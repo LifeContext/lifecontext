@@ -1,4 +1,4 @@
-# 🧠 LifeContext
+# 🧠 LifeContext1
 
 ![img](src/logo.jpg)
 
