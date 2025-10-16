@@ -2,7 +2,7 @@
 
 ![img](src/logo.jpg)
 
-## 🌍 什么是 LifeContext
+## 🌍 LifeContext
 
 - 捕捉您的**生活**并将其转化为**上下文**。
 - 充当您的数字皮层，帮助大型语言模型（LLM）理解您的整个世界。
