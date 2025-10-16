@@ -2,6 +2,8 @@
 
 ![img](src/logo.jpg)
 
+​                                                                                                [中文](readme_zh.md) / English
+
 ## 🌍 What is LifeContext
 
 - Capturing your **life** and turning it into **context**.
@@ -129,8 +131,8 @@ Based on the constantly enriched context, we will gradually unlock the core capa
 ## Community
 
 <div style="display: flex; gap: 10px;">
-    <img src="src/feishu.png" alt="Feishu Community" style="width: 48%; max-width: 500px; height: auto;">
-    <img src="src/wechat.png" alt="WeChat Community" style="width: 48%; max-width: 500px; height: auto;">
+    <img src="src/feishu.jpg" alt="Feishu Community" style="width: 48%; max-width: 500px; height: auto;">
+    <img src="src/wechat.jpg" alt="WeChat Community" style="width: 48%; max-width: 500px; height: auto;">
 </div>
 
 ## Star History
