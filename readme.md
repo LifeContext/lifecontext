@@ -2,33 +2,43 @@
 
 ![img](src/logo.jpg)
 
-​                                                                                                [中文](readme_zh.md) / English
+​[中文](readme_zh.md) / English
 
-## 🌍 What is LifeContext
 
-- Capturing your **life** and turning it into **context**.
-- Acting as your digital cortex, helping LLM understand not just your whole world.
-- Providing **open-source** implementations and **standard context APIs.**
+## 🌍 What is Life Context
+
+* Transforms what you **see, hear, and do** into AI-readable context — enabling AI to truly understand you and act proactively.
+* Serves as your **digital memory**, helping LLMs comprehend your life experiences.
+* Provides **open-source implementations** and standardized context APIs.
 
 ## 🎯 Core Features
 
-- **Personal Context Base:** Intelligently builds your life context across pages, apps, and smart devices — continuously evolving with your experiences.
-- **Standardized Context API:** Provides unified interfaces for developers to store, retrieve, and manage contextual data — making cross-platform integration easy.
-- **Companion Insights:** Automatically generates tips, to-dos, and reports — highlighting the moments, ideas, and priorities that truly matter to you.
-- **Chat with Your Life Context:** Talk naturally with your own agent — let it help you get things done anytime, anywhere.
+- **Life Context Base:** Intelligently builds a comprehensive record of your life context across web, apps, and smart devices. Continuously evolves through interaction, preserving your knowledge and experiences.
+
+- **Context API**: Provides developers with a unified interface to store, retrieve, and manage contextual data, making cross-platform integration and expansion simpler and more efficient.
+
+- **Companion Insights**: Proactively understands your life context and surfaces the moments, ideas, and priorities that truly matter to you—so information finds you, not the other way around.
+
+- **Contextual Chat**: Understands your personal context to answer questions, recall memories, or reorganize inspiration—becoming an extension of your mind and memory.
+
+- **Adaptive Scenarios**: Delivers precise, context-aware responses within specific vertical domains based on your instructions, enabling truly context-driven intelligence.
+
+- **Task Automation**: Transforms AI from a thinker into a doer—proactively triggering and continuously executing conditional tasks based on your context, embedding intelligence into everyday life.
+
+- **Content Generation**: Creates documents, images, audio, video, and notes on demand—helping you capture, organize, and express ideas naturally and effortlessly.
 
 ![img](src/mindmap.png)
 
 ## 🧩 Current Version
 
-- Focusing on your core workspace—the **web browser**—to establish a powerful and proactive intelligent presence.
-- Fully automatically analyzing the web pages you browse to generate your digital life context.
-- Not interrupting your flow state, but **proactively** providing timely, actionable insights.
-- The code will be open-sourced soon.
+* Focuses on your primary workspace — **web browser** — building an active and intelligent presence.
+* Automatically analyzes the webpages you visit to construct your **digital life context**.
+* Stays out of your way while providing timely, actionable insights.
+* Code coming soon as **open source**.
 
 ## **🚀** Quick Start
 
-1. Please install and open the LifeContext browser plugin
+1. Please install and activate the LifeContext browser extension. 
 2. On any webpage, you can click the floating button to open the chatbox and freely interact with your life context.
 
 ![img](src/product01.png)
@@ -53,7 +63,7 @@
 
 4. Privacy issues
 
-- If you do not want certain websites recorded in your life context, you can block the corresponding URL in the settings. If you do not want to record any browsing activity, you can disable the plugin.
+- If you do not want certain websites recorded in your life context, you can block the corresponding URL in the settings. If you do not want to record any browsing activity, you can disable the browser extension.
 
 ![img](src/product07.png)
 
@@ -77,20 +87,20 @@ To enable AI to understand users better, we will integrate the following context
 
 | Priority | Integration Method       | Content                               | Progress |
 | :------- | :----------------------- | :------------------------------------ | :------- |
-| P0       | Browser Plugin           | AI Chat                               |          |
-| P0       | Browser Plugin           | General Webpages                      |          |
-| P0       | Browser Plugin           | Video Webpages                        |          |
+| P0       | Browser Extension        | AI Chat                               |     ✅     |
+| P0       | Browser Extension        | General Webpages                      |     ✅     |
+| P0       | Browser Extension        | Video Webpages                        |          |
 | P1       | File Upload              | Unstructured Documents                |          |
 | P1       | File Upload              | Structured Documents                  |          |
 | P1       | File Upload              | Images                                |          |
 | P1       | User Input               | Notes                                 |          |
 | P2       | App MCP/API              | App Information                       |          |
-| P2       | Screenshot               | User PC Information                   |          |
+| P2       | PC Screenshot               | User PC Information                   |          |
 | P3       | File Upload              | Video/Audio                           |          |
-| P3       | Browser Plugin           | Meeting Records                       |          |
-| P3       | Smart Hardware (Watch)   | Health Data                           |          |
-| P3       | Smart Hardware (Audio)   | Audio                                 |          |
-| P3       | Smart Hardware (Video)   | Video                                 |          |
+| P3       | Browser Extension        | Meeting Records                       |          |
+| P3       | Smart Devices  (Watch)   | Health Data                           |          |
+| P3       | Smart Devices  (Audio)   | Audio                                 |          |
+| P3       | Smart Devices  (Video)   | Video                                 |          |
 | P4       | RSS                      | Subscribed Web Updates                |          |
 | P4       | Deep Research            | High-Quality Research Analysis        |          |
 | P4       | File Upload              | Code                                  |          |
@@ -110,10 +120,10 @@ Based on the constantly enriched context, we will gradually unlock the core capa
 
 | Priority | Feature                                     | Progress |
 | :------- | :------------------------------------------ | :------- |
-| P0       | Proactive Daily Report Push                 |          |
-| P0       | Proactive Tips Push                         |          |
-| P0       | Proactive To-do List Push                   |          |
-| P0       | Timeline                                    |          |
+| P0       | Proactive Daily Report Push                 |     ✅     |
+| P0       | Proactive Tips Push                         |     ✅     |
+| P0       | Proactive To-do List Push                   |     ✅     |
+| P0       | Timeline                                    |     ✅     |
 | P1       | Knowledge Base                              |          |
 | P1       | Internet Search                             |          |
 | P1       | Multi-modal Proactive Push                  |          |
@@ -130,9 +140,9 @@ Based on the constantly enriched context, we will gradually unlock the core capa
 
 ## Community
 
-<div style="display: flex; gap: 10px;">
-    <img src="src/feishu.jpg" alt="Feishu Community" style="width: 48%; max-width: 500px; height: auto;">
-    <img src="src/wechat.jpg" alt="WeChat Community" style="width: 48%; max-width: 500px; height: auto;">
+<div style="display: flex; gap: 10px; align-items: flex-start;">
+  <img src="src/feishu.jpg" alt="Feishu Community" style="height: 400px; width: auto; flex: 1; object-fit: cover;">
+  <img src="src/wechat.jpg" alt="WeChat Community" style="height: 400px; width: auto; flex: 1; object-fit: cover;">
 </div>
 
 ## Star History
