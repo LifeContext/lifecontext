@@ -13,10 +13,19 @@
 
 ## 🎯 Core Features
 
-* **Life Context Base:** Intelligently builds your life context across webpages, apps, and smart devices — continuously evolving with your experiences.
-* **Context API:** Offers unified interfaces for developers to store, retrieve, and manage contextual data — making cross-platform integration easy.
-* **Companion Insights:** Automatically generates smart tips, to-dos, and daily reports — surfacing the moments, ideas, and priorities that truly matter to you.
-* **Context Chat:** Naturally interact with your personal AI companion — helping you complete any task anytime, anywhere.
+- **Life Context Base:** Intelligently builds a comprehensive record of your life context across web, apps, and smart devices. Continuously evolves through interaction, preserving your knowledge and experiences.
+
+- **Context API**: Provides developers with a unified interface to store, retrieve, and manage contextual data, making cross-platform integration and expansion simpler and more efficient.
+
+- **Companion Insights**: Proactively understands your life context and surfaces the moments, ideas, and priorities that truly matter to you—so information finds you, not the other way around.
+
+- **Contextual Chat**: Understands your personal context to answer questions, recall memories, or reorganize inspiration—becoming an extension of your mind and memory.
+
+- **Adaptive Scenarios**: Delivers precise, context-aware responses within specific vertical domains based on your instructions, enabling truly context-driven intelligence.
+
+- **Task Automation**: Transforms AI from a thinker into a doer—proactively triggering and continuously executing conditional tasks based on your context, embedding intelligence into everyday life.
+
+- **Content Generation**: Creates documents, images, audio, video, and notes on demand—helping you capture, organize, and express ideas naturally and effortlessly.
 
 ![img](src/mindmap.png)
 
