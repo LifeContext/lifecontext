@@ -2,13 +2,13 @@
 
 ![img](src/logo.jpg)
 
-​[中文](readme_zh.md) / English
+[中文](readme_zh.md) / English
 
 
 ## 🌍 What is Life Context
 
 * Transforms what you **see, hear, and do** into AI-readable context — enabling AI to truly understand you and act proactively.
-* Serves as your **digital memory**, helping LLMs comprehend your life experiences.
+* A **Life Search Engine** that knows your complete history. It connects the dots of your past and can instantly retrieve info from any single moment.
 * Provides **open-source implementations** and standardized context APIs.
 
 ## 🎯 Core Features
