@@ -7,7 +7,7 @@
 ## 🌍 What is LifeContext
 
 - Capturing your **life** and turning it into **context**.
-- Acting as your digital cortex, helping LLM understand not just your whole world.
+- Acting as your digital memory, helping LLM understand not just your whole life.
 - Providing **open-source** implementations and **standard context APIs.**
 
 ## 🎯 Core Features
