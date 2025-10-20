@@ -105,8 +105,8 @@ To enable AI to understand users better, we will integrate the following context
 | P4       | Deep Research            | High-Quality Research Analysis        |          |
 | P4       | File Upload              | Code                                  |          |
 | P5       | Mobile Screenshot        | User Mobile Information               |          |
-| P6       | Knowledge Base Import    | User's Other Knowledge Bases          |          |
-| P6       | Community Knowledge Base | Official/User-Selected Knowledge Base |          |
+| P6       | Community/Imported Knowledge Base    | Official/User-Selected Knowledge Base          |          |
+| P6       | Brain-Computer Interface (BCI) | Neural Encoding |          |
 
 ### 🧰 Agent Capability Expansion Roadmap
 
