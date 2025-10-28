@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "LifeContxt",
+  "version": "1.1",
+  "description": "智能生活助手 - 网页爬取、AI聊天、事件提醒",
+  "permissions": ["scripting", "activeTab", "storage", "notifications", "alarms"],
+  "host_permissions": ["http://localhost:3000/*", "http://192.168.22.111/*", "http://192.168.22.111:8000/*", "https://*/*"],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 http://192.168.22.111 http://192.168.22.111:8000 https://*;"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "48": "icon.png"
+    }
+  },
+ "web_accessible_resources": [
+  {
+    "resources": [
+      "chat/index.html",
+      "chat/assets/*",
+      "chat/*.svg",
+      "chat/*.png",
+      "icon.png"
+    ],
+    "matches": ["<all_urls>"]
+  }
+],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["<all_urls>"],
+      "js": ["inject.js"],
+      "css": ["inject.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}
