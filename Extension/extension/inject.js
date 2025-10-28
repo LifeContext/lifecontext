@@ -43,7 +43,7 @@
     `;
     ballElement.innerHTML = `
       <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="color: white;">
-        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2 z" fill="currentColor"/>
+        <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="currentColor"/>
       </svg>
       `;
 
@@ -573,16 +573,87 @@
     return container;
   }
 
+  // 悬浮球状态管理
+  let floatingChatEnabled = true;
+  let chatContainer = null;
+
+  // 从存储中加载悬浮球状态
+  async function loadFloatingChatState() {
+    try {
+      const result = await chrome.storage.sync.get(['floatingChatEnabled']);
+      floatingChatEnabled = result.floatingChatEnabled !== false; // 默认为true
+    } catch (error) {
+      console.log('加载悬浮球状态失败，使用默认值');
+      floatingChatEnabled = true;
+    }
+  }
+
   (async function main() {
     try {
+      // 先加载悬浮球状态
+      await loadFloatingChatState();
+      
       // 创建并添加悬浮聊天组件
-      const chatContainer = createFloatingChat();
+      chatContainer = createFloatingChat();
       (document.body || document.documentElement).appendChild(chatContainer);
+      
+      // 根据状态决定是否显示悬浮球
+      if (!floatingChatEnabled) {
+        hideFloatingChat();
+      }
       
       console.log('✅ 悬浮聊天组件已加载');
     } catch (err) {
       console.error('inject error', err);
     }
   })();
+
+  // 获取悬浮球容器
+  function getChatContainer() {
+    if (!chatContainer) {
+      chatContainer = document.getElementById('my-floating-chat-container');
+    }
+    return chatContainer;
+  }
+
+  // 显示悬浮球
+  function showFloatingChat() {
+    const container = getChatContainer();
+    if (container) {
+      container.style.display = 'block';
+      floatingChatEnabled = true;
+      console.log('悬浮聊天球已显示');
+    }
+  }
+
+  // 隐藏悬浮球
+  function hideFloatingChat() {
+    const container = getChatContainer();
+    if (container) {
+      container.style.display = 'none';
+      floatingChatEnabled = false;
+      console.log('悬浮聊天球已隐藏');
+    }
+  }
+
+  // 切换悬浮球状态
+  function toggleFloatingChat(enabled) {
+    if (enabled) {
+      showFloatingChat();
+    } else {
+      hideFloatingChat();
+    }
+  }
+
+  // 监听来自popup的消息
+  chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+    if (message.type === 'TOGGLE_FLOATING_CHAT') {
+      toggleFloatingChat(message.enabled);
+      sendResponse({ success: true, enabled: floatingChatEnabled });
+    } else if (message.type === 'GET_FLOATING_CHAT_STATUS') {
+      sendResponse({ enabled: floatingChatEnabled });
+    }
+    return true;
+  });
 
 })();

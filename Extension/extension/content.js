@@ -1,7 +1,14 @@
 //content.js
-// 检查 chrome.runtime 是否可用
+// 检查 chrome.runtime 是否可用且扩展上下文有效
 function isChromeRuntimeAvailable() {
-  return typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.sendMessage;
+  try {
+    return typeof chrome !== 'undefined' && 
+           chrome.runtime && 
+           chrome.runtime.sendMessage &&
+           !chrome.runtime.lastError;
+  } catch (e) {
+    return false;
+  }
 }
 
 // DOM变化监听和爬取管理
@@ -183,24 +190,34 @@ class DOMCrawlerManager {
       // 发送到后台脚本
       const response = await new Promise((resolve) => {
         try {
+          // 先检查扩展上下文是否有效
+          if (!isChromeRuntimeAvailable()) {
+            resolve({ ok: false, error: 'Extension context invalidated' });
+            return;
+          }
+          
           chrome.runtime.sendMessage({ type: 'UPLOAD_WEB_DATA', payload }, (resp) => {
             if (chrome.runtime.lastError) {
+              console.log('Chrome runtime error:', chrome.runtime.lastError.message);
               resolve({ ok: false, error: chrome.runtime.lastError.message });
             } else {
               resolve(resp || null);
             }
           });
         } catch (e) {
+          console.log('Send message error:', e);
           resolve({ ok: false, error: String(e) });
         }
       });
 
       // 通知后台脚本
       try {
-        chrome.runtime.sendMessage({ 
-          type: 'SCRAPED_DATA', 
-          data: { payload, serverResponse: response, isIncremental: true } 
-        });
+        if (isChromeRuntimeAvailable()) {
+          chrome.runtime.sendMessage({ 
+            type: 'SCRAPED_DATA', 
+            data: { payload, serverResponse: response, isIncremental: true } 
+          });
+        }
       } catch (e) {
         console.error('发送增量爬取消息到后台失败:', e);
       }
@@ -355,21 +372,31 @@ async function autoCrawlPage() {
     // 4) 通过后台脚本代理上传，避免 HTTPS -> HTTP 混合内容被拦截
     const j = await new Promise((resolve) => {
       try {
+        // 先检查扩展上下文是否有效
+        if (!isChromeRuntimeAvailable()) {
+          resolve({ ok: false, error: 'Extension context invalidated' });
+          return;
+        }
+        
         chrome.runtime.sendMessage({ type: 'UPLOAD_WEB_DATA', payload }, (resp) => {
           if (chrome.runtime.lastError) {
+            console.log('Chrome runtime error:', chrome.runtime.lastError.message);
             resolve({ ok: false, error: chrome.runtime.lastError.message });
           } else {
             resolve(resp || null);
           }
         });
       } catch (e) {
+        console.log('Send message error:', e);
         resolve({ ok: false, error: String(e) });
       }
     });
 
     // 5) 通知 popup/background 显示
     try {
-      chrome.runtime.sendMessage({ type: 'SCRAPED_DATA', data: { payload, serverResponse: j, isIncremental: false } });
+      if (isChromeRuntimeAvailable()) {
+        chrome.runtime.sendMessage({ type: 'SCRAPED_DATA', data: { payload, serverResponse: j, isIncremental: false } });
+      }
     } catch (e) {
       console.error('发送消息到后台失败:', e);
     }
@@ -384,7 +411,9 @@ async function autoCrawlPage() {
   } catch (err) {
     console.error('自动爬取页面失败:', err);
     try {
-      chrome.runtime.sendMessage({ type: 'SCRAPED_DATA', data: { error: String(err) } });
+      if (isChromeRuntimeAvailable()) {
+        chrome.runtime.sendMessage({ type: 'SCRAPED_DATA', data: { error: String(err) } });
+      }
     } catch (e) {
       console.error('发送错误消息到后台失败:', e);
     }
