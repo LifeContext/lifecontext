@@ -153,7 +153,7 @@ async def _analyze_and_summarize(data_items: List[Dict], start_dt: datetime, end
 
 ---
 
-#### **分析维度 (Dimensions of Analysis)**
+#### **分析维度 (Dimensions of Analysis) **
 
 * **网站与应用 (Website & Web App)**: 用户主要在哪几个网站或在线工具上活动？（例如：GitHub, Kimi Chat, Google Docs, 飞书）。
 * **内容主题 (Content Topic)**: 用户正在阅读、编辑或互动的内容是关于什么的？（例如："Python 性能优化"、"Q4 市场营销计划"）。
