@@ -30,7 +30,7 @@ def init_scheduler():
     
     scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
     
-    # 1. 每15分钟生成活动记录（与原项目一致）
+    # 1. 每15分钟生成活动记录
     scheduler.add_job(
         func=job_generate_activity,
         trigger=CronTrigger(minute='*/15'),  # 每15分钟
@@ -39,7 +39,7 @@ def init_scheduler():
         replace_existing=True
     )
     
-    # 2. 每30分钟生成待办任务（与原项目一致）
+    # 2. 每30分钟生成待办任务
     scheduler.add_job(
         func=job_generate_todos,
         trigger=CronTrigger(minute='*/30'),  # 每30分钟
@@ -48,7 +48,7 @@ def init_scheduler():
         replace_existing=True
     )
     
-    # 3. 每60分钟（1小时）生成智能提示（与原项目一致）
+    # 3. 每60分钟（1小时）生成智能提示
     scheduler.add_job(
         func=job_generate_tips,
         trigger=CronTrigger(minute=0),  # 每小时整点
@@ -57,7 +57,7 @@ def init_scheduler():
         replace_existing=True
     )
     
-    # 4. 每天早上8点生成日报（与原项目一致）
+    # 4. 每天早上8点生成日报
     scheduler.add_job(
         func=job_generate_daily_report,
         trigger=CronTrigger(hour=8, minute=0),

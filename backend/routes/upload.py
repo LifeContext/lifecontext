@@ -124,7 +124,7 @@ def upload_web_data():
         else:
             content_str = str(content)
         
-        # 2. 创建临时文件保存内容（与原项目保持一致）
+        # 2. 创建临时文件保存内容
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', encoding='utf-8') as temp_file:
             temp_file.write(content_str)
             temp_file_path = temp_file.name
