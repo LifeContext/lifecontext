@@ -1,0 +1,16 @@
+name: lifecontext
+channels:
+  - defaults
+  - conda-forge
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - Flask==3.0.0
+    - flask-cors==4.0.0
+    - Werkzeug==3.0.1
+    - openai>=1.30.0
+    - chromadb>=0.5.0
+    - tiktoken==0.6.0
+    - sentence-transformers==2.3.1
+    - APScheduler==3.10.4
