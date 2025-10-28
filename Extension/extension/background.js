@@ -2,6 +2,12 @@
 // 引入配置文件
 importScripts('config.js');
 
+// 获取API URL的辅助函数
+async function getApiUrl() {
+    const config = await getConfig();
+    return `http://${config.API_HOST}:${config.API_PORT}/api`;
+}
+
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Extension installed');
@@ -32,7 +38,8 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // 获取事件数据并显示通知
 async function checkEventsAndNotify() {
   try {
-    const response = await fetch('http://192.168.22.111:8000/api/events/fetch', {
+    const apiUrl = await getApiUrl();
+    const response = await fetch(`${apiUrl}/events/fetch`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json'
@@ -183,7 +190,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'UPLOAD_WEB_DATA') {
     (async () => {
-      const url = 'http://192.168.22.111:8000/api/upload_web_data';
+      const apiUrl = await getApiUrl();
+      const url = `${apiUrl}/upload_web_data`;
       try {
         const resp = await fetch(url, {
           method: 'POST',
@@ -216,7 +224,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SEND_CHAT_MESSAGE') {
     (async () => {
-      const url = 'http://192.168.22.111:8000/api/agent/chat';
+      const apiUrl = await getApiUrl();
+      const url = `${apiUrl}/agent/chat`;
       try {
         const resp = await fetch(url, {
           method: 'POST',
@@ -249,7 +258,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SEND_STREAM_CHAT_MESSAGE') {
     (async () => {
-      const url = 'http://192.168.22.111:8000/api/agent/chat/stream';
+      const apiUrl = await getApiUrl();
+      const url = `${apiUrl}/agent/chat/stream`;
       try {
         const resp = await fetch(url, {
           method: 'POST',
@@ -301,7 +311,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } catch (err) {
         // 如果流式请求失败，回退到普通请求
         try {
-          const fallbackUrl = 'http://192.168.22.111:8000/api/agent/chat';
+          const fallbackUrl = `${apiUrl}/agent/chat`;
           const resp = await fetch(fallbackUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
