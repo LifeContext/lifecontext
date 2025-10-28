@@ -1,5 +1,8 @@
 <template>
-  <div :class="`bg-slate-100 dark:bg-slate-900 rounded-2xl shadow-lg p-4 flex flex-col ${className} border border-slate-200 dark:border-slate-600`">
+  <div 
+    :class="`bg-slate-100 dark:bg-slate-900 rounded-2xl shadow-lg p-4 flex flex-col h-full max-h-full overflow-hidden ${className} border border-slate-200 dark:border-slate-600`"
+    ref="todoContainer"
+  >
     <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Todo</h2>
 
     <!-- 加载状态 -->
@@ -27,8 +30,8 @@
     </div>
 
     <!-- 主要内容 -->
-    <div v-else class="flex flex-col flex-1">
-      <div class="mb-4">
+    <div v-else class="flex flex-col h-full min-h-0">
+      <div class="mb-4 flex-shrink-0">
         <div class="flex justify-between text-sm mb-1">
           <span class="text-slate-600 dark:text-slate-400">Progress</span>
           <span class="font-medium text-slate-700 dark:text-slate-300">{{ completedTodos }} / {{ todos.length }} Completed</span>
@@ -44,14 +47,15 @@
         </div>
       </div>
       
-      <div class="space-y-2 flex-1 overflow-y-auto max-h-96">
-        <template v-for="(todo, index) in sortedTodos" :key="todo.id">
+      <!-- 任务列表容器 -->
+      <div class="space-y-2 flex-1 overflow-y-auto min-h-0" ref="listContainer">
+        <template v-for="(todo, index) in displayTodos" :key="todo.id">
           <!-- 分隔线：在第一个已完成的 todo 前显示 -->
           <div 
-            v-if="index > 0 && !sortedTodos[index - 1].status && todo.status"
+            v-if="index > 0 && !displayTodos[index - 1].status && todo.status"
             class="border-t border-slate-300 dark:border-slate-600 my-3"
           >
-            <div class="text-xs text-slate-500 dark:text-slate-400 text-center -mt-2 bg-slate-200 dark:bg-slate-800 px-2 inline-block">
+            <div class="text-xs text-slate-500 dark:text-slate-400 text-center -mt-2 bg-slate-100 dark:bg-slate-900 px-2 inline-block">
               Completed
             </div>
           </div>
@@ -147,7 +151,7 @@
         </template>
       </div>
       
-      <div class="mt-auto pt-4 border-t border-slate-300 dark:border-slate-600">
+      <div class="flex-shrink-0 pt-4 border-t border-slate-300 dark:border-slate-600 mt-auto">
         <div class="flex items-center gap-2">
           <input
             v-model="newTodoText"
@@ -199,7 +203,7 @@
 
 <script setup lang="ts">
 import type { TodoItem } from '../../types';
-import { computed, ref, nextTick } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 
 interface Props {
   todos: TodoItem[];
@@ -211,6 +215,9 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const todoContainer = ref<HTMLElement | null>(null);
+const listContainer = ref<HTMLElement | null>(null);
 
 // New todo input state
 const newTodoText = ref('');
@@ -226,7 +233,12 @@ const editInput = ref<HTMLInputElement | null>(null);
 const showDeleteConfirm = ref(false);
 const todoToDelete = ref<number | null>(null);
 
-// 从父组件接收的API方法 - 这里需要与父组件传递的方法对应
+// 计算应该显示的任务数量的状态
+const itemHeight = ref(60);
+const visibleCount = ref(0);
+let resizeObserver: ResizeObserver | null = null;
+
+// 从父组件接收的API方法
 const emit = defineEmits<{
   addTodo: [text: string, priority: 'low' | 'medium' | 'high'];
   toggleTodo: [id: number];
@@ -251,6 +263,11 @@ const sortedTodos = computed(() => {
   });
 });
 
+// 显示所有任务，通过滚动条查看
+const displayTodos = computed(() => {
+  return sortedTodos.value;
+});
+
 // Calculate progress percentage
 const progressPercentage = computed(() => {
   if (props.todos.length === 0) return 0;
@@ -267,12 +284,12 @@ const progressColor = computed(() => {
   return '#ef4444';
 });
 
-// Toggle todo completion status - 使用emit调用父组件中的API方法
+// Toggle todo completion status
 const toggleTodo = (id: number) => {
   emit('toggleTodo', id);
 };
 
-// Add a new todo - 使用emit调用父组件中的API方法
+// Add a new todo
 const addTodo = async () => {
   if (!newTodoText.value.trim()) return; // Don't add empty text
   
@@ -282,31 +299,23 @@ const addTodo = async () => {
     // Clear input
     newTodoText.value = '';
     newTodoPriority.value = 'medium'; // Reset priority to default
+    
+    // 任务添加后重新计算显示数量
+    nextTick(() => {
+      calculateVisibleItems();
+    });
   } catch (error) {
     console.error('Error adding todo:', error);
-    // 可以在这里添加错误提示
-  }
-};
-
-// Get priority display text
-const getPriorityText = (priority: string) => {
-  switch(priority) {
-    case 'high':
-      return 'High Priority';
-    case 'medium':
-      return 'Medium Priority';
-    case 'low':
-      return 'Low Priority';
-    default:
-      return priority;
   }
 };
 
 // Start editing a todo
 const startEdit = (todo: TodoItem) => {
   editingId.value = todo.id;
-  editingText.value = todo.content;
-  editingPriority.value = todo.urgency as 'low' | 'medium' | 'high';
+  editingText.value = todo.description;
+  editingPriority.value = 
+    todo.priority === 5 ? 'high' : 
+    todo.priority === 3 ? 'medium' : 'low';
   
   // Focus the input field after DOM updates
   nextTick(() => {
@@ -314,16 +323,20 @@ const startEdit = (todo: TodoItem) => {
   });
 };
 
-// Save edited todo - 使用emit调用父组件中的API方法
+// Save edited todo
 const saveEdit = async () => {
   if (!editingText.value.trim() || editingId.value === null) return;
   
   try {
     await emit('updateTodo', editingId.value, editingText.value.trim(), editingPriority.value);
     cancelEdit();
+    
+    // 编辑完成后重新计算显示数量
+    nextTick(() => {
+      calculateVisibleItems();
+    });
   } catch (error) {
     console.error('Error saving todo:', error);
-    // 可以在这里添加错误提示
   }
 };
 
@@ -340,7 +353,7 @@ const confirmDelete = (id: number) => {
   showDeleteConfirm.value = true;
 };
 
-// Delete todo - 使用emit调用父组件中的API方法
+// Delete todo
 const deleteTodo = async () => {
   if (todoToDelete.value === null) return;
   
@@ -350,11 +363,129 @@ const deleteTodo = async () => {
     // Reset delete state
     showDeleteConfirm.value = false;
     todoToDelete.value = null;
+    
+    // 任务删除后重新计算显示数量
+    nextTick(() => {
+      calculateVisibleItems();
+    });
   } catch (error) {
     console.error('Error deleting todo:', error);
-    // 可以在这里添加错误提示
   }
 };
+
+// 计算可见任务数量
+const calculateVisibleItems = () => {
+  if (!listContainer.value) return;
+  
+  // 获取列表容器的实际可用高度
+  const containerHeight = listContainer.value.clientHeight;
+  
+  // 计算可以显示的任务数量
+  const calculatedCount = Math.floor(containerHeight / itemHeight.value);
+  
+  // 如果计算的数量小于实际任务数量，则设置可见数量，否则显示所有任务
+  if (calculatedCount < sortedTodos.value.length) {
+    visibleCount.value = calculatedCount;
+  } else {
+    visibleCount.value = 0; // 0表示显示所有任务
+  }
+};
+
+// 设置 ResizeObserver 监听
+const setupResizeObserver = () => {
+  // 确保先断开之前的观察器（如果存在）
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+  
+  // 检查浏览器是否支持 ResizeObserver
+  if (typeof ResizeObserver !== 'undefined' && listContainer.value) {
+    resizeObserver = new ResizeObserver(() => {
+      // 使用微任务队列确保在DOM更新后执行
+      Promise.resolve().then(() => {
+        calculateVisibleItems();
+      });
+    });
+    
+    try {
+      resizeObserver.observe(listContainer.value);
+    } catch (error) {
+      console.warn('Failed to observe element:', error);
+    }
+  }
+};
+
+// 添加轮询机制作为后备方案
+let resizePollingInterval: number | null = null;
+const setupResizePolling = () => {
+  // 如果已经有轮询定时器，先清除
+  if (resizePollingInterval !== null) {
+    clearInterval(resizePollingInterval);
+  }
+  
+  // 设置每200毫秒检查一次尺寸变化（作为ResizeObserver的后备方案）
+  resizePollingInterval = window.setInterval(() => {
+    calculateVisibleItems();
+  }, 200);
+};
+
+// 组件挂载时初始化
+onMounted(() => {
+  // 初始计算
+  const initialize = async () => {
+    // 等待DOM完全渲染
+    await nextTick();
+    
+    // 计算可见任务数量
+    calculateVisibleItems();
+    
+    // 设置 ResizeObserver 监听
+    setupResizeObserver();
+    
+    // 设置轮询作为后备方案
+    setupResizePolling();
+  };
+  
+  initialize();
+  
+  // 监听窗口大小变化
+  window.addEventListener('resize', () => {
+    calculateVisibleItems();
+  });
+});
+
+// 组件卸载时清理
+onUnmounted(() => {
+  // 断开 ResizeObserver 连接
+  if (resizeObserver) {
+    resizeObserver.disconnect();
+    resizeObserver = null;
+  }
+  
+  // 清除轮询定时器
+  if (resizePollingInterval !== null) {
+    clearInterval(resizePollingInterval);
+    resizePollingInterval = null;
+  }
+  
+  // 移除窗口尺寸变化监听
+  window.removeEventListener('resize', calculateVisibleItems);
+});
+
+// 监听 todos 列表变化
+watch(() => props.todos, () => {
+  nextTick(() => {
+    calculateVisibleItems();
+  });
+}, { deep: true, immediate: true });
+
+// 监听编辑状态变化
+watch([editingId, editingText, editingPriority], () => {
+  nextTick(() => {
+    calculateVisibleItems();
+  });
+});
 </script>
 
 <style scoped>
@@ -385,28 +516,44 @@ const deleteTodo = async () => {
 }
 
 .overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .overflow-y-auto::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgb(148 163 184);
-  border-radius: 3px;
-}
-
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: rgb(100 116 139);
+  border-radius: 5px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 /* 深色模式下的滚动条 */
+.dark .overflow-y-auto::-webkit-scrollbar {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .dark .overflow-y-auto::-webkit-scrollbar-thumb {
   background: rgb(71 85 105);
 }
 
 .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: rgb(51 65 85);
+  background: rgb(100 116 139);
+}
+
+/* Firefox 滚动条样式 */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184) transparent;
+}
+
+.dark .overflow-y-auto {
+  scrollbar-color: rgb(71 85 105) transparent;
 }
 </style>

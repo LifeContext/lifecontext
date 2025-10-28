@@ -53,7 +53,7 @@ const emit = defineEmits<{
   deleteTodo: [id: number];
 }>();
 
-const promptHeight = ref(300);
+const promptHeight = ref(320);
 const dragStartHeight = ref(0);
 
 const handleResizeStart = () => {
