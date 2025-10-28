@@ -2,23 +2,6 @@
   if (window.__my_floating_chat_injected__) return;
   window.__my_floating_chat_injected__ = true;
 
-  // 默认配置
-  const DEFAULT_CONFIG = {
-    API_HOST: "localhost",
-    API_PORT: "8000",
-    FRONTEND_HOST: "localhost", 
-    FRONTEND_PORT: "3000"
-  };
-
-  // 从存储中获取配置，如果没有则使用默认配置
-  async function getConfig() {
-    return new Promise((resolve) => {
-      chrome.storage.sync.get(DEFAULT_CONFIG, (config) => {
-        resolve(config);
-      });
-    });
-  }
-
   // 创建悬浮球和聊天框组件
   function createFloatingChat() {
     // 创建主容器
@@ -472,11 +455,9 @@
     });
 
     // 主页面按钮事件
-    chatHeader.querySelector('#home-btn').addEventListener('click', async () => {
+    chatHeader.querySelector('#home-btn').addEventListener('click', () => {
       // 跳转到主网页
-      const config = await getConfig();
-      const frontendUrl = `http://${config.FRONTEND_HOST}:${config.FRONTEND_PORT}/`;
-      window.open(frontendUrl, '_blank');
+      window.open('http://192.168.22.24:3000/', '_blank');
     });
 
     // 关闭按钮事件
