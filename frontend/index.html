@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Gemini Productivity Dashboard</title>
+    <script>
+      // Configure Tailwind CSS to use the 'class' strategy for dark mode.
+      // This MUST come before loading the main Tailwind script.
+      tailwind.config = {
+        darkMode: 'class',
+      }
+    </script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <style>
+      body {
+        font-family: 'Roboto', sans-serif;
+      }
+      @keyframes view-in {
+        from { opacity: 0; transform: translateY(16px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+      .animate-view-in {
+        animation: view-in 0.2s ease-out forwards;
+      }
+      @keyframes view-out {
+        from { opacity: 1; transform: translateY(0) scale(1); }
+        to { opacity: 0; transform: translateY(16px) scale(0.98); }
+      }
+      .animate-view-out {
+        animation: view-out 0.2s ease-out forwards;
+      }
+      @keyframes fadeInScaleUp {
+        from { opacity: 0; transform: scale(0.95); }
+        to { opacity: 1; transform: scale(1); }
+      }
+      .animate-fade-in-scale-up {
+        animation: fadeInScaleUp 0.15s ease-out forwards;
+      }
+      @keyframes shrink-out {
+        from {
+          opacity: 1;
+          transform: scale(1) translateX(0);
+        }
+        to {
+          opacity: 0;
+          transform: scale(0) translateX(100%);
+        }
+      }
+      .animate-shrink-out {
+        animation: shrink-out 0.3s ease-in forwards;
+        transform-origin: 100% 50%; /* Shrink towards right-middle */
+      }
+      @keyframes animated-gradient {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      .animate-gradient {
+        background-size: 200% 200%;
+        animation: animated-gradient 3s ease infinite;
+      }
+      @keyframes pulse-dot {
+        0%, 100% {
+          transform: scale(1);
+          opacity: 1;
+        }
+        50% {
+          transform: scale(1.2);
+          opacity: 0.8;
+        }
+      }
+      .animate-pulse-dot {
+          animation: pulse-dot 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+      }
+      @keyframes slide-down {
+        from { 
+          max-height: 0; 
+          opacity: 0; 
+          transform: translateY(-10px);
+        }
+        to { 
+          max-height: 24rem; 
+          opacity: 1; 
+          transform: translateY(0);
+        }
+      }
+      .animate-slide-down {
+        animation: slide-down 0.3s ease-out forwards;
+      }
+      @keyframes slide-up {
+        from { 
+          max-height: 24rem; 
+          opacity: 1; 
+          transform: translateY(0);
+        }
+        to { 
+          max-height: 0; 
+          opacity: 0; 
+          transform: translateY(-10px);
+        }
+      }
+      .animate-slide-up {
+        animation: slide-up 0.3s ease-in forwards;
+      }
+      @keyframes icon-rotate {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(180deg); }
+      }
+      .animate-icon-rotate {
+        animation: icon-rotate 0.3s ease-in-out forwards;
+      }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.24.0"
+  }
+}
+</script>
+<script>
+  // On page load, apply theme from localStorage or default to dark to avoid FOUC
+  if (localStorage.theme === 'dark' || !('theme' in localStorage)) {
+    document.documentElement.classList.add('dark')
+  } else {
+    document.documentElement.classList.remove('dark')
+  }
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+<body class="bg-slate-100 dark:bg-slate-900">
+    <div id="app"></div>
+    <script type="module" src="/main.ts"></script>
+</body>
+</html>
