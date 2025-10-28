@@ -38,7 +38,7 @@
             <Icon path="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" class="h-5 w-5 text-teal-500 dark:text-teal-400" />
             Daily Summary
           </h2>
-          <div class="bg-white dark:bg-slate-700 rounded-xl p-6 shadow-sm">
+          <div class="rounded-xl p-6 shadow-sm">
             <div class="prose prose-sm max-w-none dark:prose-invert text-slate-700 dark:text-slate-300 markdown-content" v-html="renderedContent"></div>
           </div>
         </section>

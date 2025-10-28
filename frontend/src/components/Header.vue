@@ -2,7 +2,7 @@
   <nav class="h-screen w-20 flex flex-col items-center justify-between p-2 z-20 flex-shrink-0">
     <div class="w-full flex flex-col items-center gap-4">
       <div class="h-14 flex items-center justify-center">
-        <img src="../../Logo.png" alt="LifeContext" class="h-15 w-15" />
+        <img src="../../Logo.png" alt="LifeContext" class="h-11 w-11" />
       </div>
       <div class="w-full space-y-2">
         <NavButton 

@@ -2,12 +2,12 @@
   <div class="bg-slate-100 dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-600 p-4 flex flex-col transition-all duration-300 ease-in-out h-full max-h-screen overflow-hidden">
     <!-- 头部区域 - 只在展开状态下显示 -->
     <div v-if="!isCollapsed" class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Daily Reports</h2>
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Daily</h2>
       <button 
         @click="onToggle"
         class="p-2 rounded-lg transition-all duration-200 hover:scale-105 flex-shrink-0 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
       >
-        <Icon path="M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z" class="h-4 w-4 transition-transform duration-200" />
+        <Icon path="M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z" class="h-4 w-4 transition-transform duration-200" />
       </button>
     </div>
     
@@ -15,9 +15,9 @@
     <div v-if="isCollapsed" class="flex justify-center mb-2">
       <button 
         @click="onToggle"
-        class="px-2 py-1 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-600 dark:text-slate-300 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1"
+        class="px-2 py-1 bg-slate-100 hover:bg-slate-100 dark:bg-slate-900 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 rounded text-xs font-medium transition-all duration-200 flex items-center gap-1 hover:scale-105"
       >
-        <Icon path="M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z" class="h-3 w-3" />
+        <Icon path="M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z" class="h-4 w-4 transition-transform duration-200" />
       </button>
     </div>
     

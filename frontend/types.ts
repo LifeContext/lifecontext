@@ -29,7 +29,7 @@ export interface ChatSession {
   messages: ChatMessage[];
 }
 
-export type TipCategory = 'reminder' | 'suggestion' | 'insight';
+export type TipCategory = 'DEEP_DIVE' | 'RESOURCE_RECOMMENDATION' | 'RISK_ANALYSIS' | 'KNOWLEDGE_EXPANSION' | 'ALTERNATIVE_PERSPECTIVE';
 
 export interface Tip {
   id: number;
