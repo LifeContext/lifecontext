@@ -10,7 +10,7 @@
         aria-label="Collapse chat history"
       >
         <!-- 左箭头 -->
-        <Icon path="M15 19l-7-7 7-7" class="w-5 h-5" />
+        <Icon path="M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z" class="h-4 w-4 transition-transform duration-200" />
       </button>
     </div>
 

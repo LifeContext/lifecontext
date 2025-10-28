@@ -1,66 +1,68 @@
 <template>
   <div class="chat-container h-full flex flex-col">
     <!-- 聊天消息区域 -->
-    <div class="flex-1 overflow-y-auto px-8 py-6" ref="messagesContainer">
-      <!-- 如果没有消息，显示欢迎界面 -->
-      <div v-if="messages.length === 0" class="flex flex-col items-center justify-center h-full">
-        <!-- AI Avatar -->
-        <div class="ai-avatar-container w-16 h-16 rounded-full flex items-center justify-center mb-6">
-          <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-            <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-8 h-8 text-white" />
+    <div class="flex-1 overflow-y-auto py-6" ref="messagesContainer">
+      <div class="max-w-4xl mx-auto px-8 h-full flex flex-col">
+        <!-- 如果没有消息，显示欢迎界面 -->
+        <div v-if="messages.length === 0" class="flex flex-col items-center justify-center flex-1">
+          <!-- AI Avatar -->
+          <div class="ai-avatar-container w-16 h-16 rounded-full flex items-center justify-center mb-6">
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+              <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-8 h-8 text-white" />
+            </div>
           </div>
+          
+          <!-- Main Title -->
+          <h1 class="main-title text-4xl font-bold mb-8 text-center">Chat with your life</h1>
         </div>
-        
-        <!-- Main Title -->
-        <h1 class="main-title text-4xl font-bold mb-8 text-center">Chat with your life</h1>
-      </div>
 
-      <!-- 消息列表 -->
-      <div v-else class="space-y-4">
-        <div 
-          v-for="message in messages" 
-          :key="message.workflow_id"
-          class="flex"
-          :class="message.sender === 'user' ? 'justify-end' : 'justify-start'"
-        >
+        <!-- 消息列表 -->
+        <div v-else class="space-y-4">
           <div 
-            class="max-w-3xl px-4 py-3 rounded-lg message-bubble"
-            :class="message.sender === 'user' 
-              ? 'user-message ml-12' 
-              : 'ai-message mr-12'"
+            v-for="message in messages" 
+            :key="message.workflow_id"
+            class="flex"
+            :class="message.sender === 'user' ? 'justify-end' : 'justify-start'"
           >
-            <div class="flex items-start space-x-3">
-              <!-- AI头像 -->
-              <div v-if="message.sender === 'ai'" class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-4 h-4 text-white" />
-              </div>
-              
-              <!-- 用户头像 -->
-              <div v-if="message.sender === 'user'" class="user-avatar w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                <Icon path="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" class="w-4 h-4 text-white" />
-              </div>
-              
-              <div class="flex-1">
-                <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ message.content }}</p>
-                <p class="text-xs mt-2 opacity-70">
-                  {{ formatTime(message.timestamp) }}
-                </p>
+            <div 
+              class="max-w-3xl px-4 py-3 rounded-lg message-bubble"
+              :class="message.sender === 'user' 
+                ? 'user-message ml-12' 
+                : 'ai-message mr-12'"
+            >
+              <div class="flex items-start space-x-3">
+                <!-- AI头像 -->
+                <div v-if="message.sender === 'ai'" class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-4 h-4 text-white" />
+                </div>
+                
+                <!-- 用户头像 -->
+                <div v-if="message.sender === 'user'" class="user-avatar w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
+                  <Icon path="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" class="w-4 h-4 text-white" />
+                </div>
+                
+                <div class="flex-1">
+                  <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ message.content }}</p>
+                  <p class="text-xs mt-2 opacity-70">
+                    {{ formatTime(message.timestamp) }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <!-- 加载指示器 -->
-        <div v-if="isLoading" class="flex justify-start">
-          <div class="loading-message mr-12 px-4 py-3 rounded-lg">
-            <div class="flex items-center space-x-3">
-              <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-4 h-4 text-white" />
-              </div>
-              <div class="flex space-x-1">
-                <div class="loading-dot w-2 h-2 rounded-full animate-bounce"></div>
-                <div class="loading-dot w-2 h-2 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                <div class="loading-dot w-2 h-2 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+          <!-- 加载指示器 -->
+          <div v-if="isLoading" class="flex justify-start">
+            <div class="loading-message mr-12 px-4 py-3 rounded-lg">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                  <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-4 h-4 text-white" />
+                </div>
+                <div class="flex space-x-1">
+                  <div class="loading-dot w-2 h-2 rounded-full animate-bounce"></div>
+                  <div class="loading-dot w-2 h-2 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                  <div class="loading-dot w-2 h-2 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                </div>
               </div>
             </div>
           </div>
@@ -69,23 +71,25 @@
     </div>
 
     <!-- 输入区域 -->
-    <div class="px-8 pb-6">
-      <div class="w-full max-w-4xl mx-auto relative">
-        <input 
-          type="text" 
-          placeholder="Ask, search, or make anything..."
-          class="chat-input w-full rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          v-model="inputMessage"
-          @keypress.enter="handleSend"
-          :disabled="isLoading"
-        />
-        <button 
-          @click="handleSend"
-          :disabled="isLoading || !inputMessage.trim()"
-          class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors"
-        >
-          <Icon path="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" class="w-5 h-5" />
-        </button>
+    <div class="pb-6">
+      <div class="max-w-4xl mx-auto px-8">
+        <div class="relative">
+          <input 
+            type="text" 
+            placeholder="Ask, search, or make anything..."
+            class="chat-input w-full rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            v-model="inputMessage"
+            @keypress.enter="handleSend"
+            :disabled="isLoading"
+          />
+          <button 
+            @click="handleSend"
+            :disabled="isLoading || !inputMessage.trim()"
+            class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors"
+          >
+            <Icon path="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" class="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   </div>

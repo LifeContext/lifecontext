@@ -40,12 +40,7 @@ export interface Tip {
 }
 
 export interface TimelineItem {
-  id: number;
-  timestamp: string;
   url: string;
-  domain: string;
-  title: string;
-  thumbnailUrl: string;
 }
 
 export interface TimelineSegment {

@@ -72,7 +72,7 @@
             class="chat-history-toggle-btn absolute top-4 left-4 z-10 p-2 rounded-md transition-colors"
             aria-label="Expand chat history"
           >
-            <Icon :path="chevronDoubleRight" class="w-5 h-5"/>
+            <Icon path="M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z" class="h-4 w-4 transition-transform duration-200" />
           </button>
           <ChatView />
         </div>
@@ -137,7 +137,6 @@ const REPORT_DETAIL_ICONS = {
   close: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
 };
 
-const chevronDoubleRight = 'M5.59 7.41L10.18 12l-4.59 4.59L7 18l6-6-6-6zM12.59 7.41L17.18 12l-4.59 4.59L14 18l6-6-6-6z';
 const CALENDAR_ICON = 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z';
 
 type ActiveView = 'dashboard' | 'timeline' | 'chat' | 'tipDetail' | 'reportDetail';
