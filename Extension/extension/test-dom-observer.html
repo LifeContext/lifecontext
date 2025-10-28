@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DOM监听测试页面</title>
+    <meta name="keywords" content="测试, DOM监听, 动态内容, 爬取">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .btn {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background: #0056b3;
+        }
+        .content-area {
+            min-height: 100px;
+            border: 1px solid #eee;
+            padding: 10px;
+            margin: 10px 0;
+            background: #f9f9f9;
+        }
+        .message {
+            background: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+        }
+        .chat-message {
+            background: #f0f0f0;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 DOM监听测试页面</h1>
+    <p>这个页面用于测试DOM变化监听功能。点击下面的按钮来模拟动态内容更新。</p>
+
+    <div class="test-section">
+        <h3>📝 内容区域测试</h3>
+        <button class="btn" onclick="addContent()">添加内容</button>
+        <button class="btn" onclick="clearContent()">清空内容</button>
+        <div id="content-area" class="content-area">
+            <p>初始内容 - 这里会动态添加新内容</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>💬 聊天消息测试</h3>
+        <button class="btn" onclick="addChatMessage()">添加聊天消息</button>
+        <button class="btn" onclick="simulateTyping()">模拟打字效果</button>
+        <div id="chat-area" class="content-area">
+            <div class="chat-message">系统: 欢迎使用聊天功能！</div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 数据更新测试</h3>
+        <button class="btn" onclick="updateData()">更新数据</button>
+        <button class="btn" onclick="addComment()">添加评论</button>
+        <div id="data-area" class="content-area">
+            <p>数据更新时间: <span id="update-time">未更新</span></p>
+            <div id="comments"></div>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔄 自动更新测试</h3>
+        <button class="btn" onclick="startAutoUpdate()">开始自动更新</button>
+        <button class="btn" onclick="stopAutoUpdate()">停止自动更新</button>
+        <div id="auto-area" class="content-area">
+            <p>自动更新状态: <span id="auto-status">未开始</span></p>
+            <div id="auto-content"></div>
+        </div>
+    </div>
+
+    <script>
+        let autoUpdateInterval = null;
+        let messageCount = 0;
+        let commentCount = 0;
+        let autoCount = 0;
+
+        function addContent() {
+            const area = document.getElementById('content-area');
+            const newContent = document.createElement('div');
+            newContent.className = 'message';
+            newContent.innerHTML = `<strong>新内容 ${++messageCount}:</strong> 这是动态添加的内容，时间: ${new Date().toLocaleTimeString()}`;
+            area.appendChild(newContent);
+        }
+
+        function clearContent() {
+            const area = document.getElementById('content-area');
+            area.innerHTML = '<p>内容已清空</p>';
+            messageCount = 0;
+        }
+
+        function addChatMessage() {
+            const area = document.getElementById('chat-area');
+            const newMessage = document.createElement('div');
+            newMessage.className = 'chat-message';
+            newMessage.innerHTML = `用户${Math.floor(Math.random() * 100)}: 这是一条新的聊天消息 (${new Date().toLocaleTimeString()})`;
+            area.appendChild(newMessage);
+        }
+
+        function simulateTyping() {
+            const area = document.getElementById('chat-area');
+            const typingMessage = document.createElement('div');
+            typingMessage.className = 'chat-message';
+            typingMessage.innerHTML = 'AI助手: 正在输入...';
+            area.appendChild(typingMessage);
+
+            // 模拟打字效果
+            setTimeout(() => {
+                typingMessage.innerHTML = 'AI助手: 你好！我是AI助手，有什么可以帮助您的吗？';
+            }, 2000);
+        }
+
+        function updateData() {
+            const timeElement = document.getElementById('update-time');
+            timeElement.textContent = new Date().toLocaleString();
+        }
+
+        function addComment() {
+            const commentsArea = document.getElementById('comments');
+            const newComment = document.createElement('div');
+            newComment.className = 'message';
+            newComment.innerHTML = `<strong>评论 ${++commentCount}:</strong> 这是一条新的评论，时间: ${new Date().toLocaleTimeString()}`;
+            commentsArea.appendChild(newComment);
+        }
+
+        function startAutoUpdate() {
+            if (autoUpdateInterval) return;
+            
+            document.getElementById('auto-status').textContent = '正在运行';
+            autoUpdateInterval = setInterval(() => {
+                const contentArea = document.getElementById('auto-content');
+                const newItem = document.createElement('div');
+                newItem.className = 'message';
+                newItem.innerHTML = `自动更新项目 ${++autoCount}: ${new Date().toLocaleTimeString()}`;
+                contentArea.appendChild(newItem);
+            }, 3000);
+        }
+
+        function stopAutoUpdate() {
+            if (autoUpdateInterval) {
+                clearInterval(autoUpdateInterval);
+                autoUpdateInterval = null;
+                document.getElementById('auto-status').textContent = '已停止';
+            }
+        }
+
+        // 页面加载完成后的提示
+        window.addEventListener('load', () => {
+            console.log('🔍 DOM监听测试页面已加载');
+            console.log('请打开浏览器扩展的popup界面查看DOM监听状态');
+        });
+    </script>
+</body>
+</html>

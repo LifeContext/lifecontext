@@ -1,0 +1,5 @@
+{
+  "name": "LifeContext",
+  "description": "A modern, AI-powered productivity dashboard inspired by Material Design 3. It features a three-column layout with AI-generated daily reports, actionable prompts, a to-do list, and an integrated AI assistant chat to help you stay organized and focused.",
+  "requestFramePermissions": []
+}
