@@ -1,0 +1,181 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+  body {
+    font-family: Arial, sans-serif;
+    width: 350px;
+    padding: 0;
+    margin: 0;
+    background: #1e293b;
+    color: #e2e8f0;
+  }
+    .header {
+      background: linear-gradient(135deg, #909091 0%, #949595 100%);
+      color: white;
+      padding: 15px;
+      margin: 0;
+      border-radius: 0;
+      position: relative;
+    }
+    .header-buttons {
+      position: absolute;
+      top: 15px;
+      right: 15px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .header-btn {
+      padding: 8px;
+      border-radius: 50%;
+      color: #94a3b8;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .header-btn:hover {
+      background-color: rgba(255, 255, 255, 0.1);
+    }
+    .status-box {
+      background: #1e293b;
+      border-radius: 16px;
+      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
+      margin: 15px;
+      padding: 16px;
+      border: 1px solid rgba(71, 85, 105, 0.5);
+    }
+    .status-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .status-title {
+      font-size: 16px;
+      font-weight: bold;
+      color: #f1f5f9;
+      margin: 0;
+    }
+    .status-indicator {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+    .status-indicator.crawling {
+      background: #3b82f6;
+      animation: pulse 1.5s infinite;
+    }
+    .status-indicator.success {
+      background: #22c55e;
+    }
+    .status-indicator.error {
+      background: #ef4444;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .status-content {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .status-message {
+      font-size: 14px;
+      color: #cbd5e1;
+      margin: 0;
+    }
+    .status-details {
+      font-size: 12px;
+      color: #94a3b8;
+      margin: 4px 0 0 0;
+    }
+    .status {
+      padding: 10px;
+      border-radius: 8px;
+      margin: 10px 15px;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .success { background: rgba(34, 197, 94, 0.12); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.35); }
+    .error { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); }
+    .info { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.35); }
+    pre { 
+      max-height: 200px; 
+      overflow: auto; 
+      background: rgba(15, 23, 42, 0.85); 
+      padding: 8px; 
+      border-radius: 6px;
+      font-size: 11px;
+      color: #e2e8f0;
+      border: 1px solid rgba(71, 85, 105, 0.4);
+      margin: 10px 15px;
+    }
+    .stats {
+      margin: 10px 15px;
+    }
+    .btn { 
+      color: #e2e8f0; 
+      background: #334155;
+      border: 1px solid rgba(71, 85, 105, 0.5);
+      padding: 8px 16px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: #475569;
+    }
+    .btn.btn-success { background: #059669; border-color: #047857; }
+    .btn.btn-warning { background: #d97706; border-color: #b45309; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h3 style="margin: 0;">LifeContxt</h3>
+      <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">智能生活助手 - 网页爬取、AI聊天、事件提醒</p>
+    </div>
+    <div class="header-buttons">
+      <button id="home-btn" class="header-btn" aria-label="Go to Home">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
+        </svg>
+      </button>
+      <button id="close-btn" class="header-btn" aria-label="Close">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  
+  <!-- 状态框 -->
+  <div class="status-box">
+    <div class="status-header">
+      <h4 class="status-title">爬取状态</h4>
+    </div>
+    <div class="status-content">
+      <div class="status-indicator" id="status-indicator"></div>
+      <div>
+        <p class="status-message" id="status-message">正在实时爬取网页内容</p>
+      </div>
+    </div>
+  </div>
+  
+  <div id="status" class="status info" style="display: none;">🔄 正在初始化...</div>
+  
+  
+  
+  <div id="stats" class="stats"></div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

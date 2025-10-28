@@ -1,0 +1,46 @@
+/* 透明覆盖层 - 完全不遮挡主页面 */
+#my-chat-overlay {
+  background: transparent !important;
+  pointer-events: none !important;
+}
+
+/* 悬浮球按钮样式 */
+#my-floating-button {
+  transition: all 0.3s ease;
+  pointer-events: auto !important;
+  user-select: none;
+}
+
+#my-floating-button:hover {
+  transform: scale(1.1);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* 聊天窗口样式 */
+#my-chat-window {
+  transition: all 0.3s ease;
+  transform-origin: bottom right;
+  pointer-events: auto !important;
+}
+
+#my-chat-window[style*="display: block"] {
+  animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* iframe样式 */
+#my-chat-iframe {
+  border-radius: 12px;
+  overflow: hidden;
+  pointer-events: auto !important;
+}
