@@ -36,11 +36,6 @@
 * Stays out of your way while providing timely, actionable insights.
 * Code coming soon as **open source**.
 
-## **🚀** Quick Start
-
-当然可以 ✅ 以下是你的 Markdown 文档的**英文翻译版本**，保留了所有原始的 Markdown 结构、代码块与格式不变：
-
----
 
 ## 🚀 Quick Start
 
