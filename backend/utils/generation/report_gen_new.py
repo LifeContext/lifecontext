@@ -298,8 +298,6 @@ async def _ask_llm_for_report(data_dict: Dict[str, Any], start_ts: int, end_ts: 
 
 3.  **价值导向 (Value-Oriented)**: 报告的重点是影响和成长。优先突出关键成果、学习收获以及能够帮助用户改进的 actionable 建议。
 
-4.  **第一人称框架 (First-Person Framing)**: 报告应采用用户的口吻（如"我完成了..."、"我计划..."）进行撰写，使其更具代入感和可读性。
-
 ---
 
 #### **报告结构与格式 (Report Structure & Formatting)**

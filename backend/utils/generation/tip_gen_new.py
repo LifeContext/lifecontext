@@ -216,7 +216,7 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
     [
       {
         "title": "对补充内容的高度概括",
-        "content": "详细、具体的补充信息、知识或资源说明。",
+        "content": "详细、具体的补充信息、知识或资源说明。采用 markdown 格式输出。要段落分明，类似 github 的 readme 格式。",
         "type": "从`内容维度`中选择一个最合适的类型"
       }
     ]
