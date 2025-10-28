@@ -5,23 +5,6 @@ let domObserverEnabled = true;
 let domObserverStatus = null;
 let currentCrawlStatus = 'initializing'; // 'initializing', 'crawling', 'success', 'error'
 
-// 默认配置
-const DEFAULT_CONFIG = {
-    API_HOST: "localhost",
-    API_PORT: "8000",
-    FRONTEND_HOST: "localhost", 
-    FRONTEND_PORT: "3000"
-};
-
-// 从存储中获取配置，如果没有则使用默认配置
-async function getConfig() {
-    return new Promise((resolve) => {
-        chrome.storage.sync.get(DEFAULT_CONFIG, (config) => {
-            resolve(config);
-        });
-    });
-}
-
 // 接收 content 发来的消息
 chrome.runtime.onMessage.addListener((message) => {
   if (message.type === 'SCRAPED_DATA') {
@@ -143,11 +126,9 @@ function updateDOMObserverUI() {
 }
 
 // 主页面按钮事件
-async function handleHomeClick() {
+function handleHomeClick() {
   // 跳转到主网页
-  const config = await getConfig();
-  const frontendUrl = `http://${config.FRONTEND_HOST}:${config.FRONTEND_PORT}/`;
-  chrome.tabs.create({ url: frontendUrl });
+  chrome.tabs.create({ url: 'http://192.168.22.24:3000/' });
 }
 
 // 关闭按钮事件
@@ -203,9 +184,7 @@ document.getElementById('testNotification').addEventListener('click', async () =
 // 创建测试事件
 document.getElementById('createTestEvent').addEventListener('click', async () => {
   try {
-    const config = await getConfig();
-    const apiUrl = `http://${config.API_HOST}:${config.API_PORT}/api`;
-    const response = await fetch(`${apiUrl}/events/publish`, {
+    const response = await fetch('http://192.168.22.111:8000/api/events/publish', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
