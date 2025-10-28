@@ -3,178 +3,248 @@
 <head>
   <meta charset="utf-8" />
   <style>
-  body {
-    font-family: Arial, sans-serif;
-    width: 350px;
-    padding: 0;
-    margin: 0;
-    background: #1e293b;
-    color: #e2e8f0;
-  }
-    .header {
-      background: linear-gradient(135deg, #909091 0%, #949595 100%);
-      color: white;
-      padding: 15px;
+    * {
       margin: 0;
-      border-radius: 0;
-      position: relative;
+      padding: 0;
+      box-sizing: border-box;
     }
-    .header-buttons {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .header-btn {
-      padding: 8px;
-      border-radius: 50%;
-      color: #94a3b8;
-      background: transparent;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.2s;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .header-btn:hover {
-      background-color: rgba(255, 255, 255, 0.1);
-    }
-    .status-box {
-      background: #1e293b;
+    
+    body {
+      font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      width: 320px;
+      height: 200px;
+      background: #0f172a; /* slate-900 */
+      color: #e2e8f0; /* slate-200 */
+      overflow: hidden;
       border-radius: 16px;
-      box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-      margin: 15px;
-      padding: 16px;
-      border: 1px solid rgba(71, 85, 105, 0.5);
     }
-    .status-header {
+    
+    .header {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      margin-bottom: 12px;
+      padding: 16px 20px;
+      background: #0f172a; /* slate-900 */
+      border-bottom: 1px solid #334155; /* slate-700 */
+      border-radius: 16px 16px 0 0;
     }
-    .status-title {
-      font-size: 16px;
-      font-weight: bold;
-      color: #f1f5f9;
-      margin: 0;
-    }
-    .status-indicator {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      margin-right: 8px;
-    }
-    .status-indicator.crawling {
-      background: #3b82f6;
-      animation: pulse 1.5s infinite;
-    }
-    .status-indicator.success {
-      background: #22c55e;
-    }
-    .status-indicator.error {
-      background: #ef4444;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.5; }
-    }
-    .status-content {
+    
+    .logo-section {
       display: flex;
       align-items: center;
       gap: 12px;
     }
-    .status-message {
-      font-size: 14px;
-      color: #cbd5e1;
-      margin: 0;
-    }
-    .status-details {
-      font-size: 12px;
-      color: #94a3b8;
-      margin: 4px 0 0 0;
-    }
-    .status {
-      padding: 10px;
-      border-radius: 8px;
-      margin: 10px 15px;
-      font-weight: 600;
-      font-size: 13px;
-    }
-    .success { background: rgba(34, 197, 94, 0.12); color: #86efac; border: 1px solid rgba(34, 197, 94, 0.35); }
-    .error { background: rgba(239, 68, 68, 0.12); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.35); }
-    .info { background: rgba(59, 130, 246, 0.12); color: #93c5fd; border: 1px solid rgba(59, 130, 246, 0.35); }
-    pre { 
-      max-height: 200px; 
-      overflow: auto; 
-      background: rgba(15, 23, 42, 0.85); 
-      padding: 8px; 
+    
+    .logo {
+      width: 24px;
+      height: 24px;
+      background-image: url('Logo.png');
+      background-size: contain;
+      background-repeat: no-repeat;
+      background-position: center;
       border-radius: 6px;
-      font-size: 11px;
-      color: #e2e8f0;
-      border: 1px solid rgba(71, 85, 105, 0.4);
-      margin: 10px 15px;
     }
-    .stats {
-      margin: 10px 15px;
+    
+    .app-name {
+      font-size: 16px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #3b82f6, #14b8a6); /* blue-500 to teal-500 */
+      background-clip: text;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      color: transparent;
     }
-    .btn { 
-      color: #e2e8f0; 
-      background: #334155;
-      border: 1px solid rgba(71, 85, 105, 0.5);
-      padding: 8px 16px;
+    
+    .header-buttons {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .header-btn {
+      width: 32px;
+      height: 32px;
+      border: none;
+      background: transparent;
       border-radius: 8px;
+      color: #94a3b8; /* slate-400 */
       cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       transition: all 0.2s;
     }
-    .btn:hover {
-      background: #475569;
+    
+    .header-btn:hover {
+      background: #334155; /* slate-700 */
+      color: #e2e8f0; /* slate-200 */
     }
-    .btn.btn-success { background: #059669; border-color: #047857; }
-    .btn.btn-warning { background: #d97706; border-color: #b45309; }
+    
+    .status-container {
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      flex: 1;
+    }
+    
+    .status-box {
+      background: #059669; /* emerald-600 */
+      border-radius: 12px;
+      padding: 16px 20px;
+      width: 100%;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
+    }
+    
+    .status-icon {
+      width: 20px;
+      height: 20px;
+      background: #ffffff;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .status-icon::before {
+      content: '✓';
+      color: #059669; /* emerald-600 */
+      font-size: 14px;
+      font-weight: bold;
+    }
+    
+    .status-text {
+      flex: 1;
+    }
+    
+    .status-main {
+      font-size: 16px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 2px;
+    }
+    
+    .status-sub {
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+    
+    .footer {
+      padding: 16px 20px;
+      border-top: 1px solid #334155; /* slate-700 */
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-radius: 0 0 16px 16px;
+    }
+    
+    .footer-label {
+      font-size: 14px;
+      color: #e2e8f0; /* slate-200 */
+      font-weight: 500;
+    }
+    
+    .toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 28px;
+      background: #3b82f6; /* blue-500 */
+      border-radius: 14px;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+    
+    .toggle-switch::before {
+      content: '';
+      position: absolute;
+      top: 2px;
+      right: 2px;
+      width: 24px;
+      height: 24px;
+      background: #ffffff;
+      border-radius: 50%;
+      transition: transform 0.3s;
+    }
+    
+    .toggle-switch.off {
+      background: #64748b; /* slate-500 */
+    }
+    
+    .toggle-switch.off::before {
+      transform: translateX(-20px);
+    }
+    
+    /* 状态变化样式 */
+    .status-box.crawling {
+      background: #3b82f6; /* blue-500 */
+      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    }
+    
+    .status-box.crawling .status-icon::before {
+      content: '⟳';
+      color: #3b82f6; /* blue-500 */
+      animation: spin 1s linear infinite;
+    }
+    
+    .status-box.error {
+      background: #dc2626; /* red-600 */
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+    
+    .status-box.error .status-icon::before {
+      content: '✕';
+      color: #dc2626; /* red-600 */
+    }
+    
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
+  <!-- 顶部标题栏 -->
   <div class="header">
-    <div>
-      <h3 style="margin: 0;">LifeContxt</h3>
-      <p style="margin: 5px 0 0 0; font-size: 12px; opacity: 0.9;">智能生活助手 - 网页爬取、AI聊天、事件提醒</p>
+    <div class="logo-section">
+      <div class="logo"></div>
+      <div class="app-name">LifeContext</div>
     </div>
     <div class="header-buttons">
-      <button id="home-btn" class="header-btn" aria-label="Go to Home">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <button id="home-btn" class="header-btn" aria-label="Go to Home" title="打开主页">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
         </svg>
       </button>
-      <button id="close-btn" class="header-btn" aria-label="Close">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <button id="close-btn" class="header-btn" aria-label="Close" title="关闭">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
         </svg>
       </button>
     </div>
   </div>
   
-  <!-- 状态框 -->
-  <div class="status-box">
-    <div class="status-header">
-      <h4 class="status-title">爬取状态</h4>
-    </div>
-    <div class="status-content">
-      <div class="status-indicator" id="status-indicator"></div>
-      <div>
-        <p class="status-message" id="status-message">正在实时爬取网页内容</p>
+  <!-- 中间状态区域 -->
+  <div class="status-container">
+    <div class="status-box" id="status-box">
+      <div class="status-icon" id="status-icon"></div>
+      <div class="status-text">
+        <div class="status-main" id="status-main">Page remembered</div>
+        <div class="status-sub" id="status-sub">Successfully added to memory</div>
       </div>
     </div>
   </div>
   
-  <div id="status" class="status info" style="display: none;">🔄 正在初始化...</div>
-  
-  
-  
-  <div id="stats" class="stats"></div>
+  <!-- 底部设置区域 -->
+  <div class="footer">
+    <div class="footer-label">Floating Chat Orb</div>
+    <div class="toggle-switch" id="toggle-switch" title="切换悬浮聊天球">
+    </div>
+  </div>
 
   <script src="popup.js"></script>
 </body>
