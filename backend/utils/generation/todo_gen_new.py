@@ -237,8 +237,8 @@ async def _create_tasks_from_context(context: Dict, lookback_mins: int) -> List[
 [
   {
     "title": "任务标题",
-    "description": "详细描述",
-    "priority": 1-5（数字）
+    "description": "高度概括的待办内容",
+    "priority": 1-3（数字）
   }
 ]
 ```"""

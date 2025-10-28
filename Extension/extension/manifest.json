@@ -4,9 +4,9 @@
   "version": "1.1",
   "description": "智能生活助手 - 网页爬取、AI聊天、事件提醒",
   "permissions": ["scripting", "activeTab", "storage", "notifications", "alarms"],
-  "host_permissions": ["http://localhost:3000/*", "http://192.168.22.111/*", "http://192.168.22.111:8000/*", "https://*/*"],
+  "host_permissions": ["http://localhost:3000/*", "http://localhost:8000/*", "http://127.0.0.1:3000/*", "http://127.0.0.1:8000/*", "http://*/*", "https://*/*"],
   "content_security_policy": {
-    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 http://192.168.22.111 http://192.168.22.111:8000 https://*;"
+    "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 http://localhost:8000 http://127.0.0.1:3000 http://127.0.0.1:8000 http://*/* https://*/*;"
   },
   "action": {
     "default_popup": "popup.html",
