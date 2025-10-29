@@ -82,7 +82,7 @@
         <Timeline />
       </div>
 
-      <div :class="`absolute inset-0 py-4 pr-4 pl-0 transition-opacity duration-200 ${viewingTip || viewingReport ? 'opacity-100' : 'opacity-0 pointer-events-none'}`">
+      <div :class="`absolute inset-0 transition-opacity duration-200 ${viewingTip || viewingReport ? 'opacity-100' : 'opacity-0 pointer-events-none'}`">
         <div v-if="viewingTip" :class="exitingView === 'tipDetail' ? 'animate-view-out' : 'animate-view-in'">
           <TipDetailView
             :tips="tips"
