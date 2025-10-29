@@ -3,12 +3,12 @@
     <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Tips</h2>
     
     <!-- 加载状态 -->
-    <div v-if="isLoading" class="flex items-center justify-center h-32">
+    <div v-if="isLoading" class="flex items-center justify-center h-full min-h-[200px]">
       <div class="text-slate-500 dark:text-slate-400">加载中...</div>
     </div>
     
     <!-- 错误状态 -->
-    <div v-else-if="error" class="flex items-center justify-center h-32">
+    <div v-else-if="error" class="flex items-center justify-center h-full min-h-[200px]">
       <div class="text-red-500 dark:text-red-400 text-center">
         <p>{{ error }}</p>
         <button 
@@ -21,11 +21,12 @@
     </div>
 
     <!-- 无数据状态 -->
-    <div v-else-if="tips.length === 0" class="flex flex-col items-center justify-center h-32">
+    <div v-else-if="tips.length === 0" class="flex flex-col items-center justify-center h-full min-h-[200px]">
       <svg class="w-12 h-12 text-slate-400 dark:text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
       </svg>
-      <p class="text-slate-500 dark:text-slate-400">暂无提示信息</p>
+      <h3 class="text-lg font-medium text-slate-600 dark:text-slate-300 mb-2">No tips yet</h3>
+      <p class="text-sm text-slate-500 dark:text-slate-400">Wait for generation</p>
     </div>
     
     <!-- Tips列表 -->
@@ -240,7 +241,6 @@ onMounted(() => {
     0 10px 30px rgba(0, 0, 0, 0.4),
     0 4px 12px rgba(0, 0, 0, 0.2);
   border-color: rgba(96, 165, 250, 0.3);
-  background-color: rgba(30, 41, 59, 0.95);
 }
 
 .dark .tip-card:hover h3 {
@@ -249,7 +249,7 @@ onMounted(() => {
 }
 
 .dark .tip-card:hover p {
-  color: #f1f5f9;
+  color: #1f2937;
 }
 
 .dark .tip-card:hover .text-xs {

@@ -4,11 +4,11 @@
       <h1 class="text-lg font-bold text-slate-900 dark:text-slate-100 px-2 my-2">All Tips</h1>
       <nav class="flex-1 overflow-y-auto pr-1">
         <ul>
-          <li v-for="tip in tips" :key="tip.id">
+          <li v-for="tip in props.tips" :key="tip.id">
             <button 
-              @click="() => onSelectTip(tip)"
+              @click="() => props.onSelectTip(tip)"
               :class="`w-full text-left flex items-center gap-3 p-3 rounded-lg font-medium text-sm transition-colors ${
-                selectedTip.id === tip.id 
+                props.selectedTip.id === tip.id 
                   ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' 
                   : 'text-slate-600 dark:text-slate-300 hover:bg-slate-300/50 dark:hover:bg-slate-700/50'
               }`"
@@ -23,14 +23,14 @@
 
     <main class="relative flex-1 bg-slate-200 dark:bg-slate-800 rounded-2xl p-8 overflow-y-auto shadow-lg">
       <button 
-        @click="onClose" 
+        @click="props.onClose" 
         class="absolute top-6 right-6 p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700"
         aria-label="Close tips view"
       >
         <Icon path="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" class="h-6 w-6" />
       </button>
-      <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">{{ selectedTip.title }}</h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-8">{{ new Date(selectedTip.create_time).toLocaleString([], { dateStyle: 'long' }) }}</p>
+      <h1 class="text-3xl font-bold text-slate-900 dark:text-slate-100">{{ props.selectedTip.title }}</h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-1 mb-8">{{ formatTimeAgo(props.selectedTip.create_time) }}</p>
       
       <div class="space-y-8">
         <section>
@@ -39,7 +39,7 @@
             <span>Tip Content</span>
           </h2>
           <div class="prose max-w-none dark:prose-invert text-slate-700 dark:text-slate-300">
-            <div v-html="selectedTip.content"></div>
+            <div v-html="props.selectedTip.content"></div>
           </div>
         </section>
       </div>
@@ -58,7 +58,7 @@ interface Props {
   onClose: () => void;
 }
 
-defineProps<Props>();
+const props = defineProps<Props>();
 
 const TIP_CATEGORY_ICONS = {
   blocker: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
@@ -76,16 +76,40 @@ const tipCategoryConfig: { [key in TipCategory]: { icon: string; color: string; 
   ALTERNATIVE_PERSPECTIVE: { icon: TIP_CATEGORY_ICONS.research, color: 'text-purple-500 dark:text-purple-400' }
 };
 
-const getCategoryIcon = (category: TipCategory) => {
+const getCategoryIcon = (category: string) => {
   const defaultCategory = 'suggestion'; // 默认分类
-  const validCategory = category && tipCategoryConfig[category] ? category : defaultCategory;
+  const validCategory = category && tipCategoryConfig[category as TipCategory] ? category as TipCategory : defaultCategory;
   return tipCategoryConfig[validCategory].icon;
 };
 
-const getCategoryColor = (category: TipCategory) => {
+const getCategoryColor = (category: string) => {
   const defaultCategory = 'suggestion'; // 默认分类
-  const validCategory = category && tipCategoryConfig[category] ? category : defaultCategory;
+  const validCategory = category && tipCategoryConfig[category as TipCategory] ? category as TipCategory : defaultCategory;
   return tipCategoryConfig[validCategory].color;
+};
+
+// 格式化时间函数
+const formatTimeAgo = (dateString: string): string => {
+  if (!dateString) return '';
+  
+  const now = new Date();
+  const date = new Date(dateString);
+  const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
+  
+  if (diffInSeconds < 60) {
+    return '刚刚';
+  } else if (diffInSeconds < 3600) {
+    const minutes = Math.floor(diffInSeconds / 60);
+    return `${minutes} 分钟前`;
+  } else if (diffInSeconds < 86400) {
+    const hours = Math.floor(diffInSeconds / 3600);
+    return `${hours} 小时前`;
+  } else if (diffInSeconds < 2592000) {
+    const days = Math.floor(diffInSeconds / 86400);
+    return `${days} 天前`;
+  } else {
+    return date.toLocaleDateString();
+  }
 };
 </script>
 
@@ -170,12 +194,11 @@ aside {
 }
 
 aside nav {
-  max-height: calc(100vh - 8rem); /* 减去标题和padding的高度 */
+  max-height: calc(100vh - 8rem);
 }
 
-/* 内容区域的内边距调整 */
 main .space-y-8 {
-  padding-bottom: 2rem; /* 底部留出空间 */
+  padding-bottom: 2rem;
 }
 
 /* 响应式调整 */
