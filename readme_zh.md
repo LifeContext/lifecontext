@@ -26,46 +26,34 @@
 - 全自动地对您浏览的网页进行分析，生成您的数字人生上下文。
 - 不打扰您的心流状态，主动提供及时、可行动的洞察。
 - 代码即将开源
----
+
 ## 🚀 快速开始
 ### 🛠️ 后端（Backend）配置
 
 #### 1️⃣ 配置大模型与向量服务
-打开文件 `./backend/config.py`。
-
-##### 🔹 配置 LLM 接口（用于内容分析和智能对话）
-在文件中找到以下字段，并填写你的 LLM 信息：
-```python
-LLM_API_KEY = "your_key"          # 你的 LLM 接口密钥
-LLM_BASE_URL = "your_url"         # LLM 接口地址，例如 https://api.openai.com/v1
-LLM_MODEL = "your_model"          # 模型名称，例如 gpt-4o-mini
+📦 进入 backend 目录，复制 `.env.example`文件并命名为`.env`：
+```bash
+cd ./backend
+cp .env.example .env
 ```
 
-##### 🔹 配置向量化 Embedding 接口（用于文本向量化与相似度检索）
-同样在 `config.py` 中，修改以下字段：
+✅ 将你的模型和向量数据库接口信息填入刚刚生成的`.env`中，示例如下：
 ```python
-EMBEDDING_API_KEY = "your_key"    # 向量化服务的 API 密钥
-EMBEDDING_BASE_URL = "your_url"   # 接口地址，例如 https://api.openai.com/v1
-EMBEDDING_MODEL = "your_model"    # 向量模型名称，例如 text-embedding-3-small
-```
-
-✅ **配置示例**：配置后的字段显示如下
-```python
-# LLM API 配置（用于内容分析和智能对话）
-LLM_API_KEY = "xxxx-xxx-xxxxxxxxx"
+# LLM API 
+LLM_API_KEY = "sk-1234abcd5678efgh9012ijkl"
 LLM_BASE_URL = "https://api.openai.com/v1"
 LLM_MODEL = "gpt-4o-mini"
 
-# 向量化 Embedding API 配置（用于向量数据库）
-EMBEDDING_API_KEY = "yyyy-yyy-yyyyyyyyy"
+# Embedding API 
+EMBEDDING_API_KEY = "sk-embed-9876mnop4321qrst"
 EMBEDDING_BASE_URL = "https://api.openai.com/v1"
 EMBEDDING_MODEL = "text-embedding-3-small"
+
 ```
 
 #### 2️⃣ 配置 Python 环境
-📦 进入 backend 目录，并创建虚拟环境，根据 `environment.yml` 自动安装所有依赖。
+📦 在 backend 目录下，根据 `environment.yml` 创建环境并启动：
 ```bash
-cd ./backend
 conda env create -f environment.yml
 conda activate lifecontext
 ```
@@ -75,7 +63,7 @@ conda activate lifecontext
 ```bash
 python app.py
 ```
-✅  **启动示例**：启动成功后，终端会显示服务运行的端口信息如下
+✅ 启动成功后，终端会显示服务运行的端口信息如下
 ```
 ============================================================
 LifeContext API 配置状态
@@ -110,7 +98,7 @@ node server.js
 ### 💻 前端（Frontend）配置
 
 #### 1️⃣ 安装依赖
-📦 建立新终端并进入 frontend 目录。
+📦 建立新终端并进入 frontend 目录：
 
 ```bash
 # Windows 用户
