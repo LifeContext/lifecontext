@@ -36,9 +36,144 @@
 * Stays out of your way while providing timely, actionable insights.
 * Code coming soon as **open source**.
 
-## **🚀** Quick Start
 
-1. Please install and activate the LifeContext browser extension. 
+## 🚀 Quick Start
+
+### 🛠️ Backend Configuration
+
+#### 1️⃣ Configure the LLM and Vector Services
+
+Open the file `./backend/config.py`.
+
+##### 🔹 Configure the LLM Interface (for content analysis and intelligent conversation)
+
+Locate the following fields in the file and fill in your LLM information:
+
+```python
+LLM_API_KEY = "your_key"          # Your LLM API key
+LLM_BASE_URL = "your_url"         # LLM API base URL, e.g. https://api.openai.com/v1
+LLM_MODEL = "your_model"          # Model name, e.g. gpt-4o-mini
+```
+
+##### 🔹 Configure the Embedding Interface (for text vectorization and similarity retrieval)
+
+In the same `config.py` file, modify the following fields:
+
+```python
+EMBEDDING_API_KEY = "your_key"    # API key for the embedding service
+EMBEDDING_BASE_URL = "your_url"   # API base URL, e.g. https://api.openai.com/v1
+EMBEDDING_MODEL = "your_model"    # Embedding model name, e.g. text-embedding-3-small
+```
+
+✅ **Configuration Example:** The configured fields should look like this:
+
+```python
+# LLM API Configuration (for content analysis and intelligent conversation)
+LLM_API_KEY = "xxxx-xxx-xxxxxxxxx"
+LLM_BASE_URL = "https://api.openai.com/v1"
+LLM_MODEL = "gpt-4o-mini"
+
+# Embedding API Configuration (for vector database)
+EMBEDDING_API_KEY = "yyyy-yyy-yyyyyyyyy"
+EMBEDDING_BASE_URL = "https://api.openai.com/v1"
+EMBEDDING_MODEL = "text-embedding-3-small"
+```
+
+#### 2️⃣ Set Up the Python Environment
+
+📦 Navigate to the `backend` directory and create a virtual environment.
+Install all dependencies automatically using `environment.yml`.
+
+```bash
+cd ./backend
+conda env create -f environment.yml
+conda activate lifecontext
+```
+
+#### 3️⃣ Start the Backend Service
+
+📦 Run the following command to start the backend service:
+
+```bash
+python app.py
+```
+
+✅ **Startup Example:** Once successfully launched, the terminal will display port information as follows:
+
+```
+============================================================
+LifeContext API Configuration Status
+============================================================
+✅ LLM Content Analysis: Enabled
+   Model: gpt-4o-mini
+✅ Vector Database: Enabled
+   Model: text-embedding-3-small
+============================================================
+```
+
+### 🧩 Browser Extension Configuration
+
+#### 1️⃣ Import the Browser Extension
+
+📦 Follow these steps:
+
+1. Open your browser (recommended: Chrome or Edge).
+2. Go to the **Manage Extensions** page and enable **Developer Mode** (top-right corner).
+3. Click **Load unpacked extension** and select the folder `./Extension/extension` in the project directory.
+4. Once loaded, the extension icon will appear in your browser toolbar.
+5. After enabling the extension, you may disable Developer Mode for better security.
+
+#### 2️⃣ Launch the Extension
+
+📦 Open a new terminal in your editor, navigate to the Extension directory, and install dependencies:
+
+```bash
+cd ./Extension
+npm install
+node server.js
+```
+
+### 💻 Frontend Configuration
+
+#### 1️⃣ Install Dependencies
+
+📦 Open a new terminal and navigate to the frontend directory.
+
+```bash
+# For Windows users
+cd ./frontend
+npm install
+```
+
+```bash
+# For macOS users
+cd ./frontend
+npm install
+chmod +x node_modules/.bin/vite   # Grant execution permission (to prevent Vite permission errors)
+```
+
+#### 2️⃣ Start the Frontend Development Server
+
+📦 Run the following command to start the frontend:
+
+```bash
+npm run dev
+```
+
+✅ Once started successfully, the terminal will display:
+
+```
+VITE v6.x.x  ready in 500 ms
+
+➜  Local:   http://localhost:3000/
+➜  Network: http://192.168.xx.xx:3000/
+```
+
+🎉 Open the browser and visit the address above to start using the app.
+
+## 🌄 Scenario Introduction
+
+1. Our browser extension automatically and seamlessly records the information you browse on web pages.
 2. On any webpage, you can click the floating button to open the chatbox and freely interact with your life context.
 
 ![img](src/product01.png)

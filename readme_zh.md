@@ -26,10 +26,122 @@
 - 全自动地对您浏览的网页进行分析，生成您的数字人生上下文。
 - 不打扰您的心流状态，主动提供及时、可行动的洞察。
 - 代码即将开源
+---
+## 🚀 快速开始
+### 🛠️ 后端（Backend）配置
 
-## **🚀** 快速开始
+#### 1️⃣ 配置大模型与向量服务
+打开文件 `./backend/config.py`。
 
-1. 请您安装并打开LifeContext插件
+##### 🔹 配置 LLM 接口（用于内容分析和智能对话）
+在文件中找到以下字段，并填写你的 LLM 信息：
+```python
+LLM_API_KEY = "your_key"          # 你的 LLM 接口密钥
+LLM_BASE_URL = "your_url"         # LLM 接口地址，例如 https://api.openai.com/v1
+LLM_MODEL = "your_model"          # 模型名称，例如 gpt-4o-mini
+```
+
+##### 🔹 配置向量化 Embedding 接口（用于文本向量化与相似度检索）
+同样在 `config.py` 中，修改以下字段：
+```python
+EMBEDDING_API_KEY = "your_key"    # 向量化服务的 API 密钥
+EMBEDDING_BASE_URL = "your_url"   # 接口地址，例如 https://api.openai.com/v1
+EMBEDDING_MODEL = "your_model"    # 向量模型名称，例如 text-embedding-3-small
+```
+
+✅ **配置示例**：配置后的字段显示如下
+```python
+# LLM API 配置（用于内容分析和智能对话）
+LLM_API_KEY = "xxxx-xxx-xxxxxxxxx"
+LLM_BASE_URL = "https://api.openai.com/v1"
+LLM_MODEL = "gpt-4o-mini"
+
+# 向量化 Embedding API 配置（用于向量数据库）
+EMBEDDING_API_KEY = "yyyy-yyy-yyyyyyyyy"
+EMBEDDING_BASE_URL = "https://api.openai.com/v1"
+EMBEDDING_MODEL = "text-embedding-3-small"
+```
+
+#### 2️⃣ 配置 Python 环境
+📦 进入 backend 目录，并创建虚拟环境，根据 `environment.yml` 自动安装所有依赖。
+```bash
+cd ./backend
+conda env create -f environment.yml
+conda activate lifecontext
+```
+
+#### 3️⃣ 启动后端服务
+📦 运行命令启动后端端口：
+```bash
+python app.py
+```
+✅  **启动示例**：启动成功后，终端会显示服务运行的端口信息如下
+```
+============================================================
+LifeContext API 配置状态
+============================================================
+✅ LLM 内容分析功能：已启用
+   模型：gpt-4o-mini
+✅ 向量数据库功能：已启用
+   模型：text-embedding-3-small
+============================================================
+```
+
+
+### 🧩 浏览器插件（Extension）配置
+
+#### 1️⃣ 导入浏览器插件
+📦 步骤如下：
+
+1. 打开浏览器（推荐使用 Chrome 或 Edge）。
+2. 进入 [管理扩展程序] 页面，打开右上角的 [开发者模式] 。
+3. 点击 [加载已解压的扩展程序] ，选择项目目录下的 `./Extension/extension` 文件夹。
+4. 加载完成后，即可在浏览器工具栏中看到插件图标。
+5. 插件功能启用后，可关闭开发者模式以提升安全性。
+
+#### 2️⃣ 启动插件
+📦 编译器中建立新终端，进入 Extension 目录并安装依赖：
+```bash
+cd ./Extension
+npm install
+node server.js
+```
+
+### 💻 前端（Frontend）配置
+
+#### 1️⃣ 安装依赖
+📦 建立新终端并进入 frontend 目录。
+
+```bash
+# Windows 用户
+cd ./frontend
+npm install
+```
+
+```bash
+# macOS 用户
+cd ./frontend
+npm install
+chmod +x node_modules/.bin/vite   # 赋予执行权限（防止 Vite 权限报错）
+```
+
+#### 2️⃣ 启动前端开发服务器
+📦 运行以下命令启动前端：
+```bash
+npm run dev
+```
+✅ 启动成功后终端会显示：
+```
+VITE v6.x.x  ready in 500 ms
+
+➜  Local:   http://localhost:3000/
+➜  Network: http://192.168.xx.xx:3000/
+```
+🎉打开浏览器访问上述地址即可使用 
+
+## 🌄 场景介绍
+
+1. LifeContext会自动无感地记录您在网页上浏览的信息。
 2. 在任意网页上，点击悬浮球即可打开 Chatbox，与 AI 自然对话。它能理解您正在浏览的内容，结合人生上下文提供即时回答、总结或建议。
 
 ![img](src/product01.png)

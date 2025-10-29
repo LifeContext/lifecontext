@@ -21,7 +21,7 @@ chrome.runtime.onInstalled.addListener(() => {
     }
   });
   
-  // 设置定时器，每30秒检查一次事件
+  // 设置定时器，每30秒检查一次事件 
   chrome.alarms.create('checkEvents', { 
     delayInMinutes: 0.5, // 30秒后开始
     periodInMinutes: 0.5 // 每30秒执行一次
