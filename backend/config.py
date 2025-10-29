@@ -56,7 +56,20 @@ ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 # 🤖 LLM 处理配置
 # ============================================================================
 LLM_TEMPERATURE = 0.7
-LLM_MAX_TOKENS = 2000
+LLM_MAX_TOKENS = 2000  # LLM 输出的最大 token 数
+LLM_MAX_INPUT_TOKENS = 24000  # LLM 输入的最大 token 数（包括 system prompt + user prompt）
+
+# 各类提示词的预估 token 数（用于动态计算）
+# 这些数值是根据实际 prompt 长度估算的
+SYSTEM_PROMPT_TOKENS = {
+    'tip': 2500,      # tip_gen_new.py 的 system prompt 约 2500 tokens
+    'todo': 2000,     # todo_gen_new.py 的 system prompt 约 2000 tokens
+    'activity': 2000, # activity_gen_new.py 的 system prompt 约 2000 tokens
+    'report': 3000,   # report_gen_new.py 的 system prompt 约 3000 tokens
+}
+
+# 为用户消息保留的 token 空间（用于问题描述等）
+USER_MESSAGE_RESERVE_TOKENS = 500
 
 # ============================================================================
 # 🔍 向量数据库配置
