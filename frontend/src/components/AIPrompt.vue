@@ -29,7 +29,7 @@
     </div>
     
     <!-- Tips列表 -->
-    <div v-else class="grid grid-cols-6 gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto">
+    <div v-else class="grid tips-grid gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto">
       <div 
         v-for="tip in tips" 
         :key="tip.id"
@@ -302,34 +302,22 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-/* 响应式调整 */
-@media (max-width: 1536px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+/* 自适应列：默认宽度下约为 5 列，容器更宽（daily 折叠）时能扩到 6 列 */
+.tips-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
-@media (max-width: 1280px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
 
-@media (max-width: 1024px) {
-  .grid-cols-6 {
+/* 移动端降列 */
+@media (max-width: 768px) {
+  .tips-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 768px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
 @media (max-width: 640px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
+  .tips-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
