@@ -10,14 +10,14 @@ from pathlib import Path
 # 在这里直接配置你的 API Key，不需要使用环境变量
 
 # LLM API 配置（用于内容分析和智能对话）
-LLM_API_KEY = "your_key"
-LLM_BASE_URL = "your_url"
-LLM_MODEL = "your_model"
+LLM_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
+LLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+LLM_MODEL = "doubao-seed-1-6-flash-250828"
 
 # 向量化 Embedding API 配置（用于向量数据库）
-EMBEDDING_API_KEY = "your_key"
-EMBEDDING_BASE_URL = "your_url"
-EMBEDDING_MODEL = "your_model"
+EMBEDDING_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
+EMBEDDING_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+EMBEDDING_MODEL = "doubao-embedding-large-text-250515"
 
 # ============================================================================
 # 📁 基础路径配置

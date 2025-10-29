@@ -52,7 +52,7 @@ def init_scheduler():
     # 3. 每60分钟（1小时）生成智能提示
     scheduler.add_job(
         func=job_generate_tips,
-        trigger=CronTrigger(minute=0),  # 每小时整点
+        trigger=CronTrigger(minute='*/1'),  # 每小时整点
         id='tips_hourly',
         name='每小时生成智能提示',
         replace_existing=True
@@ -61,7 +61,7 @@ def init_scheduler():
     # 4. 每天早上8点生成日报
     scheduler.add_job(
         func=job_generate_daily_report,
-        trigger=CronTrigger(hour=8, minute=0),
+        trigger=CronTrigger(hour=16, minute=33),
         id='daily_report',
         name='每日8点生成报告',
         replace_existing=True
