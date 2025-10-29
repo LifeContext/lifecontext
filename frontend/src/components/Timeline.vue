@@ -132,9 +132,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Icon from './Icon.vue';
 import { timelineService } from '../api/timelineService';
+import { eventService } from '../api/eventService';
 import type { TimelineItem, TimelineSegment } from '../../types';
 
 // State
@@ -198,6 +199,18 @@ const clearHistory = async (type: '24h' | 'all') => {
   }
 };
 
+const refreshTimelineData = async () => {
+  console.log('刷新时间线数据...');
+  try {
+    const segments = await timelineService.getTimelineByDate(selectedDate.value);
+    timelineSegments.value = segments;
+    hasActivity.value = segments.length > 0;
+    console.log('时间线数据已刷新');
+  } catch (error) {
+    console.error('刷新时间线数据失败:', error);
+  }
+};
+
 // Close dropdowns when clicking outside
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
@@ -224,6 +237,18 @@ const loadInitialData = async () => {
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
   loadInitialData();
+  
+  // 注册活动事件监听器
+  eventService.onEvent('activity', () => {
+    refreshTimelineData();
+  });
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+  
+  // 移除事件监听器
+  eventService.offEvent('activity');
 });
 </script>
 

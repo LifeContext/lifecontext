@@ -106,6 +106,14 @@
       v-if="isSettingsModalOpen"
       :on-close="() => isSettingsModalOpen = false" 
     />
+    
+    <!-- 数据更新通知 -->
+    <DataUpdateNotification 
+      :notification="notification"
+      :auto-close="true"
+      :duration="3000"
+      @close="notification = null"
+    />
   </div>
 </template>
 
@@ -126,6 +134,8 @@ import type { DailyReport, TodoItem, ChatMessage, ChatSession, Tip, TipCategory 
 import { todoService } from './src/api/todoService'; // 导入API服务
 import { reportService } from './src/api/reportService'; // 导入Report API服务
 import { tipService } from './src/api/tipService'; // 导入Tip API服务
+import { eventService } from './src/api/eventService'; // 导入事件服务
+import { dataRefreshManager } from './src/utils/dataRefreshManager'; // 导入数据刷新管理器
 
 const REPORT_DETAIL_ICONS = {
   chevronLeft: 'M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z',
@@ -168,6 +178,13 @@ const activeChatSessionId = ref<number | null>(5);
 
 const isChatWindowOpen = ref(false);
 const currentDate = ref(new Date());
+
+// 通知状态
+const notification = ref<{
+  title: string;
+  message: string;
+  type: 'success' | 'error' | 'info' | 'warning';
+} | null>(null);
 
 // Computed
 const today = computed(() => {
@@ -378,13 +395,81 @@ const setViewingTip = (tip: Tip) => {
   viewingTip.value = tip;
 };
 
+// 显示通知
+const showNotification = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning') => {
+  notification.value = {
+    title,
+    message,
+    type
+  };
+};
+
+// 初始化事件轮询和数据刷新
+const initializeEventPolling = () => {
+  // 设置数据刷新回调
+  dataRefreshManager.setCallbacks({
+    onTodosUpdate: (newTodos: TodoItem[]) => {
+      todos.value = newTodos;
+      console.log('待办事项数据已自动更新');
+      showNotification('待办事项已更新', `发现 ${newTodos.length} 个待办任务`, 'success');
+    },
+    onReportsUpdate: (newReports: DailyReport[]) => {
+      reports.value = newReports;
+      // 如果当前选中的报告被删除，选择第一个报告
+      if (selectedDashboardReport.value && !newReports.find(r => r.id === selectedDashboardReport.value!.id)) {
+        selectedDashboardReport.value = newReports.length > 0 ? newReports[0] : null;
+      }
+      console.log('报告数据已自动更新');
+      showNotification('报告已更新', `发现 ${newReports.length} 个新报告`, 'info');
+    },
+    onTipsUpdate: (newTips: Tip[]) => {
+      tips.value = newTips;
+      console.log('提示数据已自动更新');
+      showNotification('智能提示已更新', `发现 ${newTips.length} 条新提示`, 'info');
+    },
+    onTimelineUpdate: () => {
+      // 时间线组件会自动处理数据刷新
+      console.log('时间线数据已自动更新');
+      showNotification('时间线已更新', '活动记录已刷新', 'info');
+    },
+    onError: (error: string, dataType: string) => {
+      console.error(`数据刷新错误 (${dataType}):`, error);
+      showNotification('数据更新失败', `${dataType} 数据刷新时出现错误`, 'error');
+    }
+  });
+
+  // 注册事件处理器
+  eventService.onEvent('todo', (event) => {
+    dataRefreshManager.handleEvent(event);
+  });
+  
+  eventService.onEvent('report', (event) => {
+    dataRefreshManager.handleEvent(event);
+  });
+  
+  eventService.onEvent('tip', (event) => {
+    dataRefreshManager.handleEvent(event);
+  });
+  
+  eventService.onEvent('activity', (event) => {
+    dataRefreshManager.handleEvent(event);
+  });
+
+  // 开始轮询事件
+  eventService.startPolling();
+  console.log('事件轮询已启动');
+};
+
 // Lifecycle
-let timer: NodeJS.Timeout;
+let timer: number;
 
 onMounted(() => {
   loadReports(); // 组件挂载时加载Reports数据
   loadTodos(); // 组件挂载时加载Todo数据
   loadTips(); // 组件挂载时加载Tips数据
+  
+  // 初始化事件轮询
+  initializeEventPolling();
   
   timer = setInterval(() => {
     currentDate.value = new Date();
@@ -395,6 +480,10 @@ onUnmounted(() => {
   if (timer) {
     clearInterval(timer);
   }
+  
+  // 停止事件轮询
+  eventService.stopPolling();
+  console.log('事件轮询已停止');
 });
 </script>
 

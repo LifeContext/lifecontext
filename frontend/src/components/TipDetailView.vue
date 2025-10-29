@@ -1,5 +1,5 @@
 <template>
-  <div class="flex h-full w-full gap-4">
+  <div class="flex h-full w-full gap-4 tip-detail">
     <aside class="w-72 flex-shrink-0 bg-slate-200 dark:bg-slate-800 rounded-2xl p-4 flex flex-col shadow-lg">
       <h1 class="text-lg font-bold text-slate-900 dark:text-slate-100 px-2 my-2">All Tips</h1>
       <nav class="flex-1 overflow-y-auto pr-1">
@@ -90,6 +90,10 @@ const getCategoryColor = (category: TipCategory) => {
 </script>
 
 <style scoped>
+.tip-detail {
+  min-height: calc(100vh - 2rem);
+}
+
 /* 侧边栏滚动条样式 */
 aside nav::-webkit-scrollbar {
   width: 6px;
@@ -156,11 +160,13 @@ main::-webkit-scrollbar-thumb:hover {
 main {
   max-height: calc(100vh - 2rem);
   overflow-y: auto;
+  min-height: calc(100vh - 2rem);
 }
 
 /* 侧边栏高度限制 */
 aside {
   max-height: calc(100vh - 2rem);
+  min-height: calc(100vh - 2rem);
 }
 
 aside nav {
@@ -181,10 +187,12 @@ main .space-y-8 {
   aside {
     width: 100%;
     max-height: 40vh;
+    min-height: 40vh;
   }
   
   main {
     max-height: 60vh;
+    min-height: 60vh;
   }
 }
 
