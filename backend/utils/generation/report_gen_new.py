@@ -7,7 +7,12 @@ import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 import config
-from utils.helpers import get_logger
+from utils.helpers import (
+    get_logger,
+    estimate_tokens,
+    truncate_web_data_by_tokens,
+    calculate_available_context_tokens
+)
 from utils.db import get_web_data, get_tips, get_todos, insert_report
 from utils.llm import get_openai_client
 
@@ -154,7 +159,7 @@ def _fetch_time_range_data(start_ts: int, end_ts: int) -> Dict[str, Any]:
                 "id": item["id"],
                 "title": item["title"],
                 "url": item.get("url", ""),
-                "content": item["content"],
+                "content": item.get("content", ""),
                 "source": item.get("source", "unknown"),
                 "tags": item.get("tags", []),
                 "create_time": item.get("create_time", "")
@@ -251,10 +256,29 @@ async def _ask_llm_for_report(data_dict: Dict[str, Any], start_ts: int, end_ts: 
         dt_end = datetime.fromtimestamp(end_ts)
         
         # 限制数据量避免Token超限
+        tips = data_dict.get("tips", [])[:20]    # 最多20条提示
+        todos = data_dict.get("todos", [])[:30]  # 最多30条待办
+        
+        # 估算 tips 和 todos 的 token
+        other_data_json = json.dumps({
+            "tips": tips,
+            "todos": todos
+        }, ensure_ascii=False)
+        other_data_tokens = estimate_tokens(other_data_json)
+        
+        # 计算可用于 web_data 的 token 数
+        available_tokens = calculate_available_context_tokens('report', other_data_tokens)
+        
+        # 使用动态截取函数处理 web_data
+        web_data_trimmed = truncate_web_data_by_tokens(
+            data_dict.get("web_data", []),
+            max_tokens=available_tokens
+        )
+        
         report_data = {
-            "web_data": data_dict.get("web_data", [])[:50],  # 最多50条网页数据
-            "tips": data_dict.get("tips", [])[:20],           # 最多20条提示
-            "todos": data_dict.get("todos", [])[:30]          # 最多30条待办
+            "web_data": web_data_trimmed,
+            "tips": tips,
+            "todos": todos
         }
         
         data_json = json.dumps(report_data, ensure_ascii=False, indent=2)

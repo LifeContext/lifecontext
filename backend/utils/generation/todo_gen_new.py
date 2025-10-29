@@ -7,7 +7,12 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import config
-from utils.helpers import get_logger
+from utils.helpers import (
+    get_logger,
+    estimate_tokens,
+    truncate_web_data_by_tokens,
+    calculate_available_context_tokens
+)
 from utils.db import get_web_data, get_activities, insert_todo, get_todos
 from utils.llm import get_openai_client
 
@@ -172,11 +177,28 @@ async def _create_tasks_from_context(context: Dict, lookback_mins: int) -> List[
     try:
         # 准备上下文数据，包含已有todos
         existing_todos = context.get("existing_todos", [])
+        activities = context.get("activities", [])
+        
+        # 估算其他数据的 token
+        other_data_json = json.dumps({
+            "activities": activities,
+            "existing_todos": existing_todos
+        }, ensure_ascii=False)
+        other_data_tokens = estimate_tokens(other_data_json)
+        
+        # 计算可用于 web_data 的 token 数
+        available_tokens = calculate_available_context_tokens('todo', other_data_tokens)
+        
+        # 使用动态截取函数处理 web_data
+        web_data_trimmed = truncate_web_data_by_tokens(
+            context.get("web_items", []),
+            max_tokens=available_tokens
+        )
         
         context_data = {
-            "activities": context.get("activities", []),
-            "web_data": context.get("web_items", [])[:10],  # 限制数量
-            "existing_todos": existing_todos  # 添加已有待办事项
+            "activities": activities,
+            "web_data": web_data_trimmed,
+            "existing_todos": existing_todos
         }
         
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)

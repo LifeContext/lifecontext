@@ -7,7 +7,12 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List, Optional
 import config
-from utils.helpers import get_logger
+from utils.helpers import (
+    get_logger,
+    estimate_tokens,
+    truncate_web_data_by_tokens,
+    calculate_available_context_tokens
+)
 from utils.db import get_web_data, get_screenshots, insert_activity
 from utils.llm import get_openai_client
 
@@ -88,12 +93,13 @@ def _collect_data_sources(start_dt: datetime, end_dt: datetime) -> List[Dict[str
         )
         logger.info(f"Found {len(web_records)} web records")
         
+        # 先收集所有 web 数据
         for record in web_records:
             items.append({
                 "type": "web",
                 "title": record["title"],
                 "url": record.get("url", ""),
-                "content": record["content"],
+                "content": record.get("content", ""),
                 "source": record.get("source", "unknown"),
                 "tags": record.get("tags", []),
                 "create_time": record.get("create_time", "")
@@ -134,8 +140,21 @@ async def _analyze_and_summarize(data_items: List[Dict], start_dt: datetime, end
         return _create_basic_summary(data_items, start_dt, end_dt)
     
     try:
-        # 准备数据（限制大小）
-        limited_data = data_items[:20]
+        # 分离 web 数据和其他数据
+        web_items = [item for item in data_items if item.get('type') == 'web']
+        other_items = [item for item in data_items if item.get('type') != 'web']
+        
+        # 估算其他数据的 token
+        other_data_tokens = estimate_tokens(json.dumps(other_items, ensure_ascii=False))
+        
+        # 计算可用于 web_data 的 token 数
+        available_tokens = calculate_available_context_tokens('activity', other_data_tokens)
+        
+        # 使用动态截取函数处理 web_data
+        web_items_trimmed = truncate_web_data_by_tokens(web_items, max_tokens=available_tokens)
+        
+        # 合并数据
+        limited_data = other_items + web_items_trimmed
         data_json = json.dumps(limited_data, ensure_ascii=False, indent=2)
         
         system_msg = """你是一位专业的**网页活动分析师 (Web Activity Analyst)**。

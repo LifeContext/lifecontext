@@ -7,7 +7,12 @@ import json
 from datetime import datetime, timedelta
 from typing import Dict, Any, List
 import config
-from utils.helpers import get_logger
+from utils.helpers import (
+    get_logger, 
+    estimate_tokens, 
+    truncate_web_data_by_tokens, 
+    calculate_available_context_tokens
+)
 from utils.db import get_web_data, get_activities, get_todos, insert_tip, get_tips
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
@@ -367,13 +372,37 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
         return []
     
     try:
-        # 构建上下文数据（限制大小）
+        # 动态计算可用于上下文数据的 token 数
+        # 先估算其他数据的 token 数
+        activities = context.get("activity_records", [])[:5]
+        todos = context.get("pending_tasks", [])[:5]
+        existing_tips = context.get("existing_tips", [])[:5]
+        relevant_history = context.get("relevant_history", [])[:8]
+        
+        # 估算这些数据的 token
+        other_data_json = json.dumps({
+            "activities": activities,
+            "todos": todos,
+            "existing_tips": existing_tips,
+            "relevant_history": relevant_history
+        }, ensure_ascii=False)
+        other_data_tokens = estimate_tokens(other_data_json)
+        
+        # 计算可用于 web_data 的 token 数
+        available_tokens = calculate_available_context_tokens('tip', other_data_tokens)
+        
+        # 使用动态截取函数处理 web_data
+        web_data_trimmed = truncate_web_data_by_tokens(
+            context.get("web_history", []),
+            max_tokens=available_tokens
+        )
+        
         context_data = {
-            "activities": context.get("activity_records", [])[:5],
-            "web_data": context.get("web_history", [])[:10],
-            "todos": context.get("pending_tasks", [])[:5],
-            "existing_tips": context.get("existing_tips", [])[:5],  # 已有提示作为参考
-            "relevant_history": context.get("relevant_history", [])[:8]  # 新增：相关历史上下文
+            "activities": activities,
+            "web_data": web_data_trimmed,
+            "todos": todos,
+            "existing_tips": existing_tips,
+            "relevant_history": relevant_history
         }
         
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
