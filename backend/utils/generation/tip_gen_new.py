@@ -423,7 +423,7 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
     [
       {
         "title": "对补充内容的高度概括",
-        "content": "详细、具体的补充信息、知识或资源说明。可以使用 markdown 格式，但必须正确转义 JSON 字符串中的特殊字符（换行用 \\n，引号用 \\\"）。",
+        "content": "详细、具体的补充信息、知识或资源说明。必须使用 markdown 格式，段落分明，必须正确转义 JSON 字符串中的特殊字符（换行用 \\n，引号用 \\\"）。",
         "type": "从`内容维度`中选择一个最合适的类型"
       }
     ]
