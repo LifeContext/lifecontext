@@ -10,14 +10,14 @@ from pathlib import Path
 # 在这里直接配置你的 API Key，不需要使用环境变量
 
 # LLM API 配置（用于内容分析和智能对话）
-LLM_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
-LLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
-LLM_MODEL = "doubao-seed-1-6-flash-250828"
+LLM_API_KEY = "your_key"
+LLM_BASE_URL = "your_url"
+LLM_MODEL = "your_model"
 
 # 向量化 Embedding API 配置（用于向量数据库）
-EMBEDDING_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
-EMBEDDING_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
-EMBEDDING_MODEL = "doubao-embedding-large-text-250515"
+EMBEDDING_API_KEY = "your_key"
+EMBEDDING_BASE_URL = "your_url"
+EMBEDDING_MODEL = "your_model"
 
 # ============================================================================
 # 📁 基础路径配置
@@ -56,7 +56,20 @@ ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 # 🤖 LLM 处理配置
 # ============================================================================
 LLM_TEMPERATURE = 0.7
-LLM_MAX_TOKENS = 2000
+LLM_MAX_TOKENS = 2000  # LLM 输出的最大 token 数
+LLM_MAX_INPUT_TOKENS = 24000  # LLM 输入的最大 token 数（包括 system prompt + user prompt）
+
+# 各类提示词的预估 token 数（用于动态计算）
+# 这些数值是根据实际 prompt 长度估算的
+SYSTEM_PROMPT_TOKENS = {
+    'tip': 2500,      # tip_gen_new.py 的 system prompt 约 2500 tokens
+    'todo': 2000,     # todo_gen_new.py 的 system prompt 约 2000 tokens
+    'activity': 2000, # activity_gen_new.py 的 system prompt 约 2000 tokens
+    'report': 3000,   # report_gen_new.py 的 system prompt 约 3000 tokens
+}
+
+# 为用户消息保留的 token 空间（用于问题描述等）
+USER_MESSAGE_RESERVE_TOKENS = 500
 
 # ============================================================================
 # 🔍 向量数据库配置
