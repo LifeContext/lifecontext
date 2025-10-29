@@ -509,7 +509,8 @@ async def _combine_summaries(summaries: List[Dict], start_ts: int, end_ts: int) 
 1. 使用第一人称（"我"）进行叙述
 2. 从时段摘要中提炼真正的成就，而非简单罗列
 3. 提供原创的、建设性的优化建议
-4. 保持报告的洞察力和价值导向"""
+4. 保持报告的洞察力和价值导向
+5. 段落分明，必须正确转义 JSON 字符串中的特殊字符（换行用 \\n，引号用 \\\"）。"""
         
         response = client.chat.completions.create(
             model=config.LLM_MODEL,

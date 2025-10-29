@@ -30,7 +30,7 @@
     </div>
     
     <!-- Tips列表 -->
-    <div v-else class="grid grid-cols-6 gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto">
+    <div v-else class="grid tips-grid gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto">
       <div 
         v-for="tip in tips" 
         :key="tip.id"
@@ -47,8 +47,11 @@
         <!-- 标题 -->
         <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1 pr-6">{{ tip.title }}</h3>
         
-        <!-- 描述 -->
-        <p class="text-sm text-slate-600 dark:text-slate-300 mb-1 line-clamp-4">{{ truncateContent(tip.content) }}</p>
+        <!-- 描述（Markdown 渲染，限制高度作为预览） -->
+        <div 
+          class="text-sm text-slate-600 dark:text-slate-300 mb-1 markdown-content markdown-preview"
+          v-html="renderMarkdown(tip.content)"
+        ></div>
         
         <!-- 时间戳 -->
         <p class="text-xs text-slate-500 dark:text-slate-400">{{ formatTimeAgo(tip.create_time) }}</p>
@@ -59,6 +62,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, defineProps } from 'vue';
+import { marked } from 'marked';
 import { tipService } from '../api/tipService';
 import type { Tip, TipCategory } from '../../types';
 
@@ -118,11 +122,18 @@ const loadTips = async () => {
 };
 
 // 截断内容函数
+// 保留：如需在渲染前做裁剪可复用
 const truncateContent = (content: string): string => {
   if (!content) return '';
   return content.length > 100 
-    ? content.substring(0, 100) + '...' 
+    ? content.substring(0, 100) + '...'
     : content;
+};
+
+// Markdown 渲染
+const renderMarkdown = (content: string): string => {
+  if (!content) return '';
+  return marked.parse(content);
 };
 
 // 格式化时间函数
@@ -291,34 +302,50 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-/* 响应式调整 */
-@media (max-width: 1536px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(5, minmax(0, 1fr));
-  }
+/* 自适应列：默认宽度下约为 5 列，容器更宽（daily 折叠）时能扩到 6 列 */
+.tips-grid {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
-@media (max-width: 1280px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-  }
-}
 
-@media (max-width: 1024px) {
-  .grid-cols-6 {
+/* 移动端降列 */
+@media (max-width: 768px) {
+  .tips-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 768px) {
-  .grid-cols-6 {
+@media (max-width: 640px) {
+  .tips-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 640px) {
-  .grid-cols-6 {
-    grid-template-columns: repeat(1, minmax(0, 1fr));
-  }
+/* Markdown 预览样式与高度裁剪 */
+.markdown-content {
+  line-height: 1.6;
+}
+
+.markdown-content p,
+.markdown-content ul,
+.markdown-content ol,
+.markdown-content pre,
+.markdown-content blockquote {
+  margin: 0.25rem 0;
+}
+
+.markdown-content code {
+  background-color: rgba(0, 0, 0, 0.06);
+  padding: 0.1em 0.3em;
+  border-radius: 0.25em;
+}
+
+.dark .markdown-content code {
+  background-color: rgba(255, 255, 255, 0.12);
+}
+
+.markdown-preview {
+  max-height: 5.5rem; /* 约 3-4 行高度 */
+  overflow: hidden;
 }
 </style>

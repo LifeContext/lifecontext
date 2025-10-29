@@ -12,6 +12,7 @@ from typing import Dict, List, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 
+import config
 from .helpers import get_logger
 
 logger = get_logger(__name__)
@@ -54,12 +55,28 @@ class EventManager:
         self._lock = threading.Lock()  # 确保线程安全
         logger.info("Event Manager initialized")
     
+    def _is_event_enabled(self, event_type: EventType) -> bool:
+        """检查事件类型是否启用"""
+        event_config_map = {
+            EventType.TIP_GENERATED: config.ENABLE_EVENT_TIP,
+            EventType.TODO_GENERATED: config.ENABLE_EVENT_TODO,
+            EventType.ACTIVITY_GENERATED: config.ENABLE_EVENT_ACTIVITY,
+            EventType.REPORT_GENERATED: config.ENABLE_EVENT_REPORT,
+            EventType.SYSTEM_STATUS: config.ENABLE_EVENT_SYSTEM_STATUS,
+        }
+        return event_config_map.get(event_type, True)  # 默认启用
+    
     def publish_event(
         self, 
         event_type: EventType, 
         data: Dict[str, Any]
     ) -> str:
         """发布事件到缓存"""
+        # 检查事件类型是否启用
+        if not self._is_event_enabled(event_type):
+            logger.debug(f"事件类型 {event_type.value} 已禁用，跳过发布")
+            return ""  # 返回空字符串表示未发布
+        
         event_id = str(uuid.uuid4())
         event = Event(
             id=event_id,
@@ -101,11 +118,21 @@ class EventManager:
                     self.event_cache[0].timestamp
                 ).strftime("%Y-%m-%d %H:%M:%S")
         
+        # 获取事件类型启用状态
+        event_status = {
+            EventType.TIP_GENERATED.value: config.ENABLE_EVENT_TIP,
+            EventType.TODO_GENERATED.value: config.ENABLE_EVENT_TODO,
+            EventType.ACTIVITY_GENERATED.value: config.ENABLE_EVENT_ACTIVITY,
+            EventType.REPORT_GENERATED.value: config.ENABLE_EVENT_REPORT,
+            EventType.SYSTEM_STATUS.value: config.ENABLE_EVENT_SYSTEM_STATUS,
+        }
+        
         return {
             "cache_size": cache_size,
             "max_cache_size": self.max_cache_size,
             "oldest_event_time": oldest_event_time,
-            "supported_event_types": [t.value for t in EventType]
+            "supported_event_types": [t.value for t in EventType],
+            "event_enabled_status": event_status  # 新增：事件启用状态
         }
 
 

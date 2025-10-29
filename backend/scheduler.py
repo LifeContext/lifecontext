@@ -15,6 +15,7 @@ from utils.generation import (
     generate_task_list
 )
 from utils.event_manager import EventType, publish_event
+from utils.db import get_reports
 
 logger = get_logger(__name__)
 
@@ -51,7 +52,7 @@ def init_scheduler():
     # 3. 每60分钟（1小时）生成智能提示
     scheduler.add_job(
         func=job_generate_tips,
-        trigger=CronTrigger(minute=0),  # 每小时整点
+        trigger=CronTrigger(minute='*/1'),  # 每小时整点
         id='tips_hourly',
         name='每小时生成智能提示',
         replace_existing=True
@@ -60,7 +61,7 @@ def init_scheduler():
     # 4. 每天早上8点生成日报
     scheduler.add_job(
         func=job_generate_daily_report,
-        trigger=CronTrigger(hour=8, minute=0),
+        trigger=CronTrigger(hour=16, minute=33),
         id='daily_report',
         name='每日8点生成报告',
         replace_existing=True
@@ -80,16 +81,17 @@ def job_generate_activity():
         
         if result.get('success'):
             activity_id = result.get('activity_id')
-            logger.info(f"✅ Activity generated: ID={activity_id}")
+            activity_title = result.get('title', '活动记录')  # 使用实际的 title
+            logger.info(f"✅ Activity generated: ID={activity_id}, Title={activity_title}")
             
             # 发布事件
             publish_event(
                 event_type=EventType.ACTIVITY_GENERATED,
                 data={
                     "activity_id": str(activity_id),
-                    "title": "活动记录",
-                    "message": "新的活动记录已生成",
-                    "content": result.get('content', '')[:200]
+                    "title": activity_title,  # 使用实际的 title
+                    "message": f"新的活动记录已生成: {activity_title}",
+                    "description": result.get('description', '')[:200]
                 }
             )
         else:
@@ -106,18 +108,23 @@ def job_generate_todos():
         
         if result.get('success'):
             todo_ids = result.get('todo_ids', [])
+            todos = result.get('todos', [])
             todo_count = len(todo_ids)
             logger.info(f"✅ Generated {todo_count} todos")
             
             # 发布事件
             if todo_count > 0:
+                # 使用第一个 todo 的 title，如果有多个则在 message 中说明
+                first_todo_title = todos[0].get('title', '待办任务') if todos else '待办任务'
+                
                 publish_event(
                     event_type=EventType.TODO_GENERATED,
                     data={
                         "todo_ids": [str(tid) for tid in todo_ids],
                         "count": todo_count,
-                        "title": "待办任务",
-                        "message": f"生成了 {todo_count} 个新待办任务"
+                        "title": first_todo_title if todo_count == 1 else f"{first_todo_title} 等{todo_count}项任务",
+                        "message": f"生成了 {todo_count} 个新待办任务",
+                        "todos": todos  # 包含所有 todos 的完整信息
                     }
                 )
         else:
@@ -134,18 +141,23 @@ def job_generate_tips():
         
         if result.get('success'):
             tip_ids = result.get('tip_ids', [])
+            tips = result.get('tips', [])
             tip_count = len(tip_ids)
             logger.info(f"✅ Generated {tip_count} tips")
             
             # 发布事件
             if tip_count > 0:
+                # 使用第一个 tip 的 title，如果有多个则在 message 中说明
+                first_tip_title = tips[0].get('title', '智能提示') if tips else '智能提示'
+                
                 publish_event(
                     event_type=EventType.TIP_GENERATED,
                     data={
                         "tip_ids": [str(tid) for tid in tip_ids],
                         "count": tip_count,
-                        "title": "智能提示",
-                        "message": f"生成了 {tip_count} 条新的智能提示"
+                        "title": first_tip_title if tip_count == 1 else f"{first_tip_title} 等{tip_count}条提示",
+                        "message": f"生成了 {tip_count} 条新的智能提示",
+                        "tips": tips  # 包含所有 tips 的完整信息
                     }
                 )
         else:
@@ -172,13 +184,22 @@ def job_generate_daily_report():
             report_id = result.get('report_id')
             logger.info(f"✅ Daily report generated: ID={report_id}")
             
+            # 从数据库获取报告的实际 title
+            report_title = "每日报告"
+            try:
+                reports = get_reports(limit=1, offset=0)
+                if reports and len(reports) > 0 and reports[0].get('id') == report_id:
+                    report_title = reports[0].get('title', report_title)
+            except Exception as e:
+                logger.warning(f"Failed to get report title: {e}, using default")
+            
             # 发布事件
             publish_event(
                 event_type=EventType.REPORT_GENERATED,
                 data={
                     "report_id": str(report_id),
-                    "title": "每日报告",
-                    "message": "每日报告已生成完成",
+                    "title": report_title,  # 使用实际的 title
+                    "message": f"报告已生成: {report_title}",
                     "content": result.get('content', '')[:200],
                     "date": start_time.strftime("%Y-%m-%d")
                 }
