@@ -1,23 +1,32 @@
 """
-配置文件 - 直接在此文件中配置 API Key
+配置文件 - 从本地环境变量读取 API Key 与模型配置
+优先使用环境变量，未设置时采用安全的空值或合理默认值
 """
 
 from pathlib import Path
+import os
+
+# 尝试加载 .env 文件（如果存在）
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    # 如果没有安装 python-dotenv，忽略
+    pass
 
 # ============================================================================
-# 🔑 API Key 配置（必填项）
+# 🔑 API Key / 模型配置（从环境变量读取）
 # ============================================================================
-# 在这里直接配置你的 API Key，不需要使用环境变量
 
 # LLM API 配置（用于内容分析和智能对话）
-LLM_API_KEY = "your_key"
-LLM_BASE_URL = "your_url"
-LLM_MODEL = "your_model"
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
+LLM_MODEL = os.getenv("LLM_MODEL", "doubao-seed-1-6-flash-250828")
 
 # 向量化 Embedding API 配置（用于向量数据库）
-EMBEDDING_API_KEY = "your_key"
-EMBEDDING_BASE_URL = "your_url"
-EMBEDDING_MODEL = "your_model"
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
+EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL", "https://ark.cn-beijing.volces.com/api/v3")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL", "doubao-embedding-large-text-250515")
 
 # ============================================================================
 # 📁 基础路径配置
@@ -122,13 +131,13 @@ if ENABLE_LLM_PROCESSING:
     print(f"   模型：{LLM_MODEL}")
 else:
     print("❌ LLM 内容分析功能：未启用")
-    print("   请在 config.py 中配置 LLM_API_KEY")
+    print("   请在本地环境变量中配置 LLM_API_KEY")
 
 if ENABLE_VECTOR_STORAGE:
     print("✅ 向量数据库功能：已启用")
     print(f"   模型：{EMBEDDING_MODEL}")
 else:
     print("❌ 向量数据库功能：未启用")
-    print("   请在 config.py 中配置 EMBEDDING_API_KEY")
+    print("   请在本地环境变量中配置 EMBEDDING_API_KEY")
 
 print("="*60 + "\n")

@@ -61,7 +61,7 @@ def init_scheduler():
     # 4. 每天早上8点生成日报
     scheduler.add_job(
         func=job_generate_daily_report,
-        trigger=CronTrigger(hour=16, minute=33),
+        trigger=CronTrigger(hour=16, minute=43),
         id='daily_report',
         name='每日8点生成报告',
         replace_existing=True
