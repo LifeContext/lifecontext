@@ -203,7 +203,8 @@ def add_web_data_to_vectorstore(
 def search_similar_content(
     query: str,
     limit: int = 5,
-    filter_metadata: Dict[str, Any] = None
+    filter_metadata: Dict[str, Any] = None,
+    use_embedding_api: bool = True
 ) -> List[Dict[str, Any]]:
     """
     搜索相似内容
@@ -212,6 +213,7 @@ def search_similar_content(
         query: 查询文本
         limit: 返回结果数量
         filter_metadata: 元数据过滤条件
+        use_embedding_api: 是否使用配置的嵌入 API（推荐 True，与存储时保持一致）
     
     Returns:
         相似内容列表
@@ -223,12 +225,34 @@ def search_similar_content(
         
         collection = get_collection()
         
+        # 生成查询向量（使用配置的嵌入模型）
+        query_embedding = None
+        if use_embedding_api:
+            try:
+                from utils.llm import generate_embedding
+                query_embedding = generate_embedding(query)
+                if query_embedding:
+                    logger.info(f"Using embedding API for query (dim: {len(query_embedding)})")
+                else:
+                    logger.warning("Embedding API failed, falling back to query_texts")
+            except Exception as e:
+                logger.warning(f"Failed to use embedding API: {e}, falling back to query_texts")
+        
         # 执行查询
-        results = collection.query(
-            query_texts=[query],
-            n_results=limit,
-            where=filter_metadata
-        )
+        if query_embedding:
+            # 使用嵌入向量查询
+            results = collection.query(
+                query_embeddings=[query_embedding],
+                n_results=limit,
+                where=filter_metadata
+            )
+        else:
+            # 使用文本查询（ChromaDB 默认嵌入）
+            results = collection.query(
+                query_texts=[query],
+                n_results=limit,
+                where=filter_metadata
+            )
         
         # 格式化结果
         formatted_results = []

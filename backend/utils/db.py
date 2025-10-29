@@ -178,6 +178,46 @@ def update_todo_status(todo_id, status, end_time=None):
     return affected_rows > 0
 
 
+def update_todo(todo_id, **kwargs):
+    """更新待办事项（支持更新多个字段）
+    
+    Args:
+        todo_id: 待办事项ID
+        **kwargs: 可更新的字段，包括 title, description, status, priority, end_time 等
+    
+    Returns:
+        bool: 是否更新成功
+    """
+    if not kwargs:
+        return False
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    # 允许更新的字段
+    allowed_fields = {'title', 'description', 'status', 'priority', 'end_time', 'start_time'}
+    
+    # 过滤出允许更新的字段
+    update_fields = {k: v for k, v in kwargs.items() if k in allowed_fields}
+    
+    if not update_fields:
+        conn.close()
+        return False
+    
+    # 构建 SQL 更新语句
+    set_clause = ", ".join([f"{field} = ?" for field in update_fields.keys()])
+    values = list(update_fields.values())
+    values.append(todo_id)
+    
+    sql = f"UPDATE todos SET {set_clause} WHERE id = ?"
+    cursor.execute(sql, values)
+    
+    affected_rows = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return affected_rows > 0
+
+
 def insert_todo(title, description="", priority=0):
     """插入待办事项"""
     conn = get_db_connection()
@@ -195,6 +235,26 @@ def insert_todo(title, description="", priority=0):
     conn.commit()
     conn.close()
     return todo_id
+
+
+def delete_todo(todo_id):
+    """删除待办事项
+    
+    Args:
+        todo_id: 待办事项ID
+    
+    Returns:
+        bool: 是否删除成功
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM todos WHERE id = ?", (todo_id,))
+    
+    affected_rows = cursor.rowcount
+    conn.commit()
+    conn.close()
+    return affected_rows > 0
 
 
 # 活动记录相关操作

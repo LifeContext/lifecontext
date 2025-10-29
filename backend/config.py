@@ -78,6 +78,26 @@ ENABLE_VECTOR_STORAGE = bool(EMBEDDING_API_KEY)
 ENABLE_SCHEDULER = True  # 设置为 False 可关闭定时任务
 
 # ============================================================================
+# 📡 事件推送配置
+# ============================================================================
+# 控制各类事件是否推送到客户端（前端/Extension）
+
+# Tips 生成事件推送
+ENABLE_EVENT_TIP = True
+
+# Todo 生成事件推送
+ENABLE_EVENT_TODO = False
+
+# Activity 生成事件推送
+ENABLE_EVENT_ACTIVITY = False
+
+# Report 生成事件推送
+ENABLE_EVENT_REPORT = True
+
+# 系统状态事件推送
+ENABLE_EVENT_SYSTEM_STATUS = False
+
+# ============================================================================
 # 📊 启动提示
 # ============================================================================
 print("\n" + "="*60)
