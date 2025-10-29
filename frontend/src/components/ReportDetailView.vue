@@ -32,7 +32,7 @@
       </button>
     </header>
     <main ref="mainContent" class="flex-1 p-8 overflow-y-auto min-h-0" style="height: calc(100vh - 150px); max-height: calc(100vh - 150px);">
-      <div class="space-y-8 max-w-4xl mx-auto pb-8" style="min-height: 100%;">
+      <div class="space-y-8 max-w-4xl mx-auto pb-8 bg-white dark:bg-slate-700 rounded-2xl p-8 shadow-inner" style="min-height: 100%;">
         <section>
           <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-3">
             <Icon path="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" class="h-5 w-5 text-teal-500 dark:text-teal-400" />
