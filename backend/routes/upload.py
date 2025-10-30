@@ -118,11 +118,60 @@ def upload_web_data():
         
         logger.info(f"[upload_web_data] Processing: title={title}, url={url}")
         
-        # 1. 将内容转换为字符串（用于 LLM 处理）
-        if isinstance(content, dict):
-            content_str = json.dumps(content, ensure_ascii=False, indent=2)
+        # 1. 将内容转换为字符串（用于 LLM/向量 处理）
+        # 如果为增量 diff，仅线性化 diff，而非全量文本，保持处理流程不变
+        def _linearize_diff(diff_dict):
+            try:
+                ops = (diff_dict or {}).get('ops') or []
+                lines = []
+                for op in ops:
+                    t = op.get('type')
+                    if t == 'added':
+                        for ln in str(op.get('text','')).split('\n'):
+                            if ln:
+                                lines.append(f"+ {ln}")
+                    elif t == 'removed':
+                        for ln in str(op.get('text','')).split('\n'):
+                            if ln:
+                                lines.append(f"- {ln}")
+                    elif t == 'modified':
+                        for ln in str(op.get('oldText','')).split('\n'):
+                            if ln:
+                                lines.append(f"- {ln}")
+                        for ln in str(op.get('newText','')).split('\n'):
+                            if ln:
+                                lines.append(f"+ {ln}")
+                    # equal 默认跳过，避免噪音
+                # 附带简要摘要
+                summary = (diff_dict or {}).get('summary') or {}
+                header = [
+                    f"[DOM DIFF] version={(diff_dict or {}).get('version')}",
+                    f"oldHash={(diff_dict or {}).get('oldHash')} newHash={(diff_dict or {}).get('newHash')}",
+                    f"added={summary.get('added',0)} removed={summary.get('removed',0)} modifiedOld={summary.get('modifiedOld',0)} modifiedNew={summary.get('modifiedNew',0)}",
+                    "---"
+                ]
+                return "\n".join(header + lines) or "[EMPTY DIFF]"
+            except Exception as _:
+                return json.dumps(diff_dict or {}, ensure_ascii=False)
+
+        is_dom_diff = (data.get('changeType') == 'dom-diff') or (isinstance(content, dict) and content.get('diffOnly'))
+        logger.info(f"[upload_web_data] is_dom_diff={is_dom_diff}")
+        if is_dom_diff:
+            # diff 优先从顶层 diff 字段获取，其次从 content.diff
+            diff_dict = data.get('diff') or (content.get('diff') if isinstance(content, dict) else None)
+            content_str = _linearize_diff(diff_dict)
+            logger.info(f"[upload_web_data] diff linearized length={len(content_str)}")
         else:
-            content_str = str(content)
+            if isinstance(content, dict):
+                content_str = json.dumps(content, ensure_ascii=False, indent=2)
+            else:
+                content_str = str(content)
+        logger.info(f"[upload_web_data] content_str length used for LLM/vector={len(content_str)}")
+        try:
+            preview = content_str[:200].replace('\n', ' ')
+            logger.info(f"[upload_web_data] input preview: {preview}")
+        except Exception:
+            pass
         
         # 2. 创建临时文件保存内容
         with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt', encoding='utf-8') as temp_file:
@@ -166,6 +215,26 @@ def upload_web_data():
             "crawled_at": datetime.now().isoformat(),
             "temp_file_path": temp_file_path,
         }
+        # 标记输入模式与预览
+        full_metadata["llm_input_mode"] = "diff" if is_dom_diff else "full"
+        try:
+            full_metadata["llm_input_preview"] = content_str[:500]
+        except Exception:
+            pass
+        # 若为 dom-diff，将 diff 元数据纳入 metadata，便于检索/回放
+        if is_dom_diff:
+            try:
+                full_metadata.update({
+                    "change_type": data.get('changeType'),
+                    "diff_meta": {
+                        "old_hash": (data.get('diff') or {}).get('oldHash'),
+                        "new_hash": (data.get('diff') or {}).get('newHash'),
+                        "version": (data.get('diff') or {}).get('version'),
+                        "summary": (data.get('diff') or {}).get('summary'),
+                    }
+                })
+            except Exception:
+                pass
         full_metadata.update(metadata)
         
         # 5. 存入 SQLite 数据库
