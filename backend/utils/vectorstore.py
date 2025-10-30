@@ -36,18 +36,21 @@ def get_chroma_client():
 
 
 def get_collection():
-    """获取或创建集合"""
+    """获取或创建集合（仅用于存储，不处理embedding）"""
     global _collection
     if _collection is None:
         try:
             client = get_chroma_client()
-            # ChromaDB 会自动使用默认的 sentence-transformers embedding
-            # 不需要 OpenAI API key
+            # ChromaDB 仅用于存储向量，不使用其默认的 sentence-transformers
+            # 所有 embedding 由配置的向量模型生成
             _collection = client.get_or_create_collection(
                 name=config.CHROMA_COLLECTION_NAME,
-                metadata={"description": "Web data collection"}
+                metadata={
+                    "description": "Web data collection",
+                    "embedding_provider": "external"  # 标记使用外部embedding
+                }
             )
-            logger.info(f"ChromaDB collection '{config.CHROMA_COLLECTION_NAME}' ready (using default embedding)")
+            logger.info(f"ChromaDB collection '{config.CHROMA_COLLECTION_NAME}' ready (external embedding only)")
         except Exception as e:
             logger.exception(f"Failed to get/create collection: {e}")
             raise
@@ -116,6 +119,11 @@ def add_web_data_to_vectorstore(
             logger.info("Vector storage is disabled, skipping")
             return True
         
+        # 检查是否有 embedding 函数，必须使用配置的向量模型
+        if not embedding_function:
+            logger.error("No embedding function provided. Vector storage requires external embedding model.")
+            return False
+        
         # 如果 content 是字典，转换为字符串
         if isinstance(content, dict):
             content_text = json.dumps(content, ensure_ascii=False, indent=2)
@@ -156,44 +164,32 @@ def add_web_data_to_vectorstore(
             metadatas.append(chunk_metadata)
             ids.append(doc_id)
         
-        # 添加到 ChromaDB
-        if embedding_function:
-            try:
-                # 尝试使用自定义嵌入函数（OpenAI Embeddings）
-                embeddings = embedding_function(documents)
-                if embeddings:
-                    collection.add(
-                        documents=documents,
-                        metadatas=metadatas,
-                        ids=ids,
-                        embeddings=embeddings
-                    )
-                else:
-                    # 如果自定义嵌入失败，使用默认嵌入
-                    logger.warning("Custom embedding failed, falling back to default")
-                    collection.add(
-                        documents=documents,
-                        metadatas=metadatas,
-                        ids=ids
-                    )
-            except Exception as e:
-                logger.warning(f"Custom embedding error: {e}, using default embedding")
-                # 使用 ChromaDB 默认嵌入（sentence-transformers）
-                collection.add(
-                    documents=documents,
-                    metadatas=metadatas,
-                    ids=ids
-                )
-        else:
-            # 使用 ChromaDB 默认嵌入（sentence-transformers，本地运行，不需要 API key）
+        # 使用配置的向量模型生成 embeddings
+        try:
+            embeddings = embedding_function(documents)
+            if not embeddings:
+                logger.error("Embedding function returned None or empty. Cannot store without embeddings.")
+                return False
+            
+            # 验证 embeddings 数量与文档数量一致
+            if len(embeddings) != len(documents):
+                logger.error(f"Embedding count mismatch: {len(embeddings)} embeddings for {len(documents)} documents")
+                return False
+            
+            # 存储到 ChromaDB（仅存储，不生成 embedding）
             collection.add(
                 documents=documents,
                 metadatas=metadatas,
-                ids=ids
+                ids=ids,
+                embeddings=embeddings
             )
-        
-        logger.info(f"Added {len(chunks)} chunks to vectorstore for web_data_id={web_data_id}")
-        return True
+            
+            logger.info(f"Added {len(chunks)} chunks to vectorstore for web_data_id={web_data_id}")
+            return True
+            
+        except Exception as e:
+            logger.exception(f"Failed to generate or store embeddings: {e}")
+            return False
         
     except Exception as e:
         logger.exception(f"Error adding web data to vectorstore: {e}")
@@ -203,17 +199,15 @@ def add_web_data_to_vectorstore(
 def search_similar_content(
     query: str,
     limit: int = 5,
-    filter_metadata: Dict[str, Any] = None,
-    use_embedding_api: bool = True
+    filter_metadata: Dict[str, Any] = None
 ) -> List[Dict[str, Any]]:
     """
-    搜索相似内容
+    搜索相似内容（必须使用配置的向量模型）
     
     Args:
         query: 查询文本
         limit: 返回结果数量
         filter_metadata: 元数据过滤条件
-        use_embedding_api: 是否使用配置的嵌入 API（推荐 True，与存储时保持一致）
     
     Returns:
         相似内容列表
@@ -223,36 +217,28 @@ def search_similar_content(
             logger.info("Vector storage is disabled")
             return []
         
+        # 生成查询向量（必须使用配置的嵌入模型）
+        try:
+            from utils.llm import generate_embedding
+            query_embedding = generate_embedding(query)
+            
+            if not query_embedding:
+                logger.error("Failed to generate query embedding. Cannot search without embedding model.")
+                return []
+            
+            logger.info(f"Generated query embedding (dim: {len(query_embedding)})")
+            
+        except Exception as e:
+            logger.exception(f"Failed to generate query embedding: {e}")
+            return []
+        
+        # 执行查询（使用嵌入向量）
         collection = get_collection()
-        
-        # 生成查询向量（使用配置的嵌入模型）
-        query_embedding = None
-        if use_embedding_api:
-            try:
-                from utils.llm import generate_embedding
-                query_embedding = generate_embedding(query)
-                if query_embedding:
-                    logger.info(f"Using embedding API for query (dim: {len(query_embedding)})")
-                else:
-                    logger.warning("Embedding API failed, falling back to query_texts")
-            except Exception as e:
-                logger.warning(f"Failed to use embedding API: {e}, falling back to query_texts")
-        
-        # 执行查询
-        if query_embedding:
-            # 使用嵌入向量查询
-            results = collection.query(
-                query_embeddings=[query_embedding],
-                n_results=limit,
-                where=filter_metadata
-            )
-        else:
-            # 使用文本查询（ChromaDB 默认嵌入）
-            results = collection.query(
-                query_texts=[query],
-                n_results=limit,
-                where=filter_metadata
-            )
+        results = collection.query(
+            query_embeddings=[query_embedding],
+            n_results=limit,
+            where=filter_metadata
+        )
         
         # 格式化结果
         formatted_results = []

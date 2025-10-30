@@ -65,8 +65,8 @@ ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 # 🤖 LLM 处理配置
 # ============================================================================
 LLM_TEMPERATURE = 0.7
-LLM_MAX_TOKENS = 2000  # LLM 输出的最大 token 数
-LLM_MAX_INPUT_TOKENS = 24000  # LLM 输入的最大 token 数（包括 system prompt + user prompt）
+LLM_MAX_TOKENS = 4096  # LLM 输出的最大 token 数
+LLM_MAX_INPUT_TOKENS = 8192  # LLM 输入的最大 token 数（包括 system prompt + user prompt）
 
 # 各类提示词的预估 token 数（用于动态计算）
 # 这些数值是根据实际 prompt 长度估算的

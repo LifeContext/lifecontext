@@ -198,8 +198,10 @@ def upload_web_data():
                     metadata['llm_analysis'] = llm_analysis
                     
                     # 从分析结果中提取标签（如果没有提供标签）
-                    if not tags and llm_analysis.get('keywords'):
-                        tags = llm_analysis['keywords']
+                    # 新的JSON结构中，keywords在metadata_analysis下
+                    metadata_analysis = llm_analysis.get('metadata_analysis', {})
+                    if not tags and metadata_analysis.get('keywords'):
+                        tags = metadata_analysis['keywords']
                 else:
                     logger.info("[upload_web_data] LLM analysis returned no results")
                     
@@ -253,33 +255,34 @@ def upload_web_data():
         vector_success = False
         if config.ENABLE_VECTOR_STORAGE:
             try:
-                logger.info("[upload_web_data] Adding to vector store...")
-                
-                # 准备嵌入函数（仅当有 EMBEDDING_API_KEY 时使用 OpenAI Embeddings）
-                embedding_function = None
-                if config.EMBEDDING_API_KEY:
+                # 检查是否配置了 EMBEDDING_API_KEY
+                if not config.EMBEDDING_API_KEY:
+                    logger.warning("[upload_web_data] Vector storage is enabled but EMBEDDING_API_KEY is not configured. Skipping vector storage.")
+                else:
+                    logger.info("[upload_web_data] Adding to vector store...")
+                    
+                    # 准备嵌入函数（使用配置的向量模型）
                     def embedding_function(texts):
                         embeddings = generate_embeddings(texts)
                         return embeddings if embeddings else None
-                    logger.info("[upload_web_data] Using OpenAI embeddings")
-                else:
-                    logger.info("[upload_web_data] Using ChromaDB default embeddings (sentence-transformers)")
-                
-                vector_success = add_web_data_to_vectorstore(
-                    web_data_id=web_data_id,
-                    title=title,
-                    url=url or "",
-                    content=content_str,
-                    source=source,
-                    tags=tags,
-                    metadata=metadata,
-                    embedding_function=embedding_function
-                )
-                
-                if vector_success:
-                    logger.info(f"[upload_web_data] Added to vector store successfully")
-                else:
-                    logger.warning(f"[upload_web_data] Failed to add to vector store")
+                    
+                    logger.info(f"[upload_web_data] Using configured embedding model: {config.EMBEDDING_MODEL}")
+                    
+                    vector_success = add_web_data_to_vectorstore(
+                        web_data_id=web_data_id,
+                        title=title,
+                        url=url or "",
+                        content=content_str,
+                        source=source,
+                        tags=tags,
+                        metadata=metadata,
+                        embedding_function=embedding_function
+                    )
+                    
+                    if vector_success:
+                        logger.info(f"[upload_web_data] Added to vector store successfully")
+                    else:
+                        logger.warning(f"[upload_web_data] Failed to add to vector store")
                     
             except Exception as e:
                 logger.warning(f"[upload_web_data] Vector storage failed: {e}, continuing without it")
