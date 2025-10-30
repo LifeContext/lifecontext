@@ -11,7 +11,8 @@ from utils.helpers import (
     get_logger, 
     estimate_tokens, 
     truncate_web_data_by_tokens, 
-    calculate_available_context_tokens
+    calculate_available_context_tokens,
+    parse_llm_json_response
 )
 from utils.db import get_web_data, get_activities, get_todos, insert_tip, get_tips
 from utils.llm import get_openai_client
@@ -42,33 +43,49 @@ async def generate_smart_tips(history_mins: int = 60) -> Dict[str, Any]:
         提示数据字典
     """
     try:
+        logger.info("🚀" * 30)
+        logger.info(f"开始生成智能提示 - 回溯 {history_mins} 分钟")
+        
         current_time = datetime.now()
         past_time = current_time - timedelta(minutes=history_mins)
         
         # 收集上下文
+        logger.info("第一步：收集上下文数据...")
         context_info = _assemble_context(past_time, current_time)
         
         if not context_info['has_data']:
-            logger.warning(f"No data for tip generation in last {history_mins} minutes")
+            logger.warning(f"❌ 数据不足：最近 {history_mins} 分钟内没有足够的数据生成提示")
             return {"success": False, "message": "数据不足"}
         
+        logger.info("✅ 上下文数据收集完成")
+        
         # 生成提示
+        logger.info("第二步：调用 LLM 生成提示...")
         tips_list = await _produce_tips(context_info, history_mins)
         
         if not tips_list:
+            logger.error("❌ 提示生成失败：LLM 未返回有效的提示")
             return {"success": False, "message": "提示生成失败"}
         
-        # 保存提示
-        tip_ids = []
-        for tip_item in tips_list:
-            tid = insert_tip(
-                title=tip_item['title'],
-                content=tip_item['content'],
-                tip_type=tip_item.get('type', 'smart')
-            )
-            tip_ids.append(tid)
+        logger.info(f"✅ LLM 生成了 {len(tips_list)} 个提示")
         
-        logger.info(f"Generated {len(tip_ids)} tips")
+        # 保存提示
+        logger.info("第三步：保存提示到数据库...")
+        tip_ids = []
+        for idx, tip_item in enumerate(tips_list):
+            try:
+                tid = insert_tip(
+                    title=tip_item['title'],
+                    content=tip_item['content'],
+                    tip_type=tip_item.get('type', 'smart')
+                )
+                tip_ids.append(tid)
+                logger.info(f"  ✅ Tip {idx + 1} 保存成功，ID: {tid}")
+            except Exception as e:
+                logger.error(f"  ❌ Tip {idx + 1} 保存失败: {e}")
+        
+        logger.info(f"✅ 成功保存 {len(tip_ids)} 个提示")
+        logger.info("🎉" * 30)
         
         return {
             "success": True,
@@ -76,7 +93,12 @@ async def generate_smart_tips(history_mins: int = 60) -> Dict[str, Any]:
             "tips": tips_list
         }
     except Exception as e:
-        logger.exception(f"Tip generation error: {e}")
+        logger.error("💥" * 30)
+        logger.error("❌ 智能提示生成过程中发生严重错误")
+        logger.error(f"错误类型: {type(e).__name__}")
+        logger.error(f"错误信息: {e}")
+        logger.exception("完整堆栈追踪:")
+        logger.error("💥" * 30)
         return {"success": False, "message": str(e)}
 
 
@@ -391,10 +413,11 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
         # 计算可用于 web_data 的 token 数
         available_tokens = calculate_available_context_tokens('tip', other_data_tokens)
         
-        # 使用动态截取函数处理 web_data
+        # 使用动态截取函数处理 web_data，使用 metadata 替代 content
         web_data_trimmed = truncate_web_data_by_tokens(
             context.get("web_history", []),
-            max_tokens=available_tokens
+            max_tokens=available_tokens,
+            use_metadata=True
         )
         
         context_data = {
@@ -407,89 +430,120 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
         
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
         
-        system_prompt = """你是一位专业的**网页洞察分析师 (Web Insight Analyst)**，具备**历史上下文感知能力**。
-
-你的核心职责是：深度分析用户的**当前网页浏览活动**和**相关历史上下文**，主动发现并提供用户在当前任务中可能需要但尚未知晓的补充信息、知识或资源。你的目标是通过提供**信息增益 (Information Gain)** 来扩展用户的知识边界。
-
-#### **增强分析策略 (Enhanced Analysis Strategy)**
-
-1.  **聚合主题 (Synthesize Theme)**: 分析当前时间段内的浏览记录，**聚合出一个或两个核心的活动主题**。
-2.  **历史关联 (Historical Correlation)**: **重点利用 `relevant_history` 字段**，这是通过语义搜索检索到的用户历史相关上下文。分析当前活动与历史记录的关联性，发现用户的长期兴趣、重复遇到的问题、或之前未解决的疑问。
-3.  **评估深度 (Assess Depth)**: 结合当前浏览和历史记录，判断用户对当前主题的了解深度和学习进度。
-4.  **预测下一步 (Predict Next Step)**: 基于当前主题、历史轨迹和用户深度，预测他们最有可能需要的下一步知识或遇到的问题。
-
-#### **相关历史上下文的使用 (How to Use Relevant History)**
-
-- `relevant_history` 包含通过**语义搜索**检索到的与当前活动相关的历史网页记录
-- 每条历史记录包含：标题、URL、内容预览、相似度分数
-- **关键用途**：
-  1. 识别用户的**持续关注点**（多次出现的主题）
-  2. 发现用户的**知识盲点**（反复查询但未深入的领域）
-  3. 联系用户的**学习路径**（从历史到现在的知识演进）
-  4. 提供**个性化建议**（基于用户特定的历史兴趣）
-
-#### **内容维度 (Content Dimensions)**
-
-你生成的内容 `type` 必须属于以下类别之一：
-
-* **`DEEP_DIVE`**: 对用户正在关注的核心概念，提供更深层次的解读。
-* **`RESOURCE_RECOMMENDATION`**: 推荐相关的工具、开源库、优质文章或数据集。
-* **`RISK_ANALYSIS`**: 预见用户当前方案可能遇到的技术陷阱、局限性或风险。
-* **`KNOWLEDGE_EXPANSION`**: 将当前主题与相关联的新领域或更高阶的知识联系起来。
-* **`ALTERNATIVE_PERSPECTIVE`**: 提供与用户当前思路不同的备选方案或反向观点。
-* **`HISTORICAL_CONNECTION`**: **新增**：基于历史上下文，指出用户之前关注但未深入的相关话题，或之前遇到的问题的新解决方案。
-
-#### **质量与输出要求 (Strictly Enforced)**
-
-* **高信息增益**: 必须提供用户大概率不知道的新信息。禁止常识。
-* **强相关性**: 所有内容必须与聚合出的核心主题紧密相关。
-* **历史感知**: 优先利用 `relevant_history` 生成个性化、有延续性的建议。
-* **具体可用**: 提供的信息应具体、清晰，包含链接、名称或关键术语。
-* **避免重复**: 绝不重复用户已浏览页面或历史记录的核心内容。
-* **质量优先**: 若无高价值内容，必须返回空数组 `[]`。
-* **输出格式**: 严格的 JSON 数组。
-    ```json
-    [
-      {
-        "title": "对补充内容的高度概括",
-        "content": "详细、具体的补充信息、知识或资源说明。必须使用 markdown 格式，段落分明，必须正确转义 JSON 字符串中的特殊字符（换行用 \\n，引号用 \\\"）。",
-        "type": "从`内容维度`中选择一个最合适的类型"
-      }
-    ]
-    ```
-
-**JSON 格式要求（严格遵守）：**
-1. 必须返回有效的 JSON 数组
-2. content 字段中的换行符必须使用 `\\n` 转义
-3. content 字段中的引号必须使用 `\\\"` 转义
-4. 不要在 JSON 外添加任何解释性文字
-5. 如果使用代码块包裹，使用 ```json ... ``` 格式"""
+        # 打印上下文数据统计
+        logger.info("=" * 60)
+        logger.info("开始生成 Tips")
+        logger.info(f"上下文数据统计:")
+        logger.info(f"  - activities: {len(activities)} 条")
+        logger.info(f"  - web_data: {len(web_data_trimmed)} 条")
+        logger.info(f"  - todos: {len(todos)} 条")
+        logger.info(f"  - existing_tips: {len(existing_tips)} 条")
+        logger.info(f"  - relevant_history: {len(relevant_history)} 条")
+        logger.info(f"上下文 JSON 长度: {len(context_json)} 字符")
+        logger.info(f"估算输入 tokens: ~{estimate_tokens(context_json)}")
+        logger.info("=" * 60)
         
-        user_prompt = f"""作为网页洞察分析师，请分析用户最近{history_mins}分钟的活动数据，**特别注意利用语义搜索检索到的相关历史上下文**。
+        system_prompt = """你是一位顶级的网络洞察策略师 (Principal Web Insight Strategist)。你的专长是从一系列零散的用户行为数据中，精准地聚合出核心意图，并预测用户在知识探索路径上的下一个关键"信息缺口"。
 
-**分析指令：**
+## 任务目标 (Task Goal)
 
-1. **聚合主题优先**: 分析当前网页和活动，找出用户当前的核心研究主题。
-2. **深度利用历史上下文**: **重点关注 `relevant_history` 字段**，这些是通过语义搜索找到的与当前主题相关的历史记录。分析用户的长期兴趣、学习路径和知识演进。
-3. **识别信息缺口与机会**: 
-   - 基于当前主题和历史轨迹，发现用户的知识盲点
-   - 识别用户之前关注但未深入的话题
-   - 发现用户重复遇到但未解决的问题
-4. **生成个性化建议**: 结合当前活动和历史上下文，提供有延续性、个性化的高价值建议。
-5. **避免重复**: 绝不重复当前浏览内容或历史记录的核心内容。
-6. **质量优先**: 如果没有真正高价值、高信息增益的内容，严格返回空数组 []。
+你的核心目标是分析一个时间窗口内、一系列由上一节点预处理过的网页分析报告，识别出用户在当前探索主题下的核心"信息缺口"，并生成少量（1-3个）极具价值的"Tips"。每一个Tip都必须是用户大概率不知道的、经过深度拓展的、能直接启发下一步思考或行动的增量信息。
 
-**数据上下文：**
+## 输入数据说明 (Input Data Description)
+
+你将收到一个名为`context_data`的单一JSON对象，它包含以下四个关键字段：
+
+1. **`activities`**: 一个JSON数组，记录了用户一段时间内的活动记录。
+2. **`web_data`**: 一个JSON数组，包含对每个网页的独立分析报告，这是最主要的信息来源。
+3. **`todos`**: 一个JSON数组，包含用户当前未完成的待办事项列表。
+4. **`existing_tips`**: 一个JSON数组，包含已经为用户生成过的、仍然有效的Tips列表。你的核心任务之一就是避免生成与此列表内容重复的新Tips。
+
+其中**`web_data`**是一个JSON数组。数组中的每一个对象，都是对用户单个浏览网页的预分析报告，其结构如下：
+
+```json
+{
+  "metadata_analysis": {
+    "category": "内容分类",
+    "keywords": ["关键词1", "关键词2"],
+    "topics": ["主题1"]
+  },
+  "detailed_summary": "该网页的详细摘要",
+  "potential_insights": [ { "insight_title": "一个初步的、未经拓展的洞察点" } ],
+  "actionable_tasks": [ { "task_title": "一个初步的、未经拓展的待办项" } ]
+}
+```
+
+你的任务是基于这个**分析报告的集合**进行更高层次的综合分析，而不是重新分析网页原始内容。
+
+## 执行步骤 (Execution Steps)
+
+你必须严格遵循以下五个步骤来完成任务：
+
+1. **第一步：主题聚合与意图识别。** 快速浏览所有输入报告的`metadata_analysis.keywords`, `metadata_analysis.topics`和`detailed_summary`字段，精准地识别并总结出用户在此时间段内的**核心探索主题**（例如："研究React Hooks的性能优化与最佳实践"）。
+
+2. **第二步：洞察聚类与信息缺口定位。** 收集所有报告中的`potential_insights`。将内容相似或指向同一知识点的洞察进行分组、合并。然后，基于你识别出的核心主题，判断这些聚类后的洞察点中，哪些构成了用户知识体系中最关键的**"信息缺口"**。
+
+3. **第三步：核心Tips筛选。** 从你定位出的"信息缺口"中，**精选出1到3个**对用户当前探索路径最有价值、最能推动其前进的核心点，作为你将要详细拓展的最终Tips。
+
+4. **第四步：深度内容拓展。** 针对每一个选定的Tip，参考下方的`## 内容维度`，为其选择一个最合适的`type`。然后，撰写其`content`部分。
+
+**核心要求：** `content`必须是**详细、深入、结构清晰**的。你必须使用**GitHub Flavored Markdown**来格式化内容，使其像一篇高质量的README文档。有效利用以下元素：
+    - **标题:** 使用 `##` 或 `###` 来创建内容的内部结构。
+    - **列表:** 使用 `-` 或 `1.` 来罗列要点、资源或步骤。
+    - **代码块:** 使用 \`\`\` 来展示代码示例或配置。
+    - **重点突出:** 使用 `**文字**` (加粗) 或 `*文字*` (斜体) 来强调关键概念。
+    - **链接:** 使用 `[链接文本](URL)` 来引用外部资源。
+
+5. **第五步：质量审查与格式化输出。** 对生成的所有Tips进行严格的自我审查，剔除任何与用户已浏览内容重复、宽泛或价值不高的部分。**如果经过审查后，没有任何一个Tip能达到高质量标准，你必须返回一个空数组`[]`**。最后，将所有通过审查的Tips按照`## 输出要求`中定义的JSON格式进行封装。
+
+## 内容维度 (Content Dimensions)
+
+你生成的每个Tip的`type`必须属于以下类别之一：
+
+- **`DEEP_DIVE`**: 对用户正在关注的核心概念，提供更深层次的解读（例如：解释其背后的工作原理或设计模式）。
+- **`RESOURCE_RECOMMENDATION`**: 推荐相关的工具、高质量文章、开源库或权威教程。
+- **`RISK_ANALYSIS`**: 预见用户当前方案可能遇到的技术陷阱、局限性或风险。
+- **`KNOWLEDGE_EXPANSION`**: 将当前主题与相关联的新领域或更高阶的知识联系起来（例如：学习完A，下一步可以探索B）。
+- **`ALTERNATIVE_PERSPECTIVE`**: 提供与用户当前思路不同的备选方案或反向观点，并对比优缺点。
+
+## 输出要求 (Output Requirements)
+
+你必须返回一个**纯 JSON 数组**，不要使用 markdown 代码块包裹，不要添加任何解释性文字。
+
+### JSON 结构示例:
+
+```json
+[
+  {
+    "title": "对这个Tip核心价值的高度概括，应简洁且引人注目",
+    "content": "这是Tip的详细主体内容。必须使用GitHub Flavored Markdown编写，结构清晰、内容详实，就像一篇高质量的README文档。\n\n## 二级标题\n- 列表项\n\n```python\ncode here\n```",
+    "type": "从`## 内容维度`中选择一个最合适的类型"
+  }
+]
+```
+
+### 关键要求:
+
+1. **输出格式**: 直接输出 JSON 数组，以 `[` 开始，以 `]` 结束
+2. **不要包裹**: 不要用 \`\`\`json 或 \`\`\` 包裹 JSON
+3. **不要注释**: JSON 外不要有任何解释文字
+4. **content 字段**: 是一个 JSON 字符串，包含 markdown 格式的内容
+   - markdown 中的换行用 `\n` 表示（例如：`"第一行\n第二行"`）
+   - markdown 中的引号用 `\"` 转义（例如：`"他说\"你好\""`）
+   - markdown 中的反引号（用于代码块）无需转义（例如：`"\`\`\`python\ncode\n\`\`\`"`）
+5. **空结果**: 如果没有高质量内容，返回 `[]`
+6. **数量控制**: 返回 1-3 个高质量的 tips，不要贪多"""
+        
+        user_prompt = f"""作为网络洞察策略师，请严格按照你的角色、目标和要求，分析以下由上一节点生成的网页浏览分析报告集合。
+
+**数据上下文 (预分析报告集合):**
+
 {context_json}
 
-**特别说明：**
-- `web_data`: 当前时间段的网页浏览记录
-- `activities`: 当前时间段的应用活动
-- `todos`: 待办任务
-- `existing_tips`: 已有提示（避免重复）
-- `relevant_history`: **核心数据** - 通过语义搜索检索到的相关历史上下文（包含标题、URL、内容预览、相似度分数）
-
-请按照指定的JSON格式输出分析结果："""
+请输出你的洞察分析结果。"""
+        
+        logger.info("正在调用 LLM API...")
+        logger.info(f"模型: {config.LLM_MODEL}, 温度: 0.8, max_tokens: 3000")
         
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
@@ -498,241 +552,53 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
                 {"role": "user", "content": user_prompt}
             ],
             temperature=0.8,
-            max_tokens=1000
+            max_tokens=3000  # 增大到 3000，确保返回完整的 JSON
         )
         
         result_text = response.choices[0].message.content.strip()
-        logger.info("LLM tip generation completed")
         
-        # 解析结果
-        tips = _parse_tips_json(result_text)
-        return tips
-    except Exception as e:
-        logger.exception(f"Tip production error: {e}")
-        return []
-
-
-def _parse_tips_json(text: str) -> List[Dict[str, Any]]:
-    """解析提示JSON（增强容错）"""
-    try:
-        # 记录原始返回（用于调试）
-        logger.debug(f"Raw LLM response (first 500 chars): {text[:500]}")
+        # 详细打印 LLM 返回信息
+        logger.info("=" * 60)
+        logger.info("LLM 返回完成")
+        logger.info(f"返回长度: {len(result_text)} 字符")
+        logger.info(f"开始字符: {result_text[:100] if len(result_text) > 100 else result_text}")
+        logger.info(f"结束字符: {result_text[-100:] if len(result_text) > 100 else result_text}")
+        logger.info(f"是否以 [ 开头: {result_text.startswith('[')}")
+        logger.info(f"是否以 ] 结尾: {result_text.endswith(']')}")
+        logger.info(f"是否包含代码块: {'```' in result_text}")
+        logger.info("=" * 60)
         
-        # 提取JSON
-        json_text = text
-        if "```json" in text:
-            json_text = text.split("```json")[1].split("```")[0]
-        elif "```" in text:
-            json_text = text.split("```")[1].split("```")[0]
+        # 使用通用 JSON 解析工具
+        logger.info("开始解析 JSON...")
+        tips = parse_llm_json_response(
+            result_text,
+            expected_type='array',
+            save_on_error=True,
+            error_file_prefix='failed_tip_response'
+        )
         
-        # 清理文本
-        json_text = json_text.strip()
-        
-        # 尝试解析
-        try:
-            tips = json.loads(json_text)
-        except json.JSONDecodeError as e:
-            logger.warning(f"Initial JSON parse failed: {e}")
-            # 尝试修复常见问题
-            json_text = _fix_json_string(json_text)
-            tips = json.loads(json_text)
-        
-        # 验证结果
-        if isinstance(tips, list):
+        # 打印解析结果
+        if tips is not None:
+            logger.info("=" * 60)
+            logger.info(f"✅ JSON 解析成功！生成了 {len(tips)} 个 tips")
+            for idx, tip in enumerate(tips):
+                logger.info(f"  Tip {idx + 1}:")
+                logger.info(f"    - title: {tip.get('title', 'N/A')[:50]}...")
+                logger.info(f"    - type: {tip.get('type', 'N/A')}")
+                logger.info(f"    - content 长度: {len(tip.get('content', ''))} 字符")
+            logger.info("=" * 60)
             return tips
-        elif isinstance(tips, dict) and 'tips' in tips:
-            return tips['tips']
         else:
-            logger.warning(f"Unexpected JSON structure: {type(tips)}")
+            logger.error("=" * 60)
+            logger.error("❌ JSON 解析失败，返回 None")
+            logger.error("请检查以上日志中的 LLM 返回内容")
+            logger.error("=" * 60)
             return []
-            
-    except json.JSONDecodeError as e:
-        logger.error(f"JSON parse error: {e}")
-        logger.error(f"Failed JSON text (first 1000 chars): {text[:1000]}")
-        
-        # 保存失败的响应到文件用于调试
-        try:
-            import os
-            debug_file = os.path.join(config.DATA_DIR, "failed_tip_response.txt")
-            with open(debug_file, 'w', encoding='utf-8') as f:
-                f.write("=== Failed LLM Response ===\n")
-                f.write(f"Error: {e}\n")
-                f.write("=== Full Response ===\n")
-                f.write(text)
-            logger.info(f"Failed response saved to: {debug_file}")
-        except Exception as save_error:
-            logger.warning(f"Could not save failed response: {save_error}")
-        
-        return []
     except Exception as e:
-        logger.exception(f"Unexpected error parsing tips: {e}")
+        logger.error("=" * 60)
+        logger.error("❌ Tip 生成过程中发生错误")
+        logger.error(f"错误类型: {type(e).__name__}")
+        logger.error(f"错误信息: {e}")
+        logger.exception("完整堆栈追踪:")
+        logger.error("=" * 60)
         return []
-
-
-def _fix_json_string(text: str) -> str:
-    """
-    尝试修复常见的JSON格式问题
-    
-    Args:
-        text: 原始JSON文本
-    
-    Returns:
-        修复后的JSON文本
-    """
-    try:
-        import re
-        
-        # 移除可能的 BOM 标记
-        text = text.replace('\ufeff', '')
-        
-        # 替换全角引号为半角引号
-        text = text.replace('"', '"').replace('"', '"')
-        text = text.replace(''', "'").replace(''', "'")
-        
-        # 移除控制字符（保留换行符和制表符）
-        text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
-        
-        # 尝试找到数组的开始和结束
-        if '[' in text and ']' in text:
-            start = text.find('[')
-            end = text.rfind(']') + 1
-            text = text[start:end]
-        
-        # 修复策略：逐个对象处理
-        fixed_objects = []
-        
-        # 分割成独立的对象（简单的基于 { } 的分割）
-        objects = _extract_json_objects(text)
-        
-        for obj_text in objects:
-            try:
-                # 尝试修复单个对象
-                fixed_obj = _fix_single_object(obj_text)
-                fixed_objects.append(fixed_obj)
-            except Exception as e:
-                logger.warning(f"Failed to fix object: {e}")
-                continue
-        
-        if fixed_objects:
-            result = '[' + ','.join(fixed_objects) + ']'
-            logger.info(f"Applied JSON fixes, recovered {len(fixed_objects)} objects")
-            return result
-        else:
-            logger.warning("No objects could be recovered")
-            return text
-        
-    except Exception as e:
-        logger.warning(f"Error fixing JSON: {e}")
-        return text
-
-
-def _extract_json_objects(text: str) -> List[str]:
-    """
-    从 JSON 数组文本中提取独立的对象
-    
-    Args:
-        text: JSON 数组文本
-    
-    Returns:
-        对象文本列表
-    """
-    import re
-    
-    objects = []
-    depth = 0
-    current_obj = []
-    in_string = False
-    escape_next = False
-    
-    for i, char in enumerate(text):
-        if escape_next:
-            current_obj.append(char)
-            escape_next = False
-            continue
-            
-        if char == '\\':
-            escape_next = True
-            current_obj.append(char)
-            continue
-        
-        if char == '"' and not escape_next:
-            in_string = not in_string
-            current_obj.append(char)
-            continue
-        
-        if not in_string:
-            if char == '{':
-                if depth == 0:
-                    current_obj = [char]
-                else:
-                    current_obj.append(char)
-                depth += 1
-            elif char == '}':
-                depth -= 1
-                current_obj.append(char)
-                if depth == 0 and current_obj:
-                    objects.append(''.join(current_obj))
-                    current_obj = []
-            elif depth > 0:
-                current_obj.append(char)
-        else:
-            current_obj.append(char)
-    
-    return objects
-
-
-def _fix_single_object(obj_text: str) -> str:
-    """
-    修复单个 JSON 对象
-    
-    Args:
-        obj_text: 对象文本
-    
-    Returns:
-        修复后的对象文本
-    """
-    import re
-    import json
-    
-    # 尝试直接解析
-    try:
-        json.loads(obj_text)
-        return obj_text  # 已经是有效的 JSON
-    except:
-        pass
-    
-    # 提取字段
-    title_match = re.search(r'"title"\s*:\s*"([^"]*)"', obj_text)
-    type_match = re.search(r'"type"\s*:\s*"([^"]*)"', obj_text)
-    
-    # 提取 content（可能包含换行和引号）
-    content_match = re.search(r'"content"\s*:\s*"(.*?)"\s*,?\s*"type"', obj_text, re.DOTALL)
-    if not content_match:
-        # 尝试匹配到对象结尾
-        content_match = re.search(r'"content"\s*:\s*"(.*?)"\s*}', obj_text, re.DOTALL)
-    
-    if title_match and content_match:
-        title = title_match.group(1)
-        content = content_match.group(1)
-        type_val = type_match.group(1) if type_match else "RESOURCE_RECOMMENDATION"
-        
-        # 清理和转义 content
-        # 将 \" 替换为实际引号，然后统一转义
-        content = content.replace('\\"', '"')  # 先去掉 LLM 的转义
-        content = content.replace('\\n', '\n')  # 将 \n 转为实际换行
-        
-        # 使用 json.dumps 自动处理所有转义
-        content_escaped = json.dumps(content)[1:-1]  # 移除首尾引号
-        
-        # 重构对象
-        fixed = f'{{"title": "{title}", "content": "{content_escaped}", "type": "{type_val}"}}'
-        
-        # 验证
-        try:
-            json.loads(fixed)
-            return fixed
-        except:
-            logger.warning(f"Fixed object still invalid: {fixed[:100]}...")
-            return obj_text
-    
-    return obj_text
