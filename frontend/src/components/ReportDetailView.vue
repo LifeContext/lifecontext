@@ -39,7 +39,7 @@
             Daily Summary
           </h2>
           <div class="rounded-xl p-6 shadow-sm">
-            <div class="prose prose-sm max-w-none dark:prose-invert text-slate-700 dark:text-slate-300 markdown-content" v-html="renderedContent"></div>
+            <div class="markdown-content" v-html="renderedContent"></div>
           </div>
         </section>
       </div>
@@ -73,6 +73,15 @@ const formatDateTime = (dateTime: string): string => {
   return dateTime;
 };
 
+const normalizeMarkdown = (raw: string): string => {
+  if (!raw) return '';
+  // 处理 Windows 风格与通用的转义换行
+  let text = raw.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
+  // 去除可能的多余回车符
+  text = text.replace(/\r/g, '');
+  return text;
+};
+
 interface Props {
   reports: DailyReport[];
   selectedReport: DailyReport | null;
@@ -91,7 +100,14 @@ const canGoNext = computed(() => currentIndex.value < props.reports.length - 1);
 // 将Markdown内容转换为HTML
 const renderedContent = computed(() => {
   if (!props.selectedReport?.content) return '';
-  return marked(props.selectedReport.content);
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+    headerIds: false,
+    mangle: false
+  });
+  const normalized = normalizeMarkdown(props.selectedReport.content);
+  return marked(normalized);
 });
 
 // 滚动状态管理
@@ -195,7 +211,7 @@ main:hover::-webkit-scrollbar-thumb {
 }
 
 /* Markdown内容样式 */
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+:deep(.prose h1), :deep(.prose h2), :deep(.prose h3), :deep(.prose h4), :deep(.prose h5), :deep(.prose h6) {
   color: rgb(15 23 42);
   font-weight: 600;
   line-height: 1.25;
@@ -203,41 +219,68 @@ main:hover::-webkit-scrollbar-thumb {
   margin-bottom: 0.5em;
 }
 
-.dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose h4, .dark .prose h5, .dark .prose h6 {
-  color: rgb(241 245 249);
+:global(.dark) .markdown-content h1,
+:global(.dark) .markdown-content h2,
+:global(.dark) .markdown-content h3,
+:global(.dark) .markdown-content h4,
+:global(.dark) .markdown-content h5,
+:global(.dark) .markdown-content h6 {
+  color: rgb(241 245 249) !important;
 }
 
-.prose h1 {
+:global(.dark) .markdown-content {
+  color: rgb(226 232 240) !important;
+}
+
+:global(.dark) .markdown-content {
+  --tw-prose-body: 226 232 240;
+  --tw-prose-headings: 241 245 249;
+  --tw-prose-links: 241 245 249;
+  --tw-prose-bold: 241 245 249;
+  --tw-prose-counters: 203 213 225;
+  --tw-prose-bullets: 203 213 225;
+  --tw-prose-hr: 51 65 85;
+  --tw-prose-quotes: 226 232 240;
+  --tw-prose-quote-borders: 96 165 250;
+  --tw-prose-captions: 203 213 225;
+  --tw-prose-code: 241 245 249;
+  --tw-prose-pre-code: 226 232 240;
+  --tw-prose-pre-bg: 30 41 59;
+  --tw-prose-th-borders: 51 65 85;
+  --tw-prose-td-borders: 51 65 85;
+}
+
+:deep(.prose h1) {
   font-size: 1.875em;
   margin-top: 0;
 }
 
-.prose h2 {
+:deep(.prose h2) {
   font-size: 1.5em;
 }
 
-.prose h3 {
+:deep(.prose h3) {
   font-size: 1.25em;
 }
 
-.prose p {
+:deep(.prose p) {
   margin-top: 1em;
   margin-bottom: 1em;
   line-height: 1.7;
 }
 
-.prose ul, .prose ol {
+:deep(.prose ul), :deep(.prose ol) {
   margin-top: 1em;
   margin-bottom: 1em;
   padding-left: 1.5em;
 }
 
-.prose li {
+:deep(.prose li) {
   margin-top: 0.5em;
   margin-bottom: 0.5em;
 }
 
-.prose blockquote {
+:deep(.prose blockquote) {
   border-left: 4px solid rgb(59 130 246);
   padding-left: 1em;
   margin: 1.5em 0;
@@ -245,12 +288,12 @@ main:hover::-webkit-scrollbar-thumb {
   color: rgb(71 85 105);
 }
 
-.dark .prose blockquote {
+:deep(.dark .prose blockquote) {
   color: rgb(148 163 184);
   border-left-color: rgb(96 165 250);
 }
 
-.prose code {
+:deep(.prose code) {
   background-color: rgb(241 245 249);
   padding: 0.125em 0.25em;
   border-radius: 0.25em;
@@ -258,12 +301,12 @@ main:hover::-webkit-scrollbar-thumb {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-.dark .prose code {
+:deep(.dark .prose code) {
   background-color: rgb(30 41 59);
   color: rgb(241 245 249);
 }
 
-.prose pre {
+:deep(.prose pre) {
   background-color: rgb(241 245 249);
   border-radius: 0.5em;
   padding: 1em;
@@ -271,117 +314,124 @@ main:hover::-webkit-scrollbar-thumb {
   margin: 1.5em 0;
 }
 
-.dark .prose pre {
+:deep(.dark .prose pre) {
   background-color: rgb(30 41 59);
 }
 
-.prose pre code {
+:deep(.prose pre code) {
   background-color: transparent;
   padding: 0;
   font-size: 0.875em;
 }
 
-.prose a {
+:deep(.prose a) {
   color: rgb(59 130 246);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.prose a:hover {
+:deep(.prose a:hover) {
   color: rgb(37 99 235);
 }
 
-.dark .prose a {
+:deep(.dark .prose a) {
   color: rgb(96 165 250);
 }
 
-.dark .prose a:hover {
+:deep(.dark .prose a:hover) {
   color: rgb(147 197 253);
 }
 
-.prose table {
+:deep(.prose table) {
   width: 100%;
   border-collapse: collapse;
   margin: 1.5em 0;
 }
 
-.prose th, .prose td {
+:deep(.prose th), :deep(.prose td) {
   border: 1px solid rgb(226 232 240);
   padding: 0.5em 0.75em;
   text-align: left;
 }
 
-.dark .prose th, .dark .prose td {
+:deep(.dark .prose th), :deep(.dark .prose td) {
   border-color: rgb(51 65 85);
 }
 
-.prose th {
+:deep(.prose th) {
   background-color: rgb(248 250 252);
   font-weight: 600;
 }
 
-.dark .prose th {
+:deep(.dark .prose th) {
   background-color: rgb(30 41 59);
 }
 
-.prose hr {
+:deep(.prose hr) {
   border: none;
   border-top: 1px solid rgb(226 232 240);
   margin: 2em 0;
 }
 
-.dark .prose hr {
+:deep(.dark .prose hr) {
   border-top-color: rgb(51 65 85);
 }
 
-.prose img {
+:deep(.prose img) {
   max-width: 100%;
   height: auto;
   border-radius: 0.5em;
   margin: 1em 0;
 }
 
-.markdown-content {
-  line-height: 1.7;
+:deep(.markdown-content) {
+  line-height: 1.8;
+  font-size: 16px;
 }
 
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3,
-.markdown-content h4,
-.markdown-content h5,
-.markdown-content h6 {
+:deep(.markdown-content h1),
+:deep(.markdown-content h2),
+:deep(.markdown-content h3),
+:deep(.markdown-content h4),
+:deep(.markdown-content h5),
+:deep(.markdown-content h6) {
   margin-top: 1.5em;
   margin-bottom: 0.5em;
-  font-weight: 600;
+  font-weight: 700;
 }
 
-.markdown-content p {
+:deep(.markdown-content h1) { font-size: 1.875rem; }
+:deep(.markdown-content h2) { font-size: 1.5rem; }
+:deep(.markdown-content h3) { font-size: 1.25rem; }
+:deep(.markdown-content h4) { font-size: 1.125rem; }
+
+:deep(.markdown-content p) {
   margin-bottom: 1em;
+  padding-left: 1.5rem;
 }
 
-.markdown-content ul,
-.markdown-content ol {
+:deep(.markdown-content ul),
+:deep(.markdown-content ol) {
   margin-bottom: 1em;
   padding-left: 1.5em;
 }
 
-.markdown-content li {
+:deep(.markdown-content li) {
   margin-bottom: 0.25em;
 }
 
-.markdown-content code {
+:deep(.markdown-content code) {
   background-color: rgba(0, 0, 0, 0.1);
   padding: 0.125em 0.25em;
   border-radius: 0.25em;
   font-size: 0.875em;
 }
 
-.dark .markdown-content code {
+:deep(.dark .markdown-content code) {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-.markdown-content pre {
+:deep(.markdown-content pre) {
   background-color: rgba(0, 0, 0, 0.05);
   padding: 1em;
   border-radius: 0.5em;
@@ -389,22 +439,35 @@ main:hover::-webkit-scrollbar-thumb {
   margin: 1em 0;
 }
 
-.dark .markdown-content pre {
+:deep(.dark .markdown-content pre) {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.markdown-content blockquote {
+:deep(.markdown-content blockquote) {
   border-left: 4px solid #3b82f6;
   padding-left: 1em;
   margin: 1em 0;
   font-style: italic;
 }
 
-.markdown-content strong {
-  font-weight: 600;
+:deep(.markdown-content strong) {
+  font-weight: 700;
 }
 
-.markdown-content em {
+:deep(.markdown-content em) {
   font-style: italic;
+}
+</style>
+
+<style>
+.dark .markdown-content {
+  --tw-prose-body: 226 232 240;
+  --tw-prose-headings: 255 255 255;
+  --tw-prose-links: 255 255 255;
+  --tw-prose-bold: 255 255 255;
+}
+
+.dark .markdown-content :where(h1,h2,h3,h4,h5,h6) {
+  color: #ffffff !important;
 }
 </style>

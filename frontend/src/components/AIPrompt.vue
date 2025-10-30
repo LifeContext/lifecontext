@@ -30,7 +30,7 @@
     </div>
     
     <!-- Tips列表 -->
-    <div v-else class="grid tips-grid gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto">
+    <div v-else ref="tipsScroll" :class="['grid tips-grid gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto', { scrolling: isScrollingTips }]">
       <div 
         v-for="tip in tips" 
         :key="tip.id"
@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, defineProps } from 'vue';
+import { ref, onMounted, onUnmounted, defineProps } from 'vue';
 import { marked } from 'marked';
 import { tipService } from '../api/tipService';
 import type { Tip, TipCategory } from '../../types';
@@ -163,7 +163,22 @@ const formatTimeAgo = (dateString: string): string => {
 // 组件挂载时加载数据
 onMounted(() => {
   loadTips();
+  if (tipsScroll.value) tipsScroll.value.addEventListener('scroll', handleTipsScroll);
 });
+
+onUnmounted(() => {
+  if (tipsScroll.value) tipsScroll.value.removeEventListener('scroll', handleTipsScroll);
+  if (tipsScrollTimer) window.clearTimeout(tipsScrollTimer);
+});
+
+const tipsScroll = ref<HTMLElement | null>(null);
+const isScrollingTips = ref(false);
+let tipsScrollTimer: number | undefined;
+const handleTipsScroll = () => {
+  isScrollingTips.value = true;
+  if (tipsScrollTimer) window.clearTimeout(tipsScrollTimer);
+  tipsScrollTimer = window.setTimeout(() => (isScrollingTips.value = false), 600);
+};
 </script>
 
 <style scoped>
@@ -180,10 +195,18 @@ onMounted(() => {
 .overflow-y-auto::-webkit-scrollbar-thumb {
   background: rgba(0, 0, 0, 0.2);
   border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.2s ease;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgba(0, 0, 0, 0.3);
+}
+
+/* 悬停或滚动时显示滚动条 */
+.overflow-y-auto:hover::-webkit-scrollbar-thumb,
+.overflow-y-auto.scrolling::-webkit-scrollbar-thumb {
+  opacity: 1;
 }
 
 .dark .overflow-y-auto::-webkit-scrollbar-track {
@@ -197,6 +220,10 @@ onMounted(() => {
 .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+.overflow-y-auto { scrollbar-width: none; }
+.overflow-y-auto:hover,
+.overflow-y-auto.scrolling { scrollbar-width: thin; }
 
 /* 卡片样式 */
 .tip-card {
@@ -231,7 +258,6 @@ onMounted(() => {
     0 10px 30px rgba(0, 0, 0, 0.08),
     0 4px 12px rgba(0, 0, 0, 0.04);
   border-color: rgba(59, 130, 246, 0.2);
-  background-color: rgba(255, 255, 255, 0.95);
 }
 
 .tip-card:hover h3 {
