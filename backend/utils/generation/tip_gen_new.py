@@ -443,117 +443,90 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
         logger.info(f"估算输入 tokens: ~{estimate_tokens(context_json)}")
         logger.info("=" * 60)
         
-        system_prompt = """你是一位顶级的网络洞察策略师 (Principal Web Insight Strategist)。你的专长是从一系列零散的用户行为数据中，精准地聚合出核心意图，并预测用户在知识探索路径上的下一个关键"信息缺口"。
+        system_prompt = """你是一个智能提示生成助手，任务是生成1-3个有价值的Tips（建议）。
 
-## 任务目标 (Task Goal)
+## 核心任务
+分析用户的网页浏览记录、活动记录和待办事项，识别用户的兴趣主题和知识缺口，生成有价值的建议。
 
-你的核心目标是分析一个时间窗口内、一系列由上一节点预处理过的网页分析报告，识别出用户在当前探索主题下的核心"信息缺口"，并生成少量（1-3个）极具价值的"Tips"。每一个Tip都必须是用户大概率不知道的、经过深度拓展的、能直接启发下一步思考或行动的增量信息。
+## 输入数据说明
+你会收到JSON对象，包含：
+- `activities`: 用户活动记录
+- `web_data`: 网页分析报告（包含metadata_analysis、detailed_summary等字段）
+- `todos`: 待办事项
+- `existing_tips`: 已生成的提示（避免重复）
+- `relevant_history`: 相关的历史上下文
 
-## 输入数据说明 (Input Data Description)
+## Tips类型
+每个tip的`type`必须是以下之一：
+- `DEEP_DIVE`: 深入解析核心概念
+- `RESOURCE_RECOMMENDATION`: 推荐工具、文章、教程等资源
+- `RISK_ANALYSIS`: 指出潜在风险或陷阱
+- `KNOWLEDGE_EXPANSION`: 关联新知识领域
+- `ALTERNATIVE_PERSPECTIVE`: 提供替代方案或不同视角
 
-你将收到一个名为`context_data`的单一JSON对象，它包含以下四个关键字段：
+## 内容要求
+- `title`: 简短精炼的标题（10-30字）
+- `content`: 使用Markdown格式的详细内容，包含标题、列表、代码块等
+- 内容应深入、有价值，避免泛泛而谈
+- 避免与existing_tips重复
+- ⚠️ 数学公式使用普通文本或代码块，不要使用LaTeX语法（如\\[、\\frac等）
 
-1. **`activities`**: 一个JSON数组，记录了用户一段时间内的活动记录。
-2. **`web_data`**: 一个JSON数组，包含对每个网页的独立分析报告，这是最主要的信息来源。
-3. **`todos`**: 一个JSON数组，包含用户当前未完成的待办事项列表。
-4. **`existing_tips`**: 一个JSON数组，包含已经为用户生成过的、仍然有效的Tips列表。你的核心任务之一就是避免生成与此列表内容重复的新Tips。
+## ⚠️ 输出格式（极其重要）
+直接返回JSON对象，包含一个tips数组。
 
-其中**`web_data`**是一个JSON数组。数组中的每一个对象，都是对用户单个浏览网页的预分析报告，其结构如下：
-
-```json
+✅ 正确格式：
 {
-  "metadata_analysis": {
-    "category": "内容分类",
-    "keywords": ["关键词1", "关键词2"],
-    "topics": ["主题1"]
-  },
-  "detailed_summary": "该网页的详细摘要",
-  "potential_insights": [ { "insight_title": "一个初步的、未经拓展的洞察点" } ],
-  "actionable_tasks": [ { "task_title": "一个初步的、未经拓展的待办项" } ]
+  "tips": [
+    {
+      "title": "React Hooks性能优化关键技巧",
+      "content": "## 核心优化策略\n\n### 1. 使用useMemo和useCallback\n\n这两个Hook可以避免不必要的重新计算和重新渲染...\n\n```javascript\nconst memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);\n```",
+      "type": "DEEP_DIVE"
+    }
+  ]
 }
-```
 
-你的任务是基于这个**分析报告的集合**进行更高层次的综合分析，而不是重新分析网页原始内容。
+❌ 错误格式（千万不要这样）：
+- 不要用```json包裹JSON
+- 不要添加任何解释文字
+- 不要返回Markdown分析文章
+- 不要返回技术报告
 
-## 执行步骤 (Execution Steps)
+如果没有合适的提示，返回空tips数组: {"tips": []}
 
-你必须严格遵循以下五个步骤来完成任务：
-
-1. **第一步：主题聚合与意图识别。** 快速浏览所有输入报告的`metadata_analysis.keywords`, `metadata_analysis.topics`和`detailed_summary`字段，精准地识别并总结出用户在此时间段内的**核心探索主题**（例如："研究React Hooks的性能优化与最佳实践"）。
-
-2. **第二步：洞察聚类与信息缺口定位。** 收集所有报告中的`potential_insights`。将内容相似或指向同一知识点的洞察进行分组、合并。然后，基于你识别出的核心主题，判断这些聚类后的洞察点中，哪些构成了用户知识体系中最关键的**"信息缺口"**。
-
-3. **第三步：核心Tips筛选。** 从你定位出的"信息缺口"中，**精选出1到3个**对用户当前探索路径最有价值、最能推动其前进的核心点，作为你将要详细拓展的最终Tips。
-
-4. **第四步：深度内容拓展。** 针对每一个选定的Tip，参考下方的`## 内容维度`，为其选择一个最合适的`type`。然后，撰写其`content`部分。
-
-**核心要求：** `content`必须是**详细、深入、结构清晰**的。你必须使用**GitHub Flavored Markdown**来格式化内容，使其像一篇高质量的README文档。有效利用以下元素：
-    - **标题:** 使用 `##` 或 `###` 来创建内容的内部结构。
-    - **列表:** 使用 `-` 或 `1.` 来罗列要点、资源或步骤。
-    - **代码块:** 使用 \`\`\` 来展示代码示例或配置。
-    - **重点突出:** 使用 `**文字**` (加粗) 或 `*文字*` (斜体) 来强调关键概念。
-    - **链接:** 使用 `[链接文本](URL)` 来引用外部资源。
-
-5. **第五步：质量审查与格式化输出。** 对生成的所有Tips进行严格的自我审查，剔除任何与用户已浏览内容重复、宽泛或价值不高的部分。**如果经过审查后，没有任何一个Tip能达到高质量标准，你必须返回一个空数组`[]`**。最后，将所有通过审查的Tips按照`## 输出要求`中定义的JSON格式进行封装。
-
-## 内容维度 (Content Dimensions)
-
-你生成的每个Tip的`type`必须属于以下类别之一：
-
-- **`DEEP_DIVE`**: 对用户正在关注的核心概念，提供更深层次的解读（例如：解释其背后的工作原理或设计模式）。
-- **`RESOURCE_RECOMMENDATION`**: 推荐相关的工具、高质量文章、开源库或权威教程。
-- **`RISK_ANALYSIS`**: 预见用户当前方案可能遇到的技术陷阱、局限性或风险。
-- **`KNOWLEDGE_EXPANSION`**: 将当前主题与相关联的新领域或更高阶的知识联系起来（例如：学习完A，下一步可以探索B）。
-- **`ALTERNATIVE_PERSPECTIVE`**: 提供与用户当前思路不同的备选方案或反向观点，并对比优缺点。
-
-## 输出要求 (Output Requirements)
-
-你必须返回一个**纯 JSON 数组**，不要使用 markdown 代码块包裹，不要添加任何解释性文字。
-
-### JSON 结构示例:
-
-```json
-[
-  {
-    "title": "对这个Tip核心价值的高度概括，应简洁且引人注目",
-    "content": "这是Tip的详细主体内容。必须使用GitHub Flavored Markdown编写，结构清晰、内容详实，就像一篇高质量的README文档。\n\n## 二级标题\n- 列表项\n\n```python\ncode here\n```",
-    "type": "从`## 内容维度`中选择一个最合适的类型"
-  }
-]
-```
-
-### 关键要求:
-
-1. **输出格式**: 直接输出 JSON 数组，以 `[` 开始，以 `]` 结束
-2. **不要包裹**: 不要用 \`\`\`json 或 \`\`\` 包裹 JSON
-3. **不要注释**: JSON 外不要有任何解释文字
-4. **content 字段**: 是一个 JSON 字符串，包含 markdown 格式的内容
-   - markdown 中的换行用 `\n` 表示（例如：`"第一行\n第二行"`）
-   - markdown 中的引号用 `\"` 转义（例如：`"他说\"你好\""`）
-   - markdown 中的反引号（用于代码块）无需转义（例如：`"\`\`\`python\ncode\n\`\`\`"`）
-5. **空结果**: 如果没有高质量内容，返回 `[]`
-6. **数量控制**: 返回 1-3 个高质量的 tips，不要贪多"""
+记住：返回JSON对象，包含tips数组！"""
         
-        user_prompt = f"""作为网络洞察策略师，请严格按照你的角色、目标和要求，分析以下由上一节点生成的网页浏览分析报告集合。
+        user_prompt = f"""请分析以下用户行为数据，生成1-3个有价值的Tips。
 
-**数据上下文 (预分析报告集合):**
+**上下文数据:**
 
 {context_json}
 
-请输出你的洞察分析结果。"""
+⚠️ 重要提醒：直接返回JSON对象，格式为 {{"tips": [{{"title": "...", "content": "...", "type": "..."}}]}}，不要添加任何其他文字或代码块标记。"""
         
         logger.info("正在调用 LLM API...")
-        logger.info(f"模型: {config.LLM_MODEL}, 温度: 0.8, max_tokens: 3000")
+        logger.info(f"模型: {config.LLM_MODEL}, 温度: 0.3, max_tokens: 8196")
         
-        response = client.chat.completions.create(
-            model=config.LLM_MODEL,
-            messages=[
+        # 构建请求参数
+        request_params = {
+            "model": config.LLM_MODEL,
+            "messages": [
                 {"role": "system", "content": system_prompt},
                 {"role": "user", "content": user_prompt}
             ],
-            temperature=0.8,
-            max_tokens=3000  # 增大到 3000，确保返回完整的 JSON
-        )
+            "temperature": 0.3,  # 降低温度以获得更稳定的JSON输出
+            "max_tokens": 8196
+        }
+        
+        # 尝试启用JSON mode（如果模型支持）
+        try:
+            # OpenAI的gpt-4-turbo-preview和gpt-3.5-turbo-1106及以后版本支持JSON mode
+            if config.LLM_MODEL and ('gpt-4' in config.LLM_MODEL or 'gpt-3.5' in config.LLM_MODEL):
+                request_params["response_format"] = {"type": "json_object"}
+                logger.info("✅ 已启用JSON mode")
+        except Exception as e:
+            logger.debug(f"JSON mode不可用: {e}")
+        
+        response = client.chat.completions.create(**request_params)
         
         result_text = response.choices[0].message.content.strip()
         
@@ -563,22 +536,23 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
         logger.info(f"返回长度: {len(result_text)} 字符")
         logger.info(f"开始字符: {result_text[:100] if len(result_text) > 100 else result_text}")
         logger.info(f"结束字符: {result_text[-100:] if len(result_text) > 100 else result_text}")
-        logger.info(f"是否以 [ 开头: {result_text.startswith('[')}")
-        logger.info(f"是否以 ] 结尾: {result_text.endswith(']')}")
+        logger.info(f"是否以 {{ 开头: {result_text.startswith('{')}")
+        logger.info(f"是否以 }} 结尾: {result_text.endswith('}')}")
         logger.info(f"是否包含代码块: {'```' in result_text}")
         logger.info("=" * 60)
         
         # 使用通用 JSON 解析工具
         logger.info("开始解析 JSON...")
-        tips = parse_llm_json_response(
+        result = parse_llm_json_response(
             result_text,
-            expected_type='array',
+            expected_type='object',  # 现在期望返回对象
             save_on_error=True,
             error_file_prefix='failed_tip_response'
         )
         
-        # 打印解析结果
-        if tips is not None:
+        # 提取tips数组
+        if result is not None:
+            tips = result.get('tips', [])
             logger.info("=" * 60)
             logger.info(f"✅ JSON 解析成功！生成了 {len(tips)} 个 tips")
             for idx, tip in enumerate(tips):

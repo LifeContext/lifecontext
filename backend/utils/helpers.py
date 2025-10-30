@@ -587,6 +587,56 @@ def _process_parsed_data(
         return parsed_data
 
 
+def _fix_latex_escapes_in_json(text: str) -> str:
+    """
+    修复JSON字符串中的LaTeX转义字符
+    将无效的LaTeX转义序列（如\[, \frac, \times）转换为有效的JSON转义序列
+    
+    Args:
+        text: 原始JSON文本
+    
+    Returns:
+        修复后的JSON文本
+    """
+    import re
+    
+    logger = get_logger(__name__)
+    
+    try:
+        # 策略：逐个字符扫描，智能处理反斜杠
+        result = []
+        i = 0
+        while i < len(text):
+            if text[i] == '\\' and i + 1 < len(text):
+                next_char = text[i + 1]
+                
+                # 合法的JSON转义字符
+                valid_escapes = ['n', 't', 'r', '"', '\\', '/', 'b', 'f', 'u']
+                
+                if next_char in valid_escapes:
+                    # 有效的转义序列，保持不变
+                    result.append('\\')
+                    result.append(next_char)
+                    i += 2
+                else:
+                    # 无效的转义序列（如\[, \frac），需要转义反斜杠
+                    result.append('\\\\')  # 添加额外的反斜杠
+                    result.append(next_char)
+                    i += 2
+            else:
+                # 普通字符，直接添加
+                result.append(text[i])
+                i += 1
+        
+        fixed_text = ''.join(result)
+        logger.debug("[LaTeX修复] 已修复LaTeX转义字符")
+        return fixed_text
+        
+    except Exception as e:
+        logger.warning(f"[LaTeX修复] 修复LaTeX转义字符时发生错误: {e}")
+        return text
+
+
 def _fix_json_string(text: str) -> str:
     """
     尝试修复常见的 JSON 格式问题（增强版）
@@ -614,6 +664,9 @@ def _fix_json_string(text: str) -> str:
         
         # 移除控制字符（保留换行符、制表符和回车符）
         text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+        
+        # 修复LaTeX转义字符（在JSON字符串中是无效的）
+        text = _fix_latex_escapes_in_json(text)
         
         # 第二步：检测JSON结构类型
         text = text.strip()
