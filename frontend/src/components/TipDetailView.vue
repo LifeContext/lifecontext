@@ -32,13 +32,10 @@
       
       <div class="flex-1 flex flex-col">
         <header class="mb-8">
-<<<<<<< HEAD
-           <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">{{ props.selectedTip.title }}</h1>
-           <p class="text-lg text-slate-500 dark:text-slate-400">{{ formatTimeAgo(props.selectedTip.create_time) }}</p>
-=======
+
           <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">{{ selectedTip.title }}</h1>
           <p class="text-lg text-slate-500 dark:text-slate-400">{{ formatDateTime(selectedTip.create_time) }}</p>
->>>>>>> 8d39dc0 (Extension update)
+
         </header>
         
         <div class="flex-1 bg-white dark:bg-slate-700 rounded-2xl p-8 shadow-inner">
