@@ -76,10 +76,6 @@ const formatDateTime = (dateTime: string): string => {
   }
   return dateTime;
 };
-<<<<<<< Updated upstream
-=======
-
->>>>>>> Stashed changes
 // Markdown 渲染
 const renderedContent = computed(() => {
   if (!props.selectedTip?.content) return '';
