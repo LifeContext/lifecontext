@@ -44,11 +44,7 @@
               <Icon path="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" class="h-6 w-6 text-yellow-400" />
               <span>Tip Content</span>
             </h2>
-<<<<<<< HEAD
-            <div class="prose prose-lg max-w-7xl mx-auto dark:prose-invert text-slate-700 dark:text-slate-300 markdown-content h-full">
-=======
             <div class="prose prose-lg max-w-none dark:prose-invert text-slate-700 dark:text-slate-300 markdown-content h-full">
->>>>>>> 8d39dc0 (Extension update)
               <div v-html="renderedContent"></div>
             </div>
           </section>
@@ -73,8 +69,6 @@ interface Props {
 
 const props = defineProps<Props>();
 
-<<<<<<< HEAD
-=======
 const formatDateTime = (dateTime: string): string => {
   if (!dateTime) return '';
   if (dateTime.includes('.')) {
@@ -82,8 +76,6 @@ const formatDateTime = (dateTime: string): string => {
   }
   return dateTime;
 };
-
->>>>>>> 8d39dc0 (Extension update)
 // Markdown 渲染
 const renderedContent = computed(() => {
   if (!props.selectedTip?.content) return '';
@@ -210,10 +202,7 @@ main::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-<<<<<<< HEAD
-=======
 /* 确保内容区域有足够的高度 */
->>>>>>> 8d39dc0 (Extension update)
 main {
   height: calc(100vh - 2rem);
   max-height: calc(100vh - 2rem);
@@ -229,11 +218,7 @@ aside {
 }
 
 aside nav {
-<<<<<<< HEAD
-  height: calc(100vh - 8rem);
-=======
   height: calc(100vh - 8rem); /* 减去标题和padding的高度 */
->>>>>>> 8d39dc0 (Extension update)
   max-height: calc(100vh - 8rem);
 }
 
@@ -291,11 +276,7 @@ main {
   scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
 }
 
-<<<<<<< HEAD
-/* Markdown内容样式 */
-=======
 /* Markdown内容样式（与日报详情保持一致的小一号排版） */
->>>>>>> 8d39dc0 (Extension update)
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
   color: rgb(15 23 42);
   font-weight: 600;
