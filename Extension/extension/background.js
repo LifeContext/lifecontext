@@ -102,7 +102,9 @@ async function showEventNotification(event) {
     iconUrl: 'icon.png',
     title: title,
     message: message,
-    contextMessage: `LifeContxt | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString('zh-CN')}`,
+
+    contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString('zh-CN')}`,
+
     priority: 2,
     requireInteraction: true,
     buttons: [
@@ -124,9 +126,11 @@ async function showEventNotification(event) {
       await chrome.notifications.create(`simple_${Date.now()}`, {
         type: 'basic',
         iconUrl: 'icon.png',
-        title: 'LifeContxt 简单测试',
+
+        title: 'LifeContext 简单测试',
         message: '这是一个简单的测试通知',
-        contextMessage: 'LifeContxt'
+        contextMessage: 'LifeContext'
+
       });
       console.log('简单通知创建成功');
     } catch (simpleError) {
@@ -151,23 +155,40 @@ chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) =
   console.log('通知按钮被点击:', notificationId, '按钮索引:', buttonIndex);
   
   if (buttonIndex === 0) {
-    // 查看详情
-    console.log('用户选择查看详情');
-    // 可以打开详情页面或执行其他操作
+
+    // 查看详情 - 跳转到主页面
+    console.log('用户选择查看详情，跳转到主页面');
+    (async () => {
+      try {
+        const config = await getConfig();
+        const frontendUrl = `http://${config.FRONTEND_HOST}:${config.FRONTEND_PORT}/`;
+        chrome.tabs.create({ url: frontendUrl });
+      } catch (error) {
+        console.error('跳转到主页面失败:', error);
+        // 使用默认配置作为备选
+        chrome.tabs.create({ url: 'http://localhost:3000/' });
+      }
+    })();
   } else if (buttonIndex === 1) {
-    // 稍后提醒
-    console.log('用户选择稍后提醒');
-    // 可以设置延迟提醒
+    // 稍后提醒 - 3分钟后重新提醒
+    console.log('用户选择稍后提醒，3分钟后重新提醒');
+
     setTimeout(() => {
       chrome.notifications.create(`reminder_${Date.now()}`, {
         type: 'basic',
         iconUrl: 'icon.png',
-        title: 'LifeContxt 提醒',
+
+        title: 'LifeContext 提醒',
         message: '您之前选择稍后提醒的事件',
-        contextMessage: 'LifeContxt',
-        priority: 1
+        contextMessage: 'LifeContext',
+        priority: 1,
+        buttons: [
+          { title: '查看详情' },
+          { title: '稍后提醒' }
+        ]
       });
-    }, 5 * 60 * 1000); // 5分钟后提醒
+    }, 30 * 1000); // 3分钟后提醒
+
   }
   
   // 关闭原通知

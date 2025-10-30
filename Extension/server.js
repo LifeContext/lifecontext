@@ -4,7 +4,9 @@ import bodyParser from 'body-parser';
 import { Dataset } from 'crawlee';
 
 const app = express();
-const PORT = 3000;
+
+const PORT = 3001;
+
 
 app.use(bodyParser.json({ limit: '10mb' }));
 

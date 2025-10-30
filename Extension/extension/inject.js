@@ -201,7 +201,7 @@
 
     // 状态变量
     let isChatOpen = false;
-    let isChatExpanded = true; // 聊天框展开状态
+    let isChatExpanded = false; // 初始为收缩状态，匹配小窗样式
     let isDragging = false;
     let dragOffset = { x: 0, y: 0 };
     let messages = [];
@@ -411,11 +411,18 @@
       const toggleBtn = chatHeader.querySelector('#toggle-chat');
       const chatMessages = document.getElementById('chat-messages');
       const chatInput = document.getElementById('chat-input');
+      // 确保只做水平展开动画
+      chatBox.style.transitionProperty = 'left, right, width, max-width';
+      chatBox.style.transitionDuration = '0.3s';
+      chatBox.style.transitionTimingFunction = 'ease-in-out';
+      chatBox.style.transformOrigin = 'right center';
       
       if (isChatExpanded) {
-        // 展开状态 - 大尺寸聊天框
-        chatBox.style.top = '60px';
-        chatBox.style.bottom = '60px';
+        // 展开状态 - 仅水平扩大，保持高度与初始一致
+        const rect = chatBox.getBoundingClientRect();
+        chatBox.style.height = rect.height + 'px';
+        // 不改变 top/bottom，保持与初始相同高度
+        // 水平方向展开
         chatBox.style.left = '50px';
         chatBox.style.right = '50px';
         chatBox.style.width = 'auto';
@@ -430,6 +437,9 @@
         toggleBtn.title = '收缩';
       } else {
         // 收缩状态 - 小窗口
+        // 恢复自动高度
+        chatBox.style.height = '';
+        // 位置保持初始上下边距不变
         chatBox.style.top = '24px';
         chatBox.style.bottom = '24px';
         chatBox.style.left = 'auto';

@@ -42,50 +42,31 @@
 ### 🛠️ Backend Configuration
 
 #### 1️⃣ Configure the LLM and Vector Services
-
-Open the file `./backend/config.py`.
-
-##### 🔹 Configure the LLM Interface (for content analysis and intelligent conversation)
-
-Locate the following fields in the file and fill in your LLM information:
-
-```python
-LLM_API_KEY = "your_key"          # Your LLM API key
-LLM_BASE_URL = "your_url"         # LLM API base URL, e.g. https://api.openai.com/v1
-LLM_MODEL = "your_model"          # Model name, e.g. gpt-4o-mini
+📦 Navigate to the `backend` directory and copy the `.env.example` file as `.env`:
+```bash
+cd ./backend
+cp .env.example .env
 ```
 
-##### 🔹 Configure the Embedding Interface (for text vectorization and similarity retrieval)
-
-In the same `config.py` file, modify the following fields:
+✅ Fill in your API in the newly created `.env` file. Example configuration:
 
 ```python
-EMBEDDING_API_KEY = "your_key"    # API key for the embedding service
-EMBEDDING_BASE_URL = "your_url"   # API base URL, e.g. https://api.openai.com/v1
-EMBEDDING_MODEL = "your_model"    # Embedding model name, e.g. text-embedding-3-small
-```
-
-✅ **Configuration Example:** The configured fields should look like this:
-
-```python
-# LLM API Configuration (for content analysis and intelligent conversation)
-LLM_API_KEY = "xxxx-xxx-xxxxxxxxx"
+# LLM API 
+LLM_API_KEY = "sk-1234abcd5678efgh9012ijkl"
 LLM_BASE_URL = "https://api.openai.com/v1"
 LLM_MODEL = "gpt-4o-mini"
 
-# Embedding API Configuration (for vector database)
-EMBEDDING_API_KEY = "yyyy-yyy-yyyyyyyyy"
+# Embedding API 
+EMBEDDING_API_KEY = "sk-embed-9876mnop4321qrst"
 EMBEDDING_BASE_URL = "https://api.openai.com/v1"
 EMBEDDING_MODEL = "text-embedding-3-small"
 ```
 
 #### 2️⃣ Set Up the Python Environment
 
-📦 Navigate to the `backend` directory and create a virtual environment.
-Install all dependencies automatically using `environment.yml`.
+📦 In the `backend` directory, create a virtual environment, and install all dependencies automatically using `environment.yml`.
 
 ```bash
-cd ./backend
 conda env create -f environment.yml
 conda activate lifecontext
 ```
@@ -98,7 +79,7 @@ conda activate lifecontext
 python app.py
 ```
 
-✅ **Startup Example:** Once successfully launched, the terminal will display port information as follows:
+✅ Once successfully launched, the terminal will display port information as follows:
 
 ```
 ============================================================

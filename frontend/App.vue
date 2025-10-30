@@ -293,9 +293,10 @@ const toggleTodoStatus = async (id: number) => {
 
 const updateTodoItem = async (id: number, text: string, priority: 'low' | 'medium' | 'high') => {
   try {
-    const updatedTodo = await todoService.updateTodo(id, text, priority);
+    const updated = await todoService.updateTodo(id, text, priority);
+    // 合并更新：仅替换被编辑字段，保留 status 等其他字段
     todos.value = todos.value.map(item => 
-      item.id === id ? updatedTodo : item
+      item.id === id ? { ...item, description: updated.description, priority: updated.priority } : item
     );
   } catch (error) {
     console.error('Failed to update todo:', error);
