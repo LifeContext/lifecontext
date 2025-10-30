@@ -47,5 +47,5 @@ export interface TimelineSegment {
   id: number;
   title: string;
   start_time: string;
-  activities: TimelineItem[];
+  items: TimelineItem[];
 }

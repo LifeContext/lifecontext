@@ -1,7 +1,7 @@
 <template>
   <div class="bg-slate-50 dark:bg-slate-900 h-full flex flex-col">
     <!-- Header with date selector and clear history -->
-    <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800">
+    <div class="flex items-center justify-between p-6 border-b border-slate-200 dark:border-slate-800 max-w-[900px] mx-auto w-full">
       <!-- Date Selector -->
       <div class="relative">
         <button 
@@ -62,7 +62,7 @@
     </div>
     
     <!-- Main Content Area -->
-    <div class="flex-1 p-6 overflow-y-auto">
+    <div class="flex-1 p-6 overflow-y-auto max-w-[900px] mx-auto w-full">
       <!-- Loading State -->
       <div v-if="isAnalyzing" class="flex flex-col items-center justify-center h-full">
         <div class="relative">
@@ -80,7 +80,7 @@
       </div>
       
       <!-- Timeline Content -->
-      <div v-else class="space-y-8">
+      <div v-else class="space-y-10">
         <div 
           v-for="(segment, index) in timelineSegments" 
           :key="segment.id"
@@ -89,41 +89,49 @@
           <!-- Timeline Line -->
           <div 
             v-if="index < timelineSegments.length - 1"
-            class="absolute left-6 top-12 w-0.5 h-16 bg-blue-200 dark:bg-blue-900"
+            class="absolute left-6 top-12 w-0.5 h-full bg-slate-200 dark:bg-slate-700"
           ></div>
           
           <!-- Timeline Dot -->
-          <div class="absolute left-5 top-6 w-3 h-3 bg-blue-500 rounded-full"></div>
+          <div class="absolute left-5 top-6 w-3 h-3 bg-blue-500 rounded-full shadow"></div>
           
           <!-- Content -->
           <div class="ml-12">
-            <div class="flex items-center space-x-4 mb-4">
-              <h3 class="text-lg font-semibold text-slate-800 dark:text-slate-200">{{ segment.title }}</h3>
-              <span class="text-sm text-slate-500 dark:text-slate-400">{{ segment.start_time }}</span>
+            <!-- Section Header -->
+            <div class="flex items-center space-x-3 mb-3">
+              <!-- Segment Select Checkbox -->
+              <input 
+                type="checkbox" 
+                :checked="isSegmentChecked(segment)" 
+                @change="toggleSegment(segment)"
+                class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+              />
+              <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">{{ segment.title }}</h3>
             </div>
             
-            <!-- Activity Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              <div 
-                v-for="activity in segment.activities" 
-                :key="activity.id"
-                class="bg-white dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
+            <!-- Activity List -->
+            <ul class="divide-y divide-slate-200 dark:divide-slate-800 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+              <li 
+                v-for="(url, i) in getUrls(segment)" 
+                :key="i"
+                class="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/50 transition"
               >
-                <div class="aspect-video bg-slate-100 dark:bg-slate-700 rounded-lg mb-3 overflow-hidden">
-                  <img 
-                    v-if="activity.thumbnailUrl" 
-                    :src="activity.thumbnailUrl" 
-                    :alt="activity.title"
-                    class="w-full h-full object-cover"
-                  />
-                  <div v-else class="w-full h-full flex items-center justify-center">
-                    <Icon path="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" class="w-8 h-8 text-slate-400 dark:text-slate-500" />
-                  </div>
+                <!-- Item Select Checkbox -->
+                <input 
+                  type="checkbox" 
+                  :checked="isItemChecked(segment.id, url)" 
+                  @change="toggleItem(segment.id, url)"
+                  class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+                />
+                <span class="w-4 h-4 shrink-0 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                  <svg class="w-3 h-3 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15.3 15.3 0 010 20a15.3 15.3 0 010-20z"></path></svg>
+                </span>
+                <div class="min-w-0">
+                  <a :href="url" target="_blank" rel="noopener" class="block text-sm font-medium text-slate-800 dark:text-slate-200 truncate hover:underline">{{ formatTitle(url) }}</a>
+                  <p class="text-[11px] text-slate-500 dark:text-slate-400 truncate">{{ extractHostname(url) }}</p>
                 </div>
-                <h4 class="font-medium text-slate-800 dark:text-slate-200 text-sm mb-1 line-clamp-2">{{ activity.title }}</h4>
-                <p class="text-xs text-slate-500 dark:text-slate-400">{{ activity.domain }}</p>
-              </div>
-            </div>
+              </li>
+            </ul>
           </div>
         </div>
       </div>
@@ -145,13 +153,119 @@ const isClearDropdownOpen = ref(false);
 const isAnalyzing = ref(false);
 const hasActivity = ref(true);
 const timelineSegments = ref<TimelineSegment[]>([]);
+const allSegments = ref<TimelineSegment[]>([]);
 const dateOptions = ref<{ label: string; value: string }[]>([]);
 
 // Computed
 const selectedDateText = computed(() => {
   const option = dateOptions.value.find(opt => opt.value === selectedDate.value);
-  return option ? option.label : 'Monday, October 20, 2025';
+  return option ? option.label : '';
 });
+
+// Helpers for URL display
+const extractHostname = (url: string): string => {
+  try {
+    const u = new URL(url);
+    return u.hostname.replace(/^www\./, '');
+  } catch {
+    return url;
+  }
+};
+
+const formatTitle = (url: string): string => {
+  try {
+    const u = new URL(url);
+    const path = decodeURIComponent(u.pathname).replace(/\/+$/, '');
+    const clean = `${u.hostname.replace(/^www\./, '')}${path ? ' - ' + path.split('/').filter(Boolean).slice(-1)[0] : ''}`;
+    return clean || url;
+  } catch {
+    return url;
+  }
+};
+
+// 从 segment 取得 url 列表
+const getUrls = (segment: any): string[] => {
+  return segment.urls as string[];
+};
+
+const selectedItemKeys = ref<Set<string>>(new Set());
+const makeKey = (segmentId: number, url: string) => `${segmentId}::${url}`;
+
+const isItemChecked = (segmentId: number, url: string): boolean => {
+  return selectedItemKeys.value.has(makeKey(segmentId, url));
+};
+
+const toggleItem = (segmentId: number, url: string) => {
+  const key = makeKey(segmentId, url);
+  const next = new Set(selectedItemKeys.value);
+  if (next.has(key)) next.delete(key); else next.add(key);
+  selectedItemKeys.value = next;
+};
+
+const isSegmentChecked = (segment: any): boolean => {
+  const urls = getUrls(segment) || [];
+  if (urls.length === 0) return false;
+  return urls.every(u => selectedItemKeys.value.has(makeKey(segment.id, u)));
+};
+
+const toggleSegment = (segment: any) => {
+  const urls = getUrls(segment) || [];
+  const allSelected = urls.length > 0 && urls.every(u => selectedItemKeys.value.has(makeKey(segment.id, u)));
+  const next = new Set(selectedItemKeys.value);
+  if (allSelected) {
+    for (const u of urls) next.delete(makeKey(segment.id, u));
+  } else {
+    for (const u of urls) next.add(makeKey(segment.id, u));
+  }
+  selectedItemKeys.value = next;
+};
+
+// Build date options from all segments
+const buildDateOptions = (segments: TimelineSegment[]) => {
+  const set = new Set<string>();
+  const now = new Date();
+  const opts: { label: string; value: string }[] = [];
+  for (const s of segments) {
+    const d = new Date(s.start_time);
+    const key = d.toISOString().slice(0, 10);
+    if (!set.has(key)) {
+      set.add(key);
+      const isToday = d.toDateString() === now.toDateString();
+      const y = new Date(now.getTime() - 24*60*60*1000);
+      const isYesterday = d.toDateString() === y.toDateString();
+      let label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      let value = key;
+      if (isToday) { label = 'Today'; value = 'today'; }
+      else if (isYesterday) { label = 'Yesterday'; value = 'yesterday'; }
+      opts.push({ label, value });
+    }
+  }
+  // 可按时间倒序
+  dateOptions.value = opts.sort((a,b)=> a.label==='Today'? -1 : a.label==='Yesterday' && b.label!=='Today' ? -1 : a.value < b.value ? 1 : -1);
+};
+
+// Filter segments by selected date
+const applyDateFilter = (value: string) => {
+  let targetStart: Date;
+  let targetEnd: Date;
+  const now = new Date();
+  if (value === 'today') {
+    targetStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  } else if (value === 'yesterday') {
+    targetStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()-1);
+  } else {
+    const [y,m,d] = value.split('-').map(Number);
+    targetStart = new Date(y, m-1, d);
+  }
+  targetEnd = new Date(targetStart);
+  targetEnd.setDate(targetStart.getDate()+1);
+  const filtered = allSegments.value.filter(s => {
+    const t = new Date(s.start_time);
+    return t >= targetStart && t < targetEnd;
+  });
+  timelineSegments.value = filtered;
+  hasActivity.value = filtered.length > 0;
+};
 
 // Methods
 const toggleDateDropdown = () => {
@@ -167,19 +281,9 @@ const toggleClearDropdown = () => {
 const selectDate = async (date: { label: string; value: string }) => {
   selectedDate.value = date.value;
   isDateDropdownOpen.value = false;
-  
-  // 开始加载状态
   isAnalyzing.value = true;
-  
   try {
-    // 从后端获取Timeline数据
-    const segments = await timelineService.getTimelineByDate(date.value);
-    timelineSegments.value = segments;
-    hasActivity.value = segments.length > 0;
-  } catch (error) {
-    console.error('Error loading timeline data:', error);
-    timelineSegments.value = [];
-    hasActivity.value = false;
+    applyDateFilter(date.value);
   } finally {
     isAnalyzing.value = false;
   }
@@ -189,11 +293,7 @@ const clearHistory = async (type: '24h' | 'all') => {
   isClearDropdownOpen.value = false;
   
   try {
-    const success = await timelineService.clearHistory(type);
-    if (success) {
-      // 重新加载当前日期的数据
-      await selectDate({ label: selectedDateText.value, value: selectedDate.value });
-    }
+    applyDateFilter(selectedDate.value);
   } catch (error) {
     console.error('Error clearing history:', error);
   }
@@ -202,9 +302,11 @@ const clearHistory = async (type: '24h' | 'all') => {
 const refreshTimelineData = async () => {
   console.log('刷新时间线数据...');
   try {
-    const segments = await timelineService.getTimelineByDate(selectedDate.value);
-    timelineSegments.value = segments;
-    hasActivity.value = segments.length > 0;
+    const resp = await timelineService.getTimelineSegments();
+    const segs = (resp as any)?.data?.activities ?? (resp as any);
+    allSegments.value = Array.isArray(segs) ? segs : [];
+    buildDateOptions(allSegments.value);
+    applyDateFilter(selectedDate.value);
     console.log('时间线数据已刷新');
   } catch (error) {
     console.error('刷新时间线数据失败:', error);
@@ -223,14 +325,23 @@ const handleClickOutside = (event: MouseEvent) => {
 // 加载可用日期和初始数据
 const loadInitialData = async () => {
   try {
-    // 获取可用日期
-    const dates = await timelineService.getAvailableDates();
-    dateOptions.value = dates;
-    
-    // 加载当前选中日期的数据
-    await selectDate({ label: 'Today', value: 'today' });
+    const resp = await timelineService.getTimelineSegments();
+    const segs = (resp as any)?.data?.activities ?? (resp as any);
+    allSegments.value = Array.isArray(segs) ? segs : [];
+    buildDateOptions(allSegments.value);
+    // 默认选择 Today（若不存在则选择第一项）
+    const defaultOpt = dateOptions.value.find(o=>o.value==='today') || dateOptions.value[0];
+    if (defaultOpt) {
+      selectedDate.value = defaultOpt.value;
+      applyDateFilter(defaultOpt.value);
+    } else {
+      timelineSegments.value = [];
+      hasActivity.value = false;
+    }
   } catch (error) {
-    console.error('Error loading initial data:', error);
+    console.error('Error loading timeline data:', error);
+    timelineSegments.value = [];
+    hasActivity.value = false;
   }
 };
 

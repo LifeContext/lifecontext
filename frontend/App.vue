@@ -129,7 +129,7 @@ import ChatView from './src/components/ChatView.vue';
 import ChatHistoryPanel from './src/components/ChatHistoryPanel.vue';
 import TipDetailView from './src/components/TipDetailView.vue';
 import ReportDetailView from './src/components/ReportDetailView.vue';
-import { dailyReports, chatSessions, tips as tipsFromConstants } from './constants';
+import { chatSessions } from './constants';
 import type { DailyReport, TodoItem, ChatMessage, ChatSession, Tip, TipCategory } from './types';
 import { todoService } from './src/api/todoService'; // 导入API服务
 import { reportService } from './src/api/reportService'; // 导入Report API服务

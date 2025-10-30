@@ -64,22 +64,8 @@ export class EventService {
     if (!this.isPolling) return;
 
     try {
-      const response = await fetch('/api/events/fetch');
-      
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      const result: EventResponse = await response.json();
-      
-      if (result.code === 200 && result.data.events.length > 0) {
-        console.log(`收到 ${result.data.count} 个事件`);
-        
-        // 处理每个事件
-        result.data.events.forEach(event => {
-          this.handleEvent(event);
-        });
-      }
+      // 轮询各资源的变化并派发合成事件
+      await this.pollAllResources();
 
       // 重置重试计数
       this.retryCount = 0;
@@ -95,6 +81,79 @@ export class EventService {
         this.pollEvents();
       }, this.pollInterval);
     }
+  }
+
+  // 资源轮询实现（合成事件）
+  private lastSignatures: Record<string, string> = {};
+
+  private async pollAllResources(): Promise<void> {
+    await Promise.allSettled([
+      this.checkAndEmit('todo', this.fetchTodosSignature),
+      this.checkAndEmit('report', this.fetchReportsSignature),
+      this.checkAndEmit('tip', this.fetchTipsSignature),
+      this.checkAndEmit('activity', this.fetchActivitiesSignature)
+    ]);
+  }
+
+  private async checkAndEmit(
+    type: 'todo' | 'report' | 'tip' | 'activity',
+    fetchSignature: () => Promise<string>
+  ): Promise<void> {
+    try {
+      const signature = await fetchSignature();
+      if (this.lastSignatures[type] !== undefined && this.lastSignatures[type] !== signature) {
+        // 合成一个简化事件
+        const event: EventData = {
+          id: `${type}-${Date.now()}`,
+          type,
+          data: { changed: true },
+          timestamp: Date.now(),
+          datetime: new Date().toISOString()
+        };
+        this.handleEvent(event);
+      }
+      this.lastSignatures[type] = signature;
+    } catch (e) {
+      // 忽略单个资源失败，整体轮询继续
+      console.warn(`检查资源 ${type} 失败:`, e);
+    }
+  }
+
+  private async fetchTodosSignature(): Promise<string> {
+    const res = await fetch(`/api/generation/todos?limit=1&offset=0`);
+    if (!res.ok) throw new Error(`todos fetch failed: ${res.status}`);
+    const json = await res.json();
+    const total = json?.data?.total ?? (json?.data?.todos?.length ?? 0);
+    const firstId = json?.data?.todos?.[0]?.id ?? null;
+    return JSON.stringify({ total, firstId });
+  }
+
+  private async fetchReportsSignature(): Promise<string> {
+    const res = await fetch(`/api/generation/reports?limit=1&offset=0`);
+    if (!res.ok) throw new Error(`reports fetch failed: ${res.status}`);
+    const json = await res.json();
+    const total = json?.data?.total ?? (json?.data?.reports?.length ?? 0);
+    const firstId = json?.data?.reports?.[0]?.id ?? null;
+    return JSON.stringify({ total, firstId });
+  }
+
+  private async fetchTipsSignature(): Promise<string> {
+    const res = await fetch(`/api/generation/tips?limit=1&offset=0`);
+    if (!res.ok) throw new Error(`tips fetch failed: ${res.status}`);
+    const json = await res.json();
+    const total = json?.data?.total ?? (json?.data?.tips?.length ?? 0);
+    const firstId = json?.data?.tips?.[0]?.id ?? null;
+    return JSON.stringify({ total, firstId });
+  }
+
+  private async fetchActivitiesSignature(): Promise<string> {
+    const res = await fetch(`/api/generation/activities`);
+    if (!res.ok) throw new Error(`activities fetch failed: ${res.status}`);
+    const json = await res.json();
+    const list = json?.data?.activities ?? [];
+    const total = Array.isArray(list) ? list.length : 0;
+    const firstId = Array.isArray(list) && list.length > 0 ? (list[0]?.id ?? null) : null;
+    return JSON.stringify({ total, firstId });
   }
 
   /**
