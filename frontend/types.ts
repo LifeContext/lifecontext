@@ -6,7 +6,7 @@ export interface DailyReport {
   content: string;
 }
 
-export type Priority = 5 | 3 | 1;
+export type Priority = 3 | 2 | 1;
 
 export interface TodoItem {
   id: number;

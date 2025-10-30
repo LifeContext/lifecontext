@@ -104,11 +104,11 @@
             </div>
             
             <span v-if="editingId !== todo.id" :class="`text-xs px-2 py-1 rounded ${ 
-              todo.priority === 5 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' :
-              todo.priority === 3 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' :
+              todo.priority === 3 ? 'bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-300' :
+              todo.priority === 2 ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-300' :
               'bg-green-100 text-green-700 dark:bg-green-900/50 dark:text-green-300' 
             }`">
-              {{ todo.priority === 5 ? 'High' : todo.priority === 3 ? 'Medium' : 'Low' }}
+              {{ todo.priority === 3 ? 'High' : todo.priority === 2 ? 'Medium' : 'Low' }}
             </span>
             
             <div v-if="editingId !== todo.id" class="flex gap-1">
@@ -321,8 +321,8 @@ const startEdit = (todo: TodoItem) => {
   editingId.value = todo.id;
   editingText.value = todo.description;
   editingPriority.value = 
-    todo.priority === 5 ? 'high' : 
-    todo.priority === 3 ? 'medium' : 'low';
+    todo.priority === 3 ? 'high' : 
+    todo.priority === 2 ? 'medium' : 'low';
   
   // Focus the input field after DOM updates
   nextTick(() => {
