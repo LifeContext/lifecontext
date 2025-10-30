@@ -33,6 +33,10 @@ class DOMCrawlerManager {
 
   // 初始化DOM监听
   init() {
+    if (typeof window !== 'undefined' && window.__LC_SKIP_CRAWL__ === true) {
+      console.log('🚫 检测到主网页，跳过 DOM 监听与爬取');
+      return;
+    }
     if (this.isObserving) return;
     
     console.log('🔍 初始化DOM变化监听器');
@@ -143,6 +147,10 @@ class DOMCrawlerManager {
   // 执行增量爬取
   async performIncrementalCrawl() {
     try {
+      if (typeof window !== 'undefined' && window.__LC_SKIP_CRAWL__ === true) {
+        console.log('🚫 检测到主网页，跳过增量爬取');
+        return;
+      }
       if (!isChromeRuntimeAvailable()) {
         console.log('Chrome runtime 不可用，跳过增量爬取');
         return;
@@ -304,9 +312,47 @@ class DOMCrawlerManager {
 // 创建全局DOM爬取管理器实例
 const domCrawler = new DOMCrawlerManager();
 
+// 读取主站配置并设置是否跳过当前页面的爬取
+window.__LC_SKIP_CRAWL__ = false;
+async function evaluateSkipCrawlForThisPage() {
+  try {
+    const defaults = { FRONTEND_HOST: 'localhost', FRONTEND_PORT: '3000' };
+    const cfg = await new Promise((resolve) => {
+      try {
+        chrome.storage.sync.get(defaults, (res) => resolve(res || defaults));
+      } catch (e) {
+        resolve(defaults);
+      }
+    });
+
+    const expectedHost = String(cfg.FRONTEND_HOST || '').toLowerCase();
+    const expectedPort = String(cfg.FRONTEND_PORT || '').trim();
+    const currentHost = String(location.hostname || '').toLowerCase();
+    const currentPort = String(location.port || (location.protocol === 'https:' ? '443' : '80'));
+
+    const isSameHost = currentHost === expectedHost || location.host.toLowerCase() === `${expectedHost}:${expectedPort}`;
+    const isSamePort = expectedPort === '' ? true : currentPort === expectedPort;
+    const shouldSkip = Boolean(expectedHost) && isSameHost && isSamePort;
+
+    if (shouldSkip) {
+      window.__LC_SKIP_CRAWL__ = true;
+      console.log(`🚫 当前为主网页(${expectedHost}:${expectedPort})，将跳过所有爬取与监听`);
+    }
+  } catch (_) {
+    // 忽略异常，保持默认 false
+  }
+}
+
+// 尽早评估是否跳过
+(async () => { await evaluateSkipCrawlForThisPage(); })();
+
 // 自动爬取网页内容（初始爬取）
 async function autoCrawlPage() {
   try {
+    if (typeof window !== 'undefined' && window.__LC_SKIP_CRAWL__ === true) {
+      console.log('🚫 检测到主网页，跳过初始爬取');
+      return;
+    }
     // 检查 chrome.runtime 是否可用
     if (!isChromeRuntimeAvailable()) {
       console.log('Chrome runtime 不可用，跳过自动爬取');
@@ -436,7 +482,7 @@ class PageVisibilityManager {
       if (!wasVisible && this.isPageVisible) {
         console.log('📱 页面变为可见，重新激活DOM监听');
         // 页面重新可见时，重新初始化DOM监听
-        if (domCrawler && !domCrawler.isObserving) {
+        if (domCrawler && !domCrawler.isObserving && window.__LC_SKIP_CRAWL__ !== true) {
           domCrawler.init();
         }
       } else if (wasVisible && !this.isPageVisible) {
@@ -451,7 +497,7 @@ class PageVisibilityManager {
     // 监听窗口焦点变化
     window.addEventListener('focus', () => {
       console.log('🎯 窗口获得焦点，检查DOM监听状态');
-      if (domCrawler && !domCrawler.isObserving) {
+      if (domCrawler && !domCrawler.isObserving && window.__LC_SKIP_CRAWL__ !== true) {
         domCrawler.init();
       }
     });
