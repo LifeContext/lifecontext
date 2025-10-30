@@ -202,7 +202,6 @@ main::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
 
-/* 确保内容区域有足够的高度 */
 main {
   height: calc(100vh - 2rem);
   max-height: calc(100vh - 2rem);
@@ -218,7 +217,7 @@ aside {
 }
 
 aside nav {
-  height: calc(100vh - 8rem); /* 减去标题和padding的高度 */
+  height: calc(100vh - 8rem);
   max-height: calc(100vh - 8rem);
 }
 
@@ -276,7 +275,7 @@ main {
   scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
 }
 
-/* Markdown内容样式（与日报详情保持一致的小一号排版） */
+/* Markdown内容样式 */
 .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
   color: rgb(15 23 42);
   font-weight: 600;

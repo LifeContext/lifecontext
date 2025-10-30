@@ -73,7 +73,7 @@ export class TodoService {
     }
   }
 
-  // 更新Todo项的内容（编辑）
+  // 更新Todo项的内容
   async updateTodo(id: number, text: string, priority: 'low' | 'medium' | 'high'): Promise<{ id: number; description: string; priority: number; }> {
     try {
       // 将前端优先级 low/medium/high 映射为后端数值 1/2/3
@@ -96,8 +96,6 @@ export class TodoService {
         throw new Error(`Failed to update todo: ${response.statusText} - ${errorText}`);
       }
 
-      // 后端返回的是统一的 convert_resp 成功消息，不包含具体条目数据
-      // 这里直接返回前端可用于合并更新的字段
       return {
         id,
         description: text,

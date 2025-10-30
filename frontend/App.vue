@@ -254,11 +254,6 @@ const handleToggleDailyPanel = () => {
   isDailyPanelCollapsed.value = !isDailyPanelCollapsed.value;
 };
 
-// // 更新setTodos方法，使其使用API服务
-// const setTodos = async (newTodos: TodoItem[]) => {
-//   todos.value = newTodos;
-// };
-
 // 添加直接操作Todo的API方法
 const addTodo = async (text: string, priority: 'low' | 'medium' | 'high') => {
   try {
@@ -300,7 +295,6 @@ const updateTodoItem = async (id: number, text: string, priority: 'low' | 'mediu
     );
   } catch (error) {
     console.error('Failed to update todo:', error);
-    // 可以在这里添加用户通知
   }
 };
 
@@ -310,7 +304,6 @@ const deleteTodoItem = async (id: number) => {
     todos.value = todos.value.filter(item => item.id !== id);
   } catch (error) {
     console.error('Failed to delete todo:', error);
-    // 可以在这里添加用户通知
   }
 };
 
@@ -491,28 +484,28 @@ onUnmounted(() => {
 <style scoped>
 /* 暗色模式样式（默认） */
 .chat-history-toggle-btn {
-  background-color: #1e293b; /* bg-slate-800 */
-  color: #94a3b8; /* text-slate-400 */
+  background-color: #1e293b;
+  color: #94a3b8;
 }
 
 .chat-history-toggle-btn:hover {
-  background-color: #334155; /* hover:bg-slate-700 */
-  color: #f1f5f9; /* hover:text-slate-100 */
+  background-color: #334155;
+  color: #f1f5f9;
 }
 
 /* 亮色模式样式 */
 @media (prefers-color-scheme: light) {
   .chat-history-toggle-btn {
     background-color: white;
-    color: #6b7280; /* text-gray-500 */
-    border: 1px solid #e5e7eb; /* border-gray-200 */
+    color: #6b7280;
+    border: 1px solid #e5e7eb;
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
   }
 
   .chat-history-toggle-btn:hover {
-    background-color: #f9fafb; /* hover:bg-gray-50 */
-    color: #111827; /* hover:text-gray-900 */
-    border-color: #d1d5db; /* hover:border-gray-300 */
+    background-color: #f9fafb;
+    color: #111827;
+    border-color: #d1d5db;
   }
 }
 </style>
