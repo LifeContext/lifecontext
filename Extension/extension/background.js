@@ -54,15 +54,17 @@ async function checkEventsAndNotify() {
     
     console.log('获取到的事件数据:', data);
     
-    if (data.code === 200 && data.data && data.data.events && data.data.events.length > 0) {
+    if (data.code === 200 && data.data && Array.isArray(data.data.events) && data.data.events.length > 0) {
       // 有新事件，显示通知
       console.log(`发现 ${data.data.count} 个新事件`);
       for (const event of data.data.events) {
         console.log('处理事件:', event);
         await showEventNotification(event);
       }
+    } else if (data.code === 200 && data.data && Array.isArray(data.data.events)) {
+      console.log(`没有新事件（count=${data.data.count || 0}）`);
     } else {
-      console.log('没有新事件或数据格式不正确');
+      console.log('数据格式不正确:', data);
     }
   } catch (error) {
     console.error('获取事件数据失败:', error);
