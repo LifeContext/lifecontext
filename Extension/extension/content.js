@@ -37,6 +37,10 @@ class DOMCrawlerManager {
       console.log('🚫 检测到主网页，跳过 DOM 监听与爬取');
       return;
     }
+    if (typeof window !== 'undefined' && window.__LC_CRAWL_ENABLED__ === false) {
+      console.log('🚫 爬取功能已禁用');
+      return;
+    }
     if (this.isObserving) return;
     
     console.log('🔍 初始化DOM变化监听器');
@@ -149,6 +153,10 @@ class DOMCrawlerManager {
     try {
       if (typeof window !== 'undefined' && window.__LC_SKIP_CRAWL__ === true) {
         console.log('🚫 检测到主网页，跳过增量爬取');
+        return;
+      }
+      if (typeof window !== 'undefined' && window.__LC_CRAWL_ENABLED__ === false) {
+        console.log('🚫 爬取功能已禁用，跳过增量爬取');
         return;
       }
       if (!isChromeRuntimeAvailable()) {
@@ -312,6 +320,23 @@ class DOMCrawlerManager {
 // 创建全局DOM爬取管理器实例
 const domCrawler = new DOMCrawlerManager();
 
+// 全局爬取开关
+window.__LC_CRAWL_ENABLED__ = true; // 默认开启
+
+// 从存储中加载爬取开关状态
+async function loadCrawlEnabledState() {
+  try {
+    const result = await chrome.storage.sync.get(['crawlEnabled']);
+    window.__LC_CRAWL_ENABLED__ = result.crawlEnabled !== false; // 默认为true
+  } catch (error) {
+    console.log('加载爬取开关状态失败，使用默认值');
+    window.__LC_CRAWL_ENABLED__ = true;
+  }
+}
+
+// 初始化时加载爬取开关状态
+(async () => { await loadCrawlEnabledState(); })();
+
 // 读取主站配置并设置是否跳过当前页面的爬取
 window.__LC_SKIP_CRAWL__ = false;
 async function evaluateSkipCrawlForThisPage() {
@@ -351,6 +376,10 @@ async function autoCrawlPage() {
   try {
     if (typeof window !== 'undefined' && window.__LC_SKIP_CRAWL__ === true) {
       console.log('🚫 检测到主网页，跳过初始爬取');
+      return;
+    }
+    if (typeof window !== 'undefined' && window.__LC_CRAWL_ENABLED__ === false) {
+      console.log('🚫 爬取功能已禁用，跳过初始爬取');
       return;
     }
     // 检查 chrome.runtime 是否可用
@@ -538,7 +567,28 @@ function delayedAutoCrawl() {
 // 监听来自popup或background的消息
 if (isChromeRuntimeAvailable()) {
   chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    if (message.type === 'TOGGLE_DOM_OBSERVER') {
+    if (message.type === 'TOGGLE_CRAWL') {
+      // 切换全局爬取开关
+      window.__LC_CRAWL_ENABLED__ = message.enabled;
+      if (message.enabled) {
+        console.log('✅ 爬取功能已启用');
+        // 如果之前被禁用了，现在重新启用
+        if (domCrawler && !domCrawler.isObserving && window.__LC_SKIP_CRAWL__ !== true) {
+          domCrawler.init();
+        }
+      } else {
+        console.log('🛑 爬取功能已禁用');
+        // 停止DOM监听
+        if (domCrawler && domCrawler.isObserving) {
+          domCrawler.stop();
+        }
+      }
+      sendResponse({ success: true });
+    } else if (message.type === 'GET_CRAWL_STATUS') {
+      sendResponse({
+        enabled: window.__LC_CRAWL_ENABLED__ !== false
+      });
+    } else if (message.type === 'TOGGLE_DOM_OBSERVER') {
       if (message.enabled) {
         domCrawler.init();
         console.log('✅ DOM监听器已启用');

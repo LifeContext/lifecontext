@@ -12,11 +12,14 @@
     body {
       font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
       width: 320px;
-      height: 200px;
+      height: auto;
+      min-height: 160px;
       background: #0f172a; /* slate-900 */
       color: #e2e8f0; /* slate-200 */
       overflow: hidden;
       border-radius: 16px;
+      display: flex;
+      flex-direction: column;
     }
     
     .header {
@@ -33,6 +36,12 @@
       display: flex;
       align-items: center;
       gap: 12px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .logo-section:hover {
+      opacity: 0.8;
     }
     
     .logo {
@@ -43,6 +52,7 @@
       background-repeat: no-repeat;
       background-position: center;
       border-radius: 6px;
+      cursor: pointer;
     }
     
     .app-name {
@@ -53,6 +63,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       color: transparent;
+      cursor: pointer;
     }
     
     .header-buttons {
@@ -80,13 +91,81 @@
       color: #e2e8f0; /* slate-200 */
     }
     
+    /* 爬取开关按钮 - 现代简洁风格 */
+    .crawl-toggle-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      color: #ef4444; /* red-500 - 默认关闭状态为红色 */
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+      position: relative;
+      padding: 0;
+    }
+    
+    .crawl-toggle-btn:hover {
+      background: rgba(239, 68, 68, 0.1);
+      color: #dc2626; /* red-600 */
+    }
+    
+    .crawl-toggle-btn.enabled {
+      color: #10b981; /* emerald-500 */
+    }
+    
+    .crawl-toggle-btn.enabled:hover {
+      background: rgba(16, 185, 129, 0.1);
+      color: #059669; /* emerald-600 */
+    }
+    
+    .crawl-toggle-btn.enabled .pulse-dot {
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+    
+    @keyframes pulse-dot {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.4;
+        transform: scale(1.3);
+      }
+    }
+    
+    .crawl-toggle-btn svg {
+      position: relative;
+      z-index: 1;
+    }
+    
+    .crawl-toggle-btn:not(.enabled) .crawl-icon {
+      display: none;
+    }
+    
+    .crawl-toggle-btn:not(.enabled) .crawl-icon-static {
+      display: block;
+    }
+    
+    .crawl-toggle-btn.enabled .crawl-icon {
+      display: block;
+    }
+    
+    .crawl-toggle-btn.enabled .crawl-icon-static {
+      display: none;
+    }
+    
     .status-container {
-      padding: 20px;
+      padding: 16px 20px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
       flex: 1;
+      min-height: 0;
     }
     
     .status-box {
@@ -201,6 +280,17 @@
       color: #dc2626; /* red-600 */
     }
     
+    .status-box.disabled {
+      background: #dc2626; /* red-600 */
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+    }
+    
+    .status-box.disabled .status-icon::before {
+      content: '○';
+      color: #dc2626; /* red-600 */
+      font-size: 16px;
+    }
+    
     @keyframes spin {
       from { transform: rotate(0deg); }
       to { transform: rotate(360deg); }
@@ -210,14 +300,24 @@
 <body>
   <!-- 顶部标题栏 -->
   <div class="header">
-    <div class="logo-section">
-      <div class="logo"></div>
-      <div class="app-name">LifeContext</div>
+    <div class="logo-section" id="logo-section" title="打开主页">
+      <div class="logo" id="logo"></div>
+      <div class="app-name" id="app-name">LifeContext</div>
     </div>
     <div class="header-buttons">
-      <button id="home-btn" class="header-btn" aria-label="Go to Home" title="打开主页">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
+      <button id="crawl-toggle-btn" class="crawl-toggle-btn enabled" aria-label="Toggle Memory" title="Memory Toggle">
+        <!-- 启用状态：记忆/保存图标 -->
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="crawl-icon">
+          <path d="M19 21H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h11l5 5v11c0 1.1-.9 2-2 2z" stroke="currentColor" stroke-width="1.8" fill="none"/>
+          <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="1.8" fill="none"/>
+          <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="1.8" fill="none"/>
+          <circle cx="12" cy="16" r="1.8" fill="currentColor" class="pulse-dot"/>
+        </svg>
+        <!-- 禁用状态：文档图标（无活动指示） -->
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="crawl-icon-static" style="display: none;">
+          <path d="M19 21H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h11l5 5v11c0 1.1-.9 2-2 2z" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.4"/>
+          <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.4"/>
+          <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.4"/>
         </svg>
       </button>
       <button id="close-btn" class="header-btn" aria-label="Close" title="关闭">
