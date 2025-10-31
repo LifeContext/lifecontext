@@ -16,6 +16,12 @@ from utils.generation import (
 )
 from utils.event_manager import EventType, publish_event
 from utils.db import get_reports
+from config import (
+    ENABLE_SCHEDULER_ACTIVITY,
+    ENABLE_SCHEDULER_TODO,
+    ENABLE_SCHEDULER_TIP,
+    ENABLE_SCHEDULER_REPORT
+)
 
 logger = get_logger(__name__)
 
@@ -32,40 +38,56 @@ def init_scheduler():
     scheduler = BackgroundScheduler(timezone='Asia/Shanghai')
     
     # 1. 每15分钟生成活动记录
-    scheduler.add_job(
-        func=job_generate_activity,
-        trigger=CronTrigger(minute='*/15'),  # 每15分钟
-        id='activity_15min',
-        name='每15分钟生成活动记录',
-        replace_existing=True
-    )
+    if ENABLE_SCHEDULER_ACTIVITY:
+        scheduler.add_job(
+            func=job_generate_activity,
+            trigger=CronTrigger(minute='*/15'),  # 每15分钟
+            id='activity_15min',
+            name='每15分钟生成活动记录',
+            replace_existing=True
+        )
+        logger.info("✅ Activity scheduler enabled")
+    else:
+        logger.info("⏸️ Activity scheduler disabled")
     
     # 2. 每30分钟生成待办任务
-    scheduler.add_job(
-        func=job_generate_todos,
-        trigger=CronTrigger(minute='*/30'),  # 每30分钟
-        id='todos_30min',
-        name='每30分钟生成待办',
-        replace_existing=True
-    )
+    if ENABLE_SCHEDULER_TODO:
+        scheduler.add_job(
+            func=job_generate_todos,
+            trigger=CronTrigger(minute='*/30'),  # 每30分钟
+            id='todos_30min',
+            name='每30分钟生成待办',
+            replace_existing=True
+        )
+        logger.info("✅ Todo scheduler enabled")
+    else:
+        logger.info("⏸️ Todo scheduler disabled")
     
-    # 3. 每60分钟（1小时）生成智能提示
-    scheduler.add_job(
-        func=job_generate_tips,
-        trigger=CronTrigger(minute='*/15'),  # 每15分钟
-        id='tips_hourly',
-        name='每15分钟生成智能提示',
-        replace_existing=True
-    )
+    # 3. 每小时整生成智能提示
+    if ENABLE_SCHEDULER_TIP:
+        scheduler.add_job(
+            func=job_generate_tips,
+            trigger=CronTrigger(minute=0),  # 每小时整
+            id='tips_hourly',
+            name='每小时整生成智能提示',
+            replace_existing=True
+        )
+        logger.info("✅ Tip scheduler enabled")
+    else:
+        logger.info("⏸️ Tip scheduler disabled")
     
     # 4. 每天早上8点生成日报
-    scheduler.add_job(
-        func=job_generate_daily_report,
-        trigger=CronTrigger(hour=8, minute=0),
-        id='daily_report',
-        name='每日8点生成报告',
-        replace_existing=True
-    )
+    if ENABLE_SCHEDULER_REPORT:
+        scheduler.add_job(
+            func=job_generate_daily_report,
+            trigger=CronTrigger(hour=8, minute=0),
+            id='daily_report',
+            name='每日8点生成报告',
+            replace_existing=True
+        )
+        logger.info("✅ Report scheduler enabled")
+    else:
+        logger.info("⏸️ Report scheduler disabled")
     
     scheduler.start()
     logger.info("Scheduler initialized and started")
