@@ -2,6 +2,10 @@
   if (window.__my_floating_chat_injected__) return;
   window.__my_floating_chat_injected__ = true;
 
+  // 悬浮球与聊天框功能暂时禁用（保留全部代码以便后续恢复）。
+  // 如需恢复，请删除/注释掉下方的 return 语句。
+  return;
+
   // 创建悬浮球和聊天框组件
   function createFloatingChat() {
     // 创建主容器
