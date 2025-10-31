@@ -1,59 +1,59 @@
 @echo off
 chcp 65001 >nul
 echo ============================================================
-echo  🚀 LifeContext 一键部署脚本 (Windows)
+echo  🚀 LifeContext One-Click Deployment Script (Windows)
 echo ============================================================
 echo.
 
-:: 检查是否已经启动
+:: Check if services are already running
 tasklist /FI "IMAGENAME eq python.exe" 2>NUL | find /I /N "python.exe">NUL
 if "%ERRORLEVEL%"=="0" (
-    echo [警告] 检测到 Python 进程已在运行，可能已有服务启动
+    echo [Warning] Python processes detected, services may already be running
     echo.
 )
 
-:: 1. 启动后端服务
-echo [1/3] 启动后端服务...
+:: 1. Start backend service
+echo [1/3] Starting backend service...
 echo ============================================================
-start "LifeContext Backend" cmd /k "cd backend && echo 正在激活 conda 环境... && conda activate lifecontext && echo 启动后端服务... && python app.py"
+start "LifeContext Backend" cmd /k "cd backend && echo Activating conda environment... && conda activate lifecontext && echo Starting backend service... && python app.py"
 timeout /t 3 >nul
 
-:: 2. 启动浏览器插件服务
-echo [2/3] 启动浏览器插件服务...
+:: 2. Start extension service
+echo [2/3] Starting extension service...
 echo ============================================================
-start "LifeContext Extension" cmd /k "cd Extension && echo 安装依赖... && if not exist node_modules (npm install) && echo 启动插件服务器... && node server.js"
+start "LifeContext Extension" cmd /k "cd Extension && echo Installing dependencies... && if not exist node_modules (npm install) && echo Starting extension server... && node server.js"
 timeout /t 3 >nul
 
-:: 3. 启动前端服务
-echo [3/3] 启动前端服务...
+:: 3. Start frontend service
+echo [3/3] Starting frontend service...
 echo ============================================================
-start "LifeContext Frontend" cmd /k "cd frontend && echo 安装依赖... && if not exist node_modules (npm install) && echo 启动前端服务... && npm run dev"
+start "LifeContext Frontend" cmd /k "cd frontend && echo Installing dependencies... && if not exist node_modules (npm install) && echo Starting frontend service... && npm run dev"
 timeout /t 3 >nul
 
 echo.
 echo ============================================================
-echo ✅ 所有服务启动完成！
+echo ✅ All services started successfully!
 echo ============================================================
 echo.
-echo 📝 服务列表：
-echo    • 后端服务:   http://localhost:8000
-echo    • 前端界面:   http://localhost:3000
-echo    • 插件服务:   运行中
+echo 📝 Service List:
+echo    • Backend Service:   http://localhost:8000
+echo    • Frontend UI:       http://localhost:3000
+echo    • Extension Service: Running
 echo.
-echo 💡 提示：
-echo    1. 首次运行需要确保已创建 conda 环境：
+echo 💡 Tips:
+echo    1. For first run, ensure conda environment is created:
 echo       conda env create -f backend/environment.yml
 echo.
-echo    2. 需要配置 backend/config.py 中的 API Key
+echo    2. Configure API Key in backend/config.py
 echo.
-echo    3. 浏览器插件安装步骤：
-echo       - 打开浏览器扩展管理页面
-echo       - 启用开发者模式
-echo       - 加载 Extension/extension 文件夹
+echo    3. Browser extension installation steps:
+echo       - Open browser extension management page
+echo       - Enable developer mode
+echo       - Load Extension/extension folder
 echo.
-echo    4. 关闭所有服务：关闭对应的命令行窗口即可
+echo    4. To stop all services: Close the corresponding command windows
 echo.
 echo ============================================================
-echo 按任意键退出此窗口（服务将继续运行）...
+echo Press any key to exit this window (services will continue running)...
 pause >nul
 
