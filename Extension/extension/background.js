@@ -74,13 +74,18 @@ async function checkEventsAndNotify() {
 // 显示事件通知
 async function showEventNotification(event) {
   const notificationId = `event_${event.id || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
+    // 若为智能提示，且后端提供 tips 列表，则使用列表型通知展示每条标题
+    const tipTitles = (event.type === 'tip' && event.data && Array.isArray(event.data.tips))
+    ? event.data.tips.map(t => String(t?.title || '').trim()).filter(Boolean)
+    : null;
+  const tipsCount = event?.data?.count ?? (tipTitles ? tipTitles.length : 0);
+
   // 根据事件类型生成不同的通知内容
   let title = '新事件提醒';
   let message = '您有新的重要事件需要关注';
   
   if (event.type === 'tip') {
-    title = '💡 智能提示';
+    title = `您有 ${tipsCount} 条新的智能提示`;
     message = event.data?.content || event.data?.message || event.data?.title || '您有新的智能提示';
   } else if (event.type === 'todo') {
     title = '📝 待办事项';
@@ -99,21 +104,42 @@ async function showEventNotification(event) {
     message = event.data?.content || event.data?.message || event.data?.title || '您有新的重要事件需要关注';
   }
   
-  const notificationOptions = {
-    type: 'basic',
-    iconUrl: 'icon.png',
-    title: title,
-    message: message,
 
-    contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString('zh-CN')}`,
-
-    priority: 2,
-    requireInteraction: true,
-    buttons: [
-      { title: '查看详情' },
-      { title: '稍后提醒' }
-    ]
-  };
+  let notificationOptions;
+  if (tipTitles && tipTitles.length > 0) {
+    const items = tipTitles.slice(0, 5).map((t, idx) => ({ title: `${idx + 1}.`, message: t }));
+    notificationOptions = {
+      type: 'list',
+      iconUrl: 'icon.png',
+      title: title,
+      message: `您有 ${tipsCount} 条新的智能提示`,
+      items: items,
+      contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString('zh-CN')}`,
+      priority: 2,
+      requireInteraction: true,
+      buttons: [
+        { title: '查看详情' },
+        { title: '稍后提醒' }
+      ]
+    };
+  } else {
+    if (event.type === 'tip' && tipsCount > 0) {
+      message = `您有 ${tipsCount} 条新的智能提示`;
+    }
+    notificationOptions = {
+      type: 'basic',
+      iconUrl: 'icon.png',
+      title: title,
+      message: message,
+      contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString('zh-CN')}`,
+      priority: 2,
+      requireInteraction: true,
+      buttons: [
+        { title: '查看详情' },
+        { title: '稍后提醒' }
+      ]
+    };
+  }
   
   try {
     console.log('准备创建通知:', notificationId, notificationOptions);
