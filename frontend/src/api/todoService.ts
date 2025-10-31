@@ -19,17 +19,23 @@ export class TodoService {
   }
 
   // 添加新的Todo项
-  async addTodo(text: string, priority: 'low' | 'medium' | 'high'): Promise<TodoItem> {
+  async addTodo(
+    text: string,
+    priority: 'low' | 'medium' | 'high',
+    options?: { description?: string; startTime?: string; endTime?: string }
+  ): Promise<TodoItem> {
     try {
-      // 将前端优先级 low/medium/high 映射为后端数值 1/2/3
+      // 前端优先级与后端优先级(数值)映射
       const priorityMap = { low: 1, medium: 2, high: 3 } as const;
-      
-      const payload = {
+
+      const payload: Record<string, unknown> = {
         title: text,
-        description: text,
+        description: options?.description ?? text,
         priority: priorityMap[priority]
       };
 
+      if (options?.startTime) payload.start_time = options.startTime;
+      if (options?.endTime) payload.end_time = options.endTime;
       const response = await fetch(`/api/generation/todos`, {
         method: 'POST',
         headers: {
@@ -37,14 +43,29 @@ export class TodoService {
         },
         body: JSON.stringify(payload)
       });
-      
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error('API Error Response:', errorText);
         throw new Error(`Failed to add todo: ${response.statusText} - ${errorText}`);
       }
-      
-      return await response.json();
+
+      const json = await response.json();
+      // 兼容不同返回结构，尽量规范化为 TodoItem
+      const created: any = (json && (json.data?.todo ?? json.data ?? json)) ?? {};
+
+      const normalized: TodoItem = {
+        id: created.id ?? created.todo_id ?? 0,
+        description: created.description ?? created.title ?? text,
+        status: Boolean(
+          created.status === true ||
+          created.status === 1 ||
+          created.completed === true
+        ),
+        priority: (created.priority as number) ?? priorityMap[priority]
+      };
+
+      return normalized;
     } catch (error) {
       console.error('Error adding todo:', error);
       throw error;
