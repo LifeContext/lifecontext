@@ -13,7 +13,7 @@ export interface DataRefreshCallbacks {
   onTodosUpdate: (todos: TodoItem[]) => void;
   onReportsUpdate: (reports: DailyReport[]) => void;
   onTipsUpdate: (tips: Tip[]) => void;
-  onTimelineUpdate: () => void;
+  onTimelineUpdate: (activities: any[]) => void;
   onError: (error: string, dataType: string) => void;
 }
 
@@ -118,11 +118,23 @@ export class DataRefreshManager {
     try {
       console.log('刷新时间线数据...');
       
+      // 实际获取时间线数据
+      const response = await timelineService.getTimelineSegments();
+      const segs = (response as any)?.data?.activities ?? (response as any);
+      const activities = Array.isArray(segs) ? segs : [];
+      
+      // 通过自定义事件通知 Timeline 组件刷新
+      // Timeline 组件会监听这个事件
+      window.dispatchEvent(new CustomEvent('timeline-data-updated', {
+        detail: { activities }
+      }));
+      
+      // 调用回调
       if (this.callbacks?.onTimelineUpdate) {
-        this.callbacks.onTimelineUpdate();
+        this.callbacks.onTimelineUpdate(activities);
       }
       
-      console.log('时间线数据已更新');
+      console.log(`时间线数据已更新，共 ${activities.length} 个活动`);
     } catch (error) {
       console.error('刷新时间线数据失败:', error);
       this.callbacks?.onError?.('刷新时间线失败', 'timeline');

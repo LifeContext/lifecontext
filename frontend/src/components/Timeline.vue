@@ -143,7 +143,6 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Icon from './Icon.vue';
 import { timelineService } from '../api/timelineService';
-import { eventService } from '../api/eventService';
 import type { TimelineItem, TimelineSegment } from '../../types';
 
 // State
@@ -345,21 +344,36 @@ const loadInitialData = async () => {
   }
 };
 
+// 处理时间线数据更新事件
+const handleTimelineDataUpdated = (event: Event) => {
+  const customEvent = event as CustomEvent<{ activities: any[] }>;
+  console.log('Timeline 收到数据更新事件:', customEvent.detail);
+  
+  if (customEvent.detail?.activities) {
+    // 使用接收到的数据更新时间线
+    allSegments.value = customEvent.detail.activities;
+    buildDateOptions(allSegments.value);
+    applyDateFilter(selectedDate.value);
+    console.log('时间线数据已通过事件更新');
+  } else {
+    // 如果没有提供数据，则重新获取
+    refreshTimelineData();
+  }
+};
+
 onMounted(() => {
   document.addEventListener('click', handleClickOutside);
   loadInitialData();
   
-  // 注册活动事件监听器
-  eventService.onEvent('activity', () => {
-    refreshTimelineData();
-  });
+  // 监听时间线数据更新事件（由 dataRefreshManager 触发）
+  window.addEventListener('timeline-data-updated', handleTimelineDataUpdated);
 });
 
 onUnmounted(() => {
   document.removeEventListener('click', handleClickOutside);
   
-  // 移除事件监听器
-  eventService.offEvent('activity');
+  // 移除时间线数据更新事件监听器
+  window.removeEventListener('timeline-data-updated', handleTimelineDataUpdated);
 });
 </script>
 

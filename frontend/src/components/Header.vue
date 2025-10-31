@@ -11,12 +11,12 @@
           :is-active="activeView === 'dashboard'"
           :on-click="() => onNavigate('dashboard')"
         />
-        <NavButton 
+        <!-- <NavButton 
           :icon="ICONS.chat"
           label="Chat"
           :is-active="activeView === 'chat'"
           :on-click="() => onNavigate('chat')"
-        />
+        /> -->
         <NavButton 
           :icon="ICONS.timeline"
           label="Timeline"

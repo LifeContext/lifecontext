@@ -106,14 +106,6 @@
       v-if="isSettingsModalOpen"
       :on-close="() => isSettingsModalOpen = false" 
     />
-    
-    <!-- 数据更新通知 -->
-    <DataUpdateNotification 
-      :notification="notification"
-      :auto-close="true"
-      :duration="3000"
-      @close="notification = null"
-    />
   </div>
 </template>
 
@@ -178,13 +170,6 @@ const activeChatSessionId = ref<number | null>(5);
 
 const isChatWindowOpen = ref(false);
 const currentDate = ref(new Date());
-
-// 通知状态
-const notification = ref<{
-  title: string;
-  message: string;
-  type: 'success' | 'error' | 'info' | 'warning';
-} | null>(null);
 
 // Computed
 const today = computed(() => {
@@ -389,15 +374,6 @@ const setViewingTip = (tip: Tip) => {
   viewingTip.value = tip;
 };
 
-// 显示通知
-const showNotification = (title: string, message: string, type: 'success' | 'error' | 'info' | 'warning') => {
-  notification.value = {
-    title,
-    message,
-    type
-  };
-};
-
 // 初始化事件轮询和数据刷新
 const initializeEventPolling = () => {
   // 设置数据刷新回调
@@ -405,7 +381,6 @@ const initializeEventPolling = () => {
     onTodosUpdate: (newTodos: TodoItem[]) => {
       todos.value = newTodos;
       console.log('待办事项数据已自动更新');
-      showNotification('待办事项已更新', `发现 ${newTodos.length} 个待办任务`, 'success');
     },
     onReportsUpdate: (newReports: DailyReport[]) => {
       reports.value = newReports;
@@ -414,21 +389,17 @@ const initializeEventPolling = () => {
         selectedDashboardReport.value = newReports.length > 0 ? newReports[0] : null;
       }
       console.log('报告数据已自动更新');
-      showNotification('报告已更新', `发现 ${newReports.length} 个新报告`, 'info');
     },
     onTipsUpdate: (newTips: Tip[]) => {
       tips.value = newTips;
       console.log('提示数据已自动更新');
-      showNotification('智能提示已更新', `发现 ${newTips.length} 条新提示`, 'info');
     },
-    onTimelineUpdate: () => {
+    onTimelineUpdate: (activities: any[]) => {
       // 时间线组件会自动处理数据刷新
       console.log('时间线数据已自动更新');
-      showNotification('时间线已更新', '活动记录已刷新', 'info');
     },
     onError: (error: string, dataType: string) => {
       console.error(`数据刷新错误 (${dataType}):`, error);
-      showNotification('数据更新失败', `${dataType} 数据刷新时出现错误`, 'error');
     }
   });
 
