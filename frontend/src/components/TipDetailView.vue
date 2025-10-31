@@ -34,7 +34,7 @@
         <header class="mb-8">
 
           <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">{{ selectedTip.title }}</h1>
-          <p class="text-lg text-slate-500 dark:text-slate-400">{{ formatDateTime(selectedTip.create_time) }}</p>
+          <p class="text-lg text-slate-500 dark:text-slate-400">{{ formatTimeAgo(selectedTip.create_time) }}</p>
 
         </header>
         
@@ -44,7 +44,7 @@
               <Icon path="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" class="h-6 w-6 text-yellow-400" />
               <span>Tip Content</span>
             </h2>
-            <div class="prose prose-lg max-w-none dark:prose-invert text-slate-700 dark:text-slate-300 markdown-content h-full">
+            <div class="markdown-content max-w-7xl mx-auto text-slate-700 dark:text-slate-300 h-full">
               <div v-html="renderedContent"></div>
             </div>
           </section>
@@ -69,17 +69,23 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const formatDateTime = (dateTime: string): string => {
-  if (!dateTime) return '';
-  if (dateTime.includes('.')) {
-    return dateTime.split('.')[0];
-  }
-  return dateTime;
+// 规范化后端返回的 Markdown 文本中的换行/回车
+const normalizeMarkdown = (raw: string): string => {
+  if (!raw) return '';
+  let text = raw.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n');
+  text = text.replace(/\r/g, '');
+  return text;
 };
+
 // Markdown 渲染
 const renderedContent = computed(() => {
   if (!props.selectedTip?.content) return '';
-  return marked(props.selectedTip.content);
+  marked.setOptions({
+    gfm: true,
+    breaks: true
+  });
+  const normalized = normalizeMarkdown(props.selectedTip.content);
+  return marked(normalized);
 });
 
 const TIP_CATEGORY_ICONS = {
@@ -276,7 +282,7 @@ main {
 }
 
 /* Markdown内容样式 */
-.prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+:deep(.prose h1), :deep(.prose h2), :deep(.prose h3), :deep(.prose h4), :deep(.prose h5), :deep(.prose h6) {
   color: rgb(15 23 42);
   font-weight: 600;
   line-height: 1.25;
@@ -284,28 +290,28 @@ main {
   margin-bottom: 0.5em;
 }
 
-.dark .prose h1, .dark .prose h2, .dark .prose h3, .dark .prose h4, .dark .prose h5, .dark .prose h6 {
-  color: rgb(241 245 249);
+:global(.dark) :deep(.prose h1), :global(.dark) :deep(.prose h2), :global(.dark) :deep(.prose h3), :global(.dark) :deep(.prose h4), :global(.dark) :deep(.prose h5), :global(.dark) :deep(.prose h6) {
+  color: #ffffff !important;
 }
 
-.prose p {
+:deep(.prose p) {
   margin-top: 1em;
   margin-bottom: 1em;
   line-height: 1.7;
 }
 
-.prose ul, .prose ol {
+:deep(.prose ul), :deep(.prose ol) {
   margin-top: 1em;
   margin-bottom: 1em;
   padding-left: 1.5em;
 }
 
-.prose li {
+:deep(.prose li) {
   margin-top: 0.5em;
   margin-bottom: 0.5em;
 }
 
-.prose blockquote {
+:deep(.prose blockquote) {
   border-left: 4px solid rgb(59 130 246);
   padding-left: 1em;
   margin: 1.5em 0;
@@ -313,12 +319,12 @@ main {
   color: rgb(71 85 105);
 }
 
-.dark .prose blockquote {
+:global(.dark) :deep(.prose blockquote) {
   color: rgb(148 163 184);
   border-left-color: rgb(96 165 250);
 }
 
-.prose code {
+:deep(.prose code) {
   background-color: rgb(241 245 249);
   padding: 0.125em 0.25em;
   border-radius: 0.25em;
@@ -326,12 +332,12 @@ main {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-.dark .prose code {
+:global(.dark) :deep(.prose code) {
   background-color: rgb(30 41 59);
   color: rgb(241 245 249);
 }
 
-.prose pre {
+:deep(.prose pre) {
   background-color: rgb(241 245 249);
   border-radius: 0.5em;
   padding: 1em;
@@ -339,75 +345,127 @@ main {
   margin: 1.5em 0;
 }
 
-.dark .prose pre {
+:global(.dark) :deep(.prose pre) {
   background-color: rgb(30 41 59);
 }
 
-.prose pre code {
+:deep(.prose pre code) {
   background-color: transparent;
   padding: 0;
   font-size: 0.875em;
 }
 
-.prose a {
+:deep(.prose a) {
   color: rgb(59 130 246);
   text-decoration: underline;
   text-underline-offset: 2px;
 }
 
-.prose a:hover {
+:deep(.prose a:hover) {
   color: rgb(37 99 235);
 }
 
-.dark .prose a {
+:global(.dark) :deep(.prose a) {
   color: rgb(96 165 250);
 }
 
-.dark .prose a:hover {
+:global(.dark) :deep(.prose a:hover) {
   color: rgb(147 197 253);
 }
 
-.markdown-content {
-  line-height: 1.7;
+:deep(.prose table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5em 0;
 }
 
-.markdown-content h1,
-.markdown-content h2,
-.markdown-content h3,
-.markdown-content h4,
-.markdown-content h5,
-.markdown-content h6 {
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
+:deep(.prose th), :deep(.prose td) {
+  border: 1px solid rgb(226 232 240);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+
+:global(.dark) :deep(.prose th), :global(.dark) :deep(.prose td) {
+  border-color: rgb(51 65 85);
+}
+
+:deep(.prose th) {
+  background-color: rgb(248 250 252);
   font-weight: 600;
 }
 
-.markdown-content p {
+:global(.dark) :deep(.prose th) {
+  background-color: rgb(30 41 59);
+}
+
+:deep(.prose hr) {
+  border: none;
+  border-top: 1px solid rgb(226 232 240);
+  margin: 2em 0;
+}
+
+:global(.dark) :deep(.prose hr) {
+  border-top-color: rgb(51 65 85);
+}
+
+:deep(.prose img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5em;
+  margin: 1em 0;
+}
+
+:deep(.markdown-content) {
+  line-height: 1.8;
+  font-size: 16px;
+}
+
+:global(.dark) :deep(.markdown-content) {
+  color: rgb(226 232 240) !important;
+}
+
+:deep(.markdown-content h1),
+:deep(.markdown-content h2),
+:deep(.markdown-content h3),
+:deep(.markdown-content h4),
+:deep(.markdown-content h5),
+:deep(.markdown-content h6) {
+  margin-top: 1.5em;
+  margin-bottom: 0.5em;
+  font-weight: 700;
+}
+
+:deep(.markdown-content h1) { font-size: 1.875rem; }
+:deep(.markdown-content h2) { font-size: 1.5rem; }
+:deep(.markdown-content h3) { font-size: 1.25rem; }
+:deep(.markdown-content h4) { font-size: 1.125rem; }
+
+:deep(.markdown-content p) {
   margin-bottom: 1em;
 }
 
-.markdown-content ul,
-.markdown-content ol {
+:deep(.markdown-content ul),
+:deep(.markdown-content ol) {
   margin-bottom: 1em;
   padding-left: 1.5em;
 }
 
-.markdown-content li {
+:deep(.markdown-content li) {
   margin-bottom: 0.25em;
 }
 
-.markdown-content code {
+:deep(.markdown-content code) {
   background-color: rgba(0, 0, 0, 0.1);
   padding: 0.125em 0.25em;
   border-radius: 0.25em;
   font-size: 0.875em;
 }
 
-.dark .markdown-content code {
+:global(.dark) :deep(.markdown-content code) {
   background-color: rgba(255, 255, 255, 0.1);
 }
 
-.markdown-content pre {
+:deep(.markdown-content pre) {
   background-color: rgba(0, 0, 0, 0.05);
   padding: 1em;
   border-radius: 0.5em;
@@ -415,22 +473,161 @@ main {
   margin: 1em 0;
 }
 
-.dark .markdown-content pre {
+:global(.dark) :deep(.markdown-content pre) {
   background-color: rgba(255, 255, 255, 0.05);
 }
 
-.markdown-content blockquote {
+:deep(.markdown-content blockquote) {
   border-left: 4px solid #3b82f6;
   padding-left: 1em;
   margin: 1em 0;
   font-style: italic;
 }
 
-.markdown-content strong {
+:deep(.markdown-content strong) {
   font-weight: 600;
 }
 
-.markdown-content em {
+:deep(.markdown-content em) {
   font-style: italic;
+}
+
+:global(.dark) :deep(.markdown-content h1),
+:global(.dark) :deep(.markdown-content h2),
+:global(.dark) :deep(.markdown-content h3),
+:global(.dark) :deep(.markdown-content h4),
+:global(.dark) :deep(.markdown-content h5),
+:global(.dark) :deep(.markdown-content h6) {
+  color: rgb(241 245 249) !important;
+}
+
+/* 表格容器样式 */
+:deep(.markdown-content table) {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  margin: 1.5em 0;
+  border-radius: 0.75em;
+  overflow: hidden;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  background-color: rgb(255 255 255);
+}
+
+:global(.dark) :deep(.markdown-content table) {
+  background-color: rgb(30 41 59);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+}
+
+/* 表格单元格基础样式 */
+:deep(.markdown-content th),
+:deep(.markdown-content td) {
+  padding: 0.75em 1em;
+  text-align: left;
+  border-bottom: 1px solid rgb(226 232 240);
+  border-right: 1px solid rgb(226 232 240);
+  transition: background-color 0.15s ease;
+}
+
+:deep(.markdown-content th:last-child),
+:deep(.markdown-content td:last-child) {
+  border-right: none;
+}
+
+:global(.dark) :deep(.markdown-content th),
+:global(.dark) :deep(.markdown-content td) {
+  border-bottom-color: rgb(51 65 85);
+  border-right-color: rgb(51 65 85);
+}
+
+/* 表头样式 */
+:deep(.markdown-content thead) {
+  background-color: rgb(248 250 252);
+}
+
+:global(.dark) :deep(.markdown-content thead) {
+  background-color: rgb(30 41 59);
+}
+
+:deep(.markdown-content th) {
+  background-color: rgb(248 250 252);
+  font-weight: 600;
+  color: rgb(15 23 42);
+  font-size: 0.875rem;
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+  padding-top: 1em;
+  padding-bottom: 1em;
+}
+
+:global(.dark) :deep(.markdown-content th) {
+  background-color: rgb(30 41 59);
+  color: rgb(241 245 249);
+}
+
+/* 表格行样式 */
+:deep(.markdown-content tbody tr) {
+  background-color: rgb(255 255 255);
+}
+
+:deep(.markdown-content tbody tr:hover) {
+  background-color: rgb(249 250 251);
+}
+
+:global(.dark) :deep(.markdown-content tbody tr) {
+  background-color: rgb(30 41 59);
+}
+
+:global(.dark) :deep(.markdown-content tbody tr:hover) {
+  background-color: rgb(51 65 85);
+}
+
+/* 最后一行边框 */
+:deep(.markdown-content tbody tr:last-child td) {
+  border-bottom: none;
+}
+
+/* 表格内容样式 */
+:deep(.markdown-content td) {
+  color: rgb(51 65 85);
+  vertical-align: top;
+}
+
+:global(.dark) :deep(.markdown-content td) {
+  color: rgb(226 232 240);
+}
+
+/* 响应式：小屏幕时表格可横向滚动 */
+:deep(.markdown-content table) {
+  overflow-x: auto;
+  max-width: 100%;
+  -webkit-overflow-scrolling: touch;
+}
+
+@media (max-width: 768px) {
+  :deep(.markdown-content table) {
+    font-size: 0.875rem;
+  }
+  
+  :deep(.markdown-content th),
+  :deep(.markdown-content td) {
+    padding: 0.5em 0.75em;
+  }
+}
+
+:deep(.markdown-content hr) {
+  border: none;
+  border-top: 1px solid rgb(226 232 240);
+  margin: 2em 0;
+}
+
+:global(.dark) :deep(.markdown-content hr) {
+  border-top-color: rgb(51 65 85);
+}
+
+:deep(.markdown-content img) {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.5em;
+  margin: 1em 0;
 }
 </style>

@@ -30,7 +30,11 @@
     </div>
     
     <!-- Tips列表 -->
-    <div v-else ref="tipsScroll" :class="['grid tips-grid gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto', { scrolling: isScrollingTips }]">
+    <div v-else ref="tipsScroll" :class="[
+      'grid tips-grid gap-4 pb-2 max-h-[calc(100%-2.5rem)] overflow-y-auto',
+      { scrolling: isScrollingTips },
+      isFirstRowNotFull ? 'tips-grid-fixed' : 'tips-grid-fit'
+    ]">
       <div 
         v-for="tip in tips" 
         :key="tip.id"
@@ -47,7 +51,6 @@
         <!-- 标题 -->
         <h3 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-1 pr-6">{{ tip.title }}</h3>
         
-        <!-- 描述（Markdown 渲染，限制高度作为预览） -->
         <div 
           class="text-sm text-slate-600 dark:text-slate-300 mb-1 markdown-content markdown-preview"
           v-html="renderMarkdown(tip.content)"
@@ -61,7 +64,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, defineProps } from 'vue';
+import { ref, onMounted, onUnmounted, defineProps, nextTick } from 'vue';
 import { marked } from 'marked';
 import { tipService } from '../api/tipService';
 import type { Tip, TipCategory } from '../../types';
@@ -113,6 +116,8 @@ const loadTips = async () => {
     error.value = null;
     const tipsData = await tipService.getTips();
     tips.value = tipsData.data.tips;
+    await nextTick();
+    recalcGridState();
   } catch (err) {
     console.error('Failed to load tips:', err);
     error.value = 'Failed to load tips. Please try again later.';
@@ -133,7 +138,7 @@ const truncateContent = (content: string): string => {
 // Markdown 渲染
 const renderMarkdown = (content: string): string => {
   if (!content) return '';
-  return marked.parse(content);
+  return marked.parse(content) as string;
 };
 
 // 格式化时间函数
@@ -164,11 +169,18 @@ const formatTimeAgo = (dateString: string): string => {
 onMounted(() => {
   loadTips();
   if (tipsScroll.value) tipsScroll.value.addEventListener('scroll', handleTipsScroll);
+  if (tipsScroll.value) {
+    resizeObserver = new ResizeObserver(() => recalcGridState());
+    resizeObserver.observe(tipsScroll.value);
+  }
+  window.addEventListener('resize', recalcGridState);
 });
 
 onUnmounted(() => {
   if (tipsScroll.value) tipsScroll.value.removeEventListener('scroll', handleTipsScroll);
   if (tipsScrollTimer) window.clearTimeout(tipsScrollTimer);
+  if (resizeObserver && tipsScroll.value) resizeObserver.unobserve(tipsScroll.value);
+  window.removeEventListener('resize', recalcGridState);
 });
 
 const tipsScroll = ref<HTMLElement | null>(null);
@@ -178,6 +190,27 @@ const handleTipsScroll = () => {
   isScrollingTips.value = true;
   if (tipsScrollTimer) window.clearTimeout(tipsScrollTimer);
   tipsScrollTimer = window.setTimeout(() => (isScrollingTips.value = false), 600);
+};
+
+// 当第一行未排满时不平均拉伸
+const isFirstRowNotFull = ref(false);
+const MIN_CARD_WIDTH = 180;
+const GRID_GAP_PX = 16;
+let resizeObserver: ResizeObserver | null = null;
+
+const recalcGridState = () => {
+  const container = tipsScroll.value;
+  if (!container) {
+    isFirstRowNotFull.value = false;
+    return;
+  }
+  const containerWidth = container.clientWidth || 0;
+  if (containerWidth <= 0) {
+    isFirstRowNotFull.value = false;
+    return;
+  }
+  const maxColumns = Math.max(1, Math.floor((containerWidth + GRID_GAP_PX) / (MIN_CARD_WIDTH + GRID_GAP_PX)));
+  isFirstRowNotFull.value = tips.value.length > 0 && tips.value.length < maxColumns;
 };
 </script>
 
@@ -328,8 +361,16 @@ const handleTipsScroll = () => {
   transition: all 0.2s ease;
 }
 
-/* 自适应列：默认宽度下约为 5 列，容器更宽（daily 折叠）时能扩到 6 列 */
-.tips-grid {
+/* 通过类切换两种布局 */
+
+/* 第一行未排满：不平均拉伸，保持固定卡片宽度并靠左 */
+.tips-grid-fixed {
+  grid-template-columns: repeat(auto-fill, minmax(180px, 200px));
+  justify-content: start;
+}
+
+/* 其他情况：平均填满每行 */
+.tips-grid-fit {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
@@ -371,7 +412,7 @@ const handleTipsScroll = () => {
 }
 
 .markdown-preview {
-  max-height: 5.5rem; /* 约 3-4 行高度 */
+  max-height: 5.5rem;
   overflow: hidden;
 }
 </style>
