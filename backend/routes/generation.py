@@ -76,6 +76,107 @@ def get_debug_todos():
         return convert_resp(code=500, status=500, message=f"获取待办事项失败: {str(e)}")
 
 
+@generation_bp.route('/todos', methods=['POST'])
+@auth_required
+def create_todo():
+    """手动创建待办事项"""
+    try:
+        data = request.get_json()
+        
+        if not data or 'title' not in data:
+            return convert_resp(code=400, status=400, message="缺少必填参数: title")
+        
+        title = data['title']
+        description = data.get('description', '')
+        priority = data.get('priority', 0)
+        start_time_str = data.get('start_time')
+        end_time_str = data.get('end_time')
+        
+        # 验证优先级
+        if not isinstance(priority, int) or priority < 0 or priority > 3:
+            return convert_resp(code=400, status=400, message="优先级必须是0-3之间的整数")
+        
+        # 验证标题长度
+        if len(title.strip()) < 2:
+            return convert_resp(code=400, status=400, message="标题至少需要2个字符")
+        
+        if len(title) > 200:
+            return convert_resp(code=400, status=400, message="标题不能超过200个字符")
+        
+        # 解析和验证时间
+        start_time = None
+        end_time = None
+        
+        if start_time_str:
+            try:
+                # 支持多种时间格式
+                # ISO格式: 2025-10-31T12:00:00
+                # 标准格式: 2025-10-31 12:00:00
+                if 'T' in start_time_str:
+                    start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                else:
+                    start_time = datetime.strptime(start_time_str, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                return convert_resp(code=400, status=400, message="开始时间格式错误，请使用 'YYYY-MM-DD HH:MM:SS' 或 ISO 格式")
+        
+        if end_time_str:
+            try:
+                if 'T' in end_time_str:
+                    end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00'))
+                else:
+                    end_time = datetime.strptime(end_time_str, '%Y-%m-%d %H:%M:%S')
+            except ValueError:
+                return convert_resp(code=400, status=400, message="结束时间格式错误，请使用 'YYYY-MM-DD HH:MM:SS' 或 ISO 格式")
+        
+        # 验证时间逻辑
+        if start_time and end_time:
+            if end_time <= start_time:
+                return convert_resp(code=400, status=400, message="结束时间必须晚于开始时间")
+        
+        # 插入待办事项
+        todo_id = insert_todo(
+            title=title.strip(),
+            description=description.strip() if description else "",
+            priority=priority,
+            start_time=start_time,
+            end_time=end_time
+        )
+        
+        logger.info(f"Created todo: ID={todo_id}, title={title}, start_time={start_time}, end_time={end_time}")
+        
+        # 获取完整的待办信息
+        todos = get_todos(limit=1, offset=0)
+        created_todo = None
+        for todo in todos:
+            if todo.get('id') == todo_id:
+                created_todo = todo
+                break
+        
+        # 发布事件
+        publish_event(
+            event_type=EventType.TODO_GENERATED,
+            data={
+                "todo_ids": [str(todo_id)],
+                "count": 1,
+                "title": title,
+                "message": f"手动创建待办任务: {title}",
+                "todos": [created_todo] if created_todo else []
+            }
+        )
+        
+        return convert_resp(
+            data={
+                "todo_id": todo_id,
+                "todo": created_todo
+            },
+            message="待办事项创建成功"
+        )
+        
+    except Exception as e:
+        logger.exception(f"Error creating todo: {e}")
+        return convert_resp(code=500, status=500, message=f"创建待办事项失败: {str(e)}")
+
+
 @generation_bp.route('/activities', methods=['GET'])
 @auth_required
 def get_debug_activities():
