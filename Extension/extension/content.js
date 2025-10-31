@@ -2,10 +2,12 @@
 // 检查 chrome.runtime 是否可用且扩展上下文有效
 function isChromeRuntimeAvailable() {
   try {
-    return typeof chrome !== 'undefined' && 
-           chrome.runtime && 
-           chrome.runtime.sendMessage &&
-           !chrome.runtime.lastError;
+    // chrome.runtime.lastError 仅在调用后才有意义，这里不作为判定条件
+    return typeof chrome !== 'undefined' &&
+           !!chrome &&
+           !!chrome.runtime &&
+           !!chrome.runtime.id &&
+           typeof chrome.runtime.sendMessage === 'function';
   } catch (e) {
     return false;
   }
@@ -18,6 +20,11 @@ class DOMCrawlerManager {
     this.lastCrawlTime = 0;
     this.crawlThrottleDelay = 3000; // 3秒节流
     this.contentHash = '';
+    this.previousContent = '';
+    this.versionCounter = 0;
+    this.lastChangeTime = 0;
+    this.quietPeriodMs = 5000; // 静默期，5s 内无变化才视为"完成一次修改"
+    this.quietTimerId = null;
     this.isObserving = false;
     this.observedSelectors = [
       'main', 'article', '.content', '.post', '.message', '.chat-message',
@@ -97,7 +104,8 @@ class DOMCrawlerManager {
 
     if (hasSignificantChange) {
       console.log(`📝 检测到 ${changeCount} 个重要DOM变化`);
-      this.scheduleCrawl();
+      this.lastChangeTime = Date.now();
+      this.scheduleDebouncedCrawl();
     }
   }
 
@@ -148,6 +156,26 @@ class DOMCrawlerManager {
     this.performIncrementalCrawl();
   }
 
+  // 静默期去抖：5s 内若持续变化则不触发，直到 5s 无变化才执行
+  scheduleDebouncedCrawl() {
+    if (this.quietTimerId) {
+      clearTimeout(this.quietTimerId);
+    }
+    const tick = () => {
+      const now = Date.now();
+      const sinceLastChange = now - this.lastChangeTime;
+      const remain = this.quietPeriodMs - sinceLastChange;
+      if (remain <= 0) {
+        console.log('🕒 静默期结束，执行一次增量爬取');
+        this.performIncrementalCrawl();
+        this.quietTimerId = null;
+      } else {
+        this.quietTimerId = setTimeout(tick, Math.min(remain, 1000));
+      }
+    };
+    this.quietTimerId = setTimeout(tick, this.quietPeriodMs);
+  }
+
   // 执行增量爬取
   async performIncrementalCrawl() {
     try {
@@ -184,6 +212,27 @@ class DOMCrawlerManager {
 
       console.log('📊 执行增量爬取，内容长度:', currentContent.length);
 
+      // 计算行级 diff（支持新增/删除/修改）
+      const oldContent = this.previousContent || '';
+      const diffResult = this.computeLineDiff(oldContent, currentContent);
+      // 仅保留非 equal 的变更片段，限制单次 diff 的行规模
+      let ops = Array.isArray(diffResult?.ops) ? diffResult.ops.filter(op => op.type !== 'equal') : [];
+      const MAX_LINES = 2000;
+      const countLines = (t) => (t.match(/\n/g)?.length || 0) + 1;
+      let totalLines = 0;
+      const limitedOps = [];
+      for (const op of ops) {
+        const size = op.type === 'modified' ? countLines(op.oldText) + countLines(op.newText) : countLines(op.text || '');
+        if (totalLines + size > MAX_LINES) break;
+        limitedOps.push(op);
+        totalLines += size;
+      }
+      const hasMeaningfulOps = limitedOps.length > 0;
+      if (!hasMeaningfulOps) {
+        console.log('📄 diff 无实质性变化，跳过上传');
+        return;
+      }
+
       // 提取标签
       const keywordsContent = (document.querySelector('meta[name="keywords"]')?.getAttribute('content') || '').trim();
       const tags = keywordsContent
@@ -192,7 +241,8 @@ class DOMCrawlerManager {
 
       // 组织请求数据
       const title = document.title || '';
-      const contentObj = { title, content: currentContent };
+      // 仅上传变更（diff-only），不再附带全量文本
+      const contentObj = { title, diffOnly: true, diff: { ...diffResult, ops: limitedOps } };
       const payload = {
         title,
         url: location.href,
@@ -200,7 +250,16 @@ class DOMCrawlerManager {
         source: 'web-crawler-incremental',
         tags,
         timestamp: new Date().toISOString(),
-        changeType: 'dom-mutation'
+        changeType: 'dom-diff',
+        diff: {
+          oldHash: this.calculateContentHash(oldContent),
+          newHash: currentHash,
+          oldLength: oldContent.length,
+          newLength: currentContent.length,
+          version: this.versionCounter + 1,
+          summary: diffResult.summary,
+          ops: limitedOps
+        }
       };
 
       // 发送到后台脚本
@@ -226,20 +285,24 @@ class DOMCrawlerManager {
         }
       });
 
-      // 通知后台脚本
+      // 通知后台脚本（调试用途），上下文失效时静默忽略
       try {
         if (isChromeRuntimeAvailable()) {
-          chrome.runtime.sendMessage({ 
-            type: 'SCRAPED_DATA', 
-            data: { payload, serverResponse: response, isIncremental: true } 
+          chrome.runtime.sendMessage({
+            type: 'SCRAPED_DATA',
+            data: { payload, serverResponse: response, isIncremental: true }
           });
         }
       } catch (e) {
-        console.error('发送增量爬取消息到后台失败:', e);
+        // 降级到 debug，避免扩展上下文失效导致的噪音
+        console.debug('SCRAPED_DATA 通知忽略（可能扩展上下文失效）:', e?.message || e);
       }
 
       if (response && response.ok) {
         console.log('✅ 增量爬取成功');
+        // 成功后更新基线
+        this.previousContent = currentContent;
+        this.versionCounter += 1;
       } else {
         console.log('❌ 增量爬取失败:', response?.error || '未知错误');
       }
@@ -292,11 +355,86 @@ class DOMCrawlerManager {
     return hash.toString();
   }
 
+  // 基于行的 LCS diff，输出 added/removed/modified/equal
+  computeLineDiff(oldStr, newStr) {
+    const oldLines = (oldStr || '').split(/\r?\n/);
+    const newLines = (newStr || '').split(/\r?\n/);
+    const n = oldLines.length;
+    const m = newLines.length;
+
+    // LCS 动态规划
+    const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
+    for (let i = n - 1; i >= 0; i--) {
+      for (let j = m - 1; j >= 0; j--) {
+        if (oldLines[i] === newLines[j]) dp[i][j] = dp[i + 1][j + 1] + 1;
+        else dp[i][j] = Math.max(dp[i + 1][j], dp[i][j + 1]);
+      }
+    }
+
+    // 回溯生成基础 ops（equal/removed/added）
+    const ops = [];
+    let i = 0, j = 0;
+    while (i < n && j < m) {
+      if (oldLines[i] === newLines[j]) {
+        ops.push({ type: 'equal', text: oldLines[i] });
+        i++; j++;
+      } else if (dp[i + 1][j] >= dp[i][j + 1]) {
+        ops.push({ type: 'removed', text: oldLines[i] });
+        i++;
+      } else {
+        ops.push({ type: 'added', text: newLines[j] });
+        j++;
+      }
+    }
+    while (i < n) { ops.push({ type: 'removed', text: oldLines[i++] }); }
+    while (j < m) { ops.push({ type: 'added', text: newLines[j++] }); }
+
+    // 合并连续片段，并识别修改（removed 后紧跟 added 视为 modified）
+    const merged = [];
+    for (const op of ops) {
+      const last = merged[merged.length - 1];
+      if (last && last.type === op.type && (op.type === 'equal' || op.type === 'removed' || op.type === 'added')) {
+        last.text += '\n' + op.text;
+      } else {
+        merged.push({ ...op });
+      }
+    }
+
+    const finalOps = [];
+    for (let k = 0; k < merged.length; k++) {
+      const cur = merged[k];
+      const next = merged[k + 1];
+      if (cur && next && cur.type === 'removed' && next.type === 'added') {
+        finalOps.push({ type: 'modified', oldText: cur.text, newText: next.text });
+        k++; // 跳过 next
+      } else {
+        finalOps.push(cur);
+      }
+    }
+
+    // 摘要统计
+    const summary = finalOps.reduce((acc, op) => {
+      if (op.type === 'added') acc.added += (op.text.match(/\n/g)?.length || 0) + 1;
+      else if (op.type === 'removed') acc.removed += (op.text.match(/\n/g)?.length || 0) + 1;
+      else if (op.type === 'modified') {
+        acc.modifiedOld += (op.oldText.match(/\n/g)?.length || 0) + 1;
+        acc.modifiedNew += (op.newText.match(/\n/g)?.length || 0) + 1;
+      }
+      return acc;
+    }, { added: 0, removed: 0, modifiedOld: 0, modifiedNew: 0 });
+
+    return { ops: finalOps, summary };
+  }
+
   // 停止监听
   stop() {
     if (this.observer) {
       this.observer.disconnect();
       this.observer = null;
+    }
+    if (this.quietTimerId) {
+      clearTimeout(this.quietTimerId);
+      this.quietTimerId = null;
     }
     this.isObserving = false;
     console.log('🛑 DOM变化监听器已停止');
@@ -478,6 +616,8 @@ async function autoCrawlPage() {
     
     if (j && j.ok) {
       console.log('✅ 初始页面爬取成功:', title);
+      // 设置初始基线内容，用于后续增量爬取的 diff 计算
+      domCrawler.previousContent = pageText;
       // 初始化DOM监听器
       domCrawler.init();
     } else {
