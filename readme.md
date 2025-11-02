@@ -38,6 +38,15 @@
 
 
 ## 🚀 Quick Start
+### 📋 Prerequisites
+
+#### 1️⃣ **Python Environment**
+   - Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/)
+   - Ensure the `conda` command is available
+
+#### 2️⃣ **Node.js Environment**
+   - Install [Node.js](https://nodejs.org/) (recommended v18 or higher)
+   - Ensure `node` and `npm` commands are available
 ### 🛠️ Backend and Frontend Configuration & Startup
 
 #### 1️⃣ Configure LLM and Vector Services
@@ -61,11 +70,10 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 ```
 
-#### 2️⃣ Configure Python Environment
-📦 In the `backend` directory, create the environment based on `environment.yml` and activate it:
+#### 2️⃣ Create conda environment (only needed for first run)
+📦 In the `backend` directory, create the environment based on `environment.yml`:
 ```bash
 conda env create -f environment.yml
-conda activate lifecontext
 ```
 
 #### 3️⃣ Start Services

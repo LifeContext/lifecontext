@@ -28,12 +28,21 @@
 - 代码即将开源
 
 ## 🚀 快速开始
+### 📋 前置准备
+
+#### 1️⃣ **Python 环境**
+   - 安装 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) 或 [Anaconda](https://www.anaconda.com/)
+   - 确保 `conda` 命令可用
+
+#### 2️⃣ **Node.js 环境**
+   - 安装 [Node.js](https://nodejs.org/) (推荐 v18 或更高版本)
+   - 确保 `node` 和 `npm` 命令可用
 ### 🛠️ 前后端配置与启动
 
 #### 1️⃣ 配置大模型与向量服务
 📦 进入 backend 目录，复制 `.env.example`文件并命名为`.env`：
 ```bash
-cd ./backend
+cd backend
 cp .env.example .env
 ```
 
@@ -51,11 +60,10 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 ```
 
-#### 2️⃣ 配置 Python 环境
+#### 2️⃣ 创建conda环境（仅首次运行需要）
 📦 在 backend 目录下，根据 `environment.yml` 创建环境并启动：
 ```bash
 conda env create -f environment.yml
-conda activate lifecontext
 ```
 
 #### 3️⃣ 启动服务
