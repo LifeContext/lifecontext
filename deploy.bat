@@ -21,13 +21,13 @@ timeout /t 3 >nul
 :: 2. Start extension service
 echo [2/3] Starting extension service...
 echo ============================================================
-start "LifeContext Extension" cmd /k "cd Extension && echo Installing dependencies... && if not exist node_modules (npm install) && echo Starting extension server... && node server.js"
+start "LifeContext Extension" cmd /k "cd Extension && echo Installing dependencies... && if not exist node_modules (npm install && echo Dependencies installed successfully) else (echo Dependencies already installed) && echo Extension service ready"
 timeout /t 3 >nul
 
 :: 3. Start frontend service
 echo [3/3] Starting frontend service...
 echo ============================================================
-start "LifeContext Frontend" cmd /k "cd frontend && echo Installing dependencies... && if not exist node_modules (npm install) && echo Starting frontend service... && npm run dev"
+start "LifeContext Frontend" cmd /k "cd frontend && echo Installing dependencies... && if not exist node_modules (npm install && echo Dependencies installed successfully && echo Starting frontend service... && npm run dev) else (echo Dependencies already installed && echo Starting frontend service... && npm run dev)"
 timeout /t 3 >nul
 
 echo.
@@ -38,7 +38,7 @@ echo.
 echo 📝 Service List:
 echo    • Backend Service:   http://localhost:8000
 echo    • Frontend UI:       http://localhost:3000
-echo    • Extension Service: Running
+echo    • Extension Service: http://localhost:3001
 echo.
 echo 💡 Tips:
 echo    1. For first run, ensure conda environment is created:
