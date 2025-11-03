@@ -216,42 +216,78 @@ const recalcGridState = () => {
 
 <style scoped>
 /* 垂直滚动条样式 */
+.overflow-y-auto {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(148 163 184) transparent;
+  scroll-behavior: smooth;
+  position: relative;
+  padding-right: 4px;
+}
+
+.overflow-y-auto:hover,
+.overflow-y-auto.scrolling {
+  scrollbar-width: thin;
+}
+
 .overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
+  width: 10px;
+  background: rgba(0, 0, 0, 0.1);
 }
 
 .overflow-y-auto::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
-  border-radius: 3px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-  opacity: 0;
-  transition: opacity 0.2s ease;
+  border-radius: 5px;
+  border: 2px solid rgba(0, 0, 0, 0.1);
 }
 
 .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
+  background: rgba(75, 85, 99, 0.7);
+  width: 6px;
 }
 
 /* 悬停或滚动时显示滚动条 */
 .overflow-y-auto:hover::-webkit-scrollbar-thumb,
 .overflow-y-auto.scrolling::-webkit-scrollbar-thumb {
   opacity: 1;
+  background: rgba(107, 114, 128, 0.6);
+}
+
+.dark .overflow-y-auto {
+  scrollbar-color: rgb(71 85 105) transparent;
+}
+
+.dark .overflow-y-auto::-webkit-scrollbar {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .dark .overflow-y-auto::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .dark .overflow-y-auto::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: rgb(71 85 105);
 }
 
 .dark .overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: rgb(100 116 139);
+}
+
+.dark .overflow-y-auto:hover::-webkit-scrollbar-thumb,
+.dark .overflow-y-auto.scrolling::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.25);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.overflow-y-auto:hover::after {
+  opacity: 1;
+}
+
+.dark .overflow-y-auto:hover::after {
+  opacity: 1;
 }
 
 .overflow-y-auto { scrollbar-width: none; }
@@ -374,6 +410,10 @@ const recalcGridState = () => {
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
 }
 
+.tips-grid {
+  overflow-x: hidden;
+  padding-right: 3px;
+}
 
 /* 移动端降列 */
 @media (max-width: 768px) {
