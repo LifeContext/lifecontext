@@ -128,6 +128,8 @@ Stop all services
 
 🎉 Open your browser and visit http://localhost:3000/
 
+If you encounter any deployment issues, please refer to [deploy_guide.md](deploy_guide.md)
+
 ## 🌄 Scenario Introduction
 
 1. LifeContext automatically and seamlessly records the information you browse on web pages.
