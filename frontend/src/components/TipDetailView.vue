@@ -338,18 +338,6 @@ main {
 }
 
 /* Markdown内容样式 */
-:deep(.prose h1), :deep(.prose h2), :deep(.prose h3), :deep(.prose h4), :deep(.prose h5), :deep(.prose h6) {
-  color: rgb(15 23 42);
-  font-weight: 600;
-  line-height: 1.25;
-  margin-top: 1.5em;
-  margin-bottom: 0.5em;
-}
-
-:global(.dark) :deep(.prose h1), :global(.dark) :deep(.prose h2), :global(.dark) :deep(.prose h3), :global(.dark) :deep(.prose h4), :global(.dark) :deep(.prose h5), :global(.dark) :deep(.prose h6) {
-  color: #ffffff !important;
-}
-
 :deep(.prose p) {
   margin-top: 1em;
   margin-bottom: 1em;
@@ -375,11 +363,6 @@ main {
   color: rgb(71 85 105);
 }
 
-:global(.dark) :deep(.prose blockquote) {
-  color: rgb(148 163 184);
-  border-left-color: rgb(96 165 250);
-}
-
 :deep(.prose code) {
   background-color: rgb(241 245 249);
   padding: 0.125em 0.25em;
@@ -388,21 +371,12 @@ main {
   font-family: ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace;
 }
 
-:global(.dark) :deep(.prose code) {
-  background-color: rgb(30 41 59);
-  color: rgb(241 245 249);
-}
-
 :deep(.prose pre) {
   background-color: rgb(241 245 249);
   border-radius: 0.5em;
   padding: 1em;
   overflow-x: auto;
   margin: 1.5em 0;
-}
-
-:global(.dark) :deep(.prose pre) {
-  background-color: rgb(30 41 59);
 }
 
 :deep(.prose pre code) {
@@ -421,14 +395,6 @@ main {
   color: rgb(37 99 235);
 }
 
-:global(.dark) :deep(.prose a) {
-  color: rgb(96 165 250);
-}
-
-:global(.dark) :deep(.prose a:hover) {
-  color: rgb(147 197 253);
-}
-
 :deep(.prose table) {
   width: 100%;
   border-collapse: collapse;
@@ -441,27 +407,15 @@ main {
   text-align: left;
 }
 
-:global(.dark) :deep(.prose th), :global(.dark) :deep(.prose td) {
-  border-color: rgb(51 65 85);
-}
-
 :deep(.prose th) {
   background-color: rgb(248 250 252);
   font-weight: 600;
-}
-
-:global(.dark) :deep(.prose th) {
-  background-color: rgb(30 41 59);
 }
 
 :deep(.prose hr) {
   border: none;
   border-top: 1px solid rgb(226 232 240);
   margin: 2em 0;
-}
-
-:global(.dark) :deep(.prose hr) {
-  border-top-color: rgb(51 65 85);
 }
 
 :deep(.prose img) {
@@ -474,10 +428,7 @@ main {
 :deep(.markdown-content) {
   line-height: 1.8;
   font-size: 16px;
-}
-
-:global(.dark) :deep(.markdown-content) {
-  color: rgb(226 232 240) !important;
+  color: rgb(51 65 85);
 }
 
 :deep(.markdown-content h1),
@@ -486,10 +437,10 @@ main {
 :deep(.markdown-content h4),
 :deep(.markdown-content h5),
 :deep(.markdown-content h6) {
-  color: rgb(15 23 42) !important;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 700;
+  color: rgb(15 23 42) !important;
 }
 
 :deep(.markdown-content h1) { font-size: 1.875rem; }
@@ -499,6 +450,7 @@ main {
 
 :deep(.markdown-content p) {
   margin-bottom: 1em;
+  color: rgb(51 65 85);
 }
 
 :deep(.markdown-content ul),
@@ -518,20 +470,12 @@ main {
   font-size: 0.875em;
 }
 
-:global(.dark) :deep(.markdown-content code) {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
 :deep(.markdown-content pre) {
   background-color: rgba(0, 0, 0, 0.05);
   padding: 1em;
   border-radius: 0.5em;
   overflow-x: auto;
   margin: 1em 0;
-}
-
-:global(.dark) :deep(.markdown-content pre) {
-  background-color: rgba(255, 255, 255, 0.05);
 }
 
 :deep(.markdown-content blockquote) {
@@ -549,13 +493,105 @@ main {
   font-style: italic;
 }
 
-:global(.dark) :deep(.markdown-content h1),
-:global(.dark) :deep(.markdown-content h2),
-:global(.dark) :deep(.markdown-content h3),
-:global(.dark) :deep(.markdown-content h4),
-:global(.dark) :deep(.markdown-content h5),
-:global(.dark) :deep(.markdown-content h6) {
-  color: rgb(241 245 249) !important;
+@media (prefers-color-scheme: dark) {
+  :deep(.prose blockquote) {
+    color: rgb(148 163 184);
+    border-left-color: rgb(96 165 250);
+  }
+
+  :deep(.prose code) {
+    background-color: rgb(30 41 59);
+    color: rgb(241 245 249);
+  }
+
+  :deep(.prose pre) {
+    background-color: rgb(30 41 59);
+  }
+
+  :deep(.prose a) {
+    color: rgb(96 165 250);
+  }
+
+  :deep(.prose a:hover) {
+    color: rgb(147 197 253);
+  }
+
+  :deep(.prose th),
+  :deep(.prose td) {
+    border-color: rgb(51 65 85);
+  }
+
+  :deep(.prose th) {
+    background-color: rgb(30 41 59);
+  }
+
+  :deep(.prose hr) {
+    border-top-color: rgb(51 65 85);
+  }
+
+  :deep(.markdown-content) {
+    color: rgb(226 232 240);
+  }
+
+  /* 深色模式下的标题颜色 */
+  :deep(.markdown-content h1),
+  :deep(.markdown-content h2),
+  :deep(.markdown-content h3),
+  :deep(.markdown-content h4),
+  :deep(.markdown-content h5),
+  :deep(.markdown-content h6) {
+    color: #ffffff !important;
+  }
+  
+  /* 深色模式下的段落颜色 */
+  :deep(.markdown-content p) {
+    color: rgb(226 232 240);
+  }
+  
+  /* 深色模式下的代码块背景 */
+  :deep(.markdown-content code) {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  :deep(.markdown-content pre) {
+    background-color: rgba(255, 255, 255, 0.05);
+  }
+
+  :deep(.markdown-content table) {
+    background-color: rgb(30 41 59);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
+  }
+
+  :deep(.markdown-content th),
+  :deep(.markdown-content td) {
+    border-bottom-color: rgb(51 65 85);
+    border-right-color: rgb(51 65 85);
+  }
+
+  :deep(.markdown-content thead) {
+    background-color: rgb(30 41 59);
+  }
+
+  :deep(.markdown-content th) {
+    background-color: rgb(30 41 59);
+    color: rgb(241 245 249);
+  }
+
+  :deep(.markdown-content tbody tr) {
+    background-color: rgb(30 41 59);
+  }
+
+  :deep(.markdown-content tbody tr:hover) {
+    background-color: rgb(51 65 85);
+  }
+
+  :deep(.markdown-content td) {
+    color: rgb(226 232 240);
+  }
+
+  :deep(.markdown-content hr) {
+    border-top-color: rgb(51 65 85);
+  }
 }
 
 /* 表格容器样式 */
@@ -568,11 +604,6 @@ main {
   overflow: hidden;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.1);
   background-color: rgb(255 255 255);
-}
-
-:global(.dark) :deep(.markdown-content table) {
-  background-color: rgb(30 41 59);
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.3), 0 1px 2px -1px rgba(0, 0, 0, 0.3);
 }
 
 /* 表格单元格基础样式 */
@@ -590,19 +621,9 @@ main {
   border-right: none;
 }
 
-:global(.dark) :deep(.markdown-content th),
-:global(.dark) :deep(.markdown-content td) {
-  border-bottom-color: rgb(51 65 85);
-  border-right-color: rgb(51 65 85);
-}
-
 /* 表头样式 */
 :deep(.markdown-content thead) {
   background-color: rgb(248 250 252);
-}
-
-:global(.dark) :deep(.markdown-content thead) {
-  background-color: rgb(30 41 59);
 }
 
 :deep(.markdown-content th) {
@@ -616,11 +637,6 @@ main {
   padding-bottom: 1em;
 }
 
-:global(.dark) :deep(.markdown-content th) {
-  background-color: rgb(30 41 59);
-  color: rgb(241 245 249);
-}
-
 /* 表格行样式 */
 :deep(.markdown-content tbody tr) {
   background-color: rgb(255 255 255);
@@ -628,14 +644,6 @@ main {
 
 :deep(.markdown-content tbody tr:hover) {
   background-color: rgb(249 250 251);
-}
-
-:global(.dark) :deep(.markdown-content tbody tr) {
-  background-color: rgb(30 41 59);
-}
-
-:global(.dark) :deep(.markdown-content tbody tr:hover) {
-  background-color: rgb(51 65 85);
 }
 
 /* 最后一行边框 */
@@ -647,10 +655,6 @@ main {
 :deep(.markdown-content td) {
   color: rgb(51 65 85);
   vertical-align: top;
-}
-
-:global(.dark) :deep(.markdown-content td) {
-  color: rgb(226 232 240);
 }
 
 /* 响应式：小屏幕时表格可横向滚动 */
@@ -675,10 +679,6 @@ main {
   border: none;
   border-top: 1px solid rgb(226 232 240);
   margin: 2em 0;
-}
-
-:global(.dark) :deep(.markdown-content hr) {
-  border-top-color: rgb(51 65 85);
 }
 
 :deep(.markdown-content img) {
