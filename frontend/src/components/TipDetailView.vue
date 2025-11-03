@@ -30,15 +30,15 @@
         <Icon path="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" class="h-6 w-6" />
       </button>
       
-      <div class="flex-1 flex flex-col">
-        <header class="mb-8">
+      <div class="flex-1 flex flex-col overflow-hidden">
+        <header class="sticky-header flex-shrink-0">
 
           <h1 class="text-4xl font-bold text-slate-900 dark:text-slate-100 mb-2">{{ selectedTip.title }}</h1>
           <p class="text-lg text-slate-500 dark:text-slate-400">{{ formatTimeAgo(selectedTip.create_time) }}</p>
 
         </header>
         
-        <div class="flex-1 bg-white dark:bg-slate-700 rounded-2xl p-8 shadow-inner">
+        <div class="flex-1 bg-white dark:bg-slate-700 rounded-2xl p-8 shadow-inner overflow-y-auto">
           <section class="h-full">
             <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-3">
               <Icon path="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" class="h-6 w-6 text-yellow-400" />
@@ -211,7 +211,7 @@ main::-webkit-scrollbar-thumb:hover {
 main {
   height: calc(100vh - 2rem);
   max-height: calc(100vh - 2rem);
-  overflow-y: auto;
+  overflow: hidden;
   min-height: calc(100vh - 2rem);
 }
 
@@ -227,11 +227,67 @@ aside nav {
   max-height: calc(100vh - 8rem);
 }
 
+/* 固定标题栏样式 */
+.sticky-header {
+  padding-top: 0;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+  padding-left: 0;
+  padding-right: 0;
+}
+
+.dark .sticky-header {
+  border-bottom-color: rgba(148, 163, 184, 0.2);
+}
+
+/* 内容区域滚动条样式 */
+.bg-white.dark\\:bg-slate-700::-webkit-scrollbar {
+  width: 8px;
+}
+
+.bg-white.dark\\:bg-slate-700::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 4px;
+}
+
+.bg-white.dark\\:bg-slate-700::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+}
+
+.bg-white.dark\\:bg-slate-700::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.3);
+}
+
+.dark .bg-white.dark\\:bg-slate-700::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.dark .bg-white.dark\\:bg-slate-700::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.dark .bg-white.dark\\:bg-slate-700::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.bg-white.dark\\:bg-slate-700 {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0, 0, 0, 0.2) rgba(0, 0, 0, 0.05);
+}
+
+.dark .bg-white.dark\\:bg-slate-700 {
+  scrollbar-color: rgba(255, 255, 255, 0.2) rgba(255, 255, 255, 0.05);
+}
+
 /* 内容卡片样式 */
 .bg-white.dark\\:bg-slate-700 {
   min-height: calc(100vh - 12rem);
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 1;
 }
 
 .bg-white.dark\\:bg-slate-700 section {
