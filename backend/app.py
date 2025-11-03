@@ -98,9 +98,11 @@ def create_app():
                 "generation": [
                     "GET /api/generation/reports",
                     "GET /api/generation/todos",
+                    "POST /api/generation/todos",
                     "GET /api/generation/activities",
                     "GET /api/generation/tips",
                     "PATCH /api/generation/todos/{todo_id}",
+                    "DELETE /api/generation/todos/{todo_id}",
                     "POST /api/generation/generate/report",
                     "POST /api/generation/generate/activity",
                     "POST /api/generation/generate/tips",

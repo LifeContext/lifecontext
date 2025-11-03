@@ -31,25 +31,32 @@
 
 ## 🧩 Current Version
 
-* Focuses on your primary workspace — **web browser** — building an active and intelligent presence.
-* Automatically analyzes the webpages you visit to construct your **digital life context**.
+* Focuses on your core workspace — **web browser** — building a powerful and proactive intelligent presence.
+* Automatically analyzes the web pages you browse to generate your digital life context.
 * Stays out of your way while providing timely, actionable insights.
-* Code coming soon as **open source**.
+* Code will be open source soon.
 
 
 ## 🚀 Quick Start
+### 📋 Prerequisites
 
-### 🛠️ Backend Configuration
+#### 1️⃣ **Python Environment**
+   - Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/)
+   - Ensure the `conda` command is available
 
-#### 1️⃣ Configure the LLM and Vector Services
+#### 2️⃣ **Node.js Environment**
+   - Install [Node.js](https://nodejs.org/) (recommended v18 or higher)
+   - Ensure `node` and `npm` commands are available
+### 🛠️ Backend and Frontend Configuration & Startup
+
+#### 1️⃣ Configure LLM and Vector Services
 📦 Navigate to the `backend` directory and copy the `.env.example` file as `.env`:
 ```bash
 cd ./backend
 cp .env.example .env
 ```
 
-✅ Fill in your API in the newly created `.env` file. Example configuration:
-
+✅ Fill in your model and vector database API information in the newly created `.env` file. Example configuration:
 ```python
 # LLM API 
 LLM_API_KEY = "sk-1234abcd5678efgh9012ijkl"
@@ -60,130 +67,101 @@ LLM_MODEL = "gpt-4o-mini"
 EMBEDDING_API_KEY = "sk-embed-9876mnop4321qrst"
 EMBEDDING_BASE_URL = "https://api.openai.com/v1"
 EMBEDDING_MODEL = "text-embedding-3-small"
+
 ```
 
-#### 2️⃣ Set Up the Python Environment
-
-📦 In the `backend` directory, create a virtual environment, and install all dependencies automatically using `environment.yml`.
-
+#### 2️⃣ Create conda environment (only needed for first run)
+📦 In the `backend` directory, create the environment based on `environment.yml`:
 ```bash
 conda env create -f environment.yml
-conda activate lifecontext
 ```
 
-#### 3️⃣ Start the Backend Service
+#### 3️⃣ Start Services
+#### Windows
 
-📦 Run the following command to start the backend service:
+Start all services
+
+Double-click `deploy.bat` or run in command line:
+
+```cmd
+deploy.bat
+```
+
+Stop all services
+
+Double-click `stop.bat` or run in command line:
+
+```cmd
+stop.bat
+```
+
+#### Linux / macOS
+
+First time: Add execution permissions
 
 ```bash
-python app.py
+chmod +x deploy.sh stop.sh
 ```
 
-✅ Once successfully launched, the terminal will display port information as follows:
+Start all services
 
+```bash
+./deploy.sh
 ```
-============================================================
-LifeContext API Configuration Status
-============================================================
-✅ LLM Content Analysis: Enabled
-   Model: gpt-4o-mini
-✅ Vector Database: Enabled
-   Model: text-embedding-3-small
-============================================================
+
+Stop all services
+
+```bash
+./stop.sh
 ```
 
 ### 🧩 Browser Extension Configuration
 
-#### 1️⃣ Import the Browser Extension
-
+#### 1️⃣ Import Browser Extension
 📦 Follow these steps:
 
 1. Open your browser (recommended: Chrome or Edge).
-2. Go to the **Manage Extensions** page and enable **Developer Mode** (top-right corner).
-3. Click **Load unpacked extension** and select the folder `./Extension/extension` in the project directory.
-4. Once loaded, the extension icon will appear in your browser toolbar.
-5. After enabling the extension, you may disable Developer Mode for better security.
+2. Go to the [Manage Extensions] page and enable [Developer Mode] in the top-right corner.
+3. Click [Load unpacked extension] and select the folder `./Extension/extension` in the project directory.
+4. Once loaded, you will see the extension icon in your browser toolbar.
+5. After enabling the extension functionality, you may disable Developer Mode for better security.
 
-#### 2️⃣ Launch the Extension
-
-📦 Open a new terminal in your editor, navigate to the Extension directory, and install dependencies:
-
-```bash
-cd ./Extension
-npm install
-node server.js
-```
-
-### 💻 Frontend Configuration
-
-#### 1️⃣ Install Dependencies
-
-📦 Open a new terminal and navigate to the frontend directory.
-
-```bash
-# For Windows users
-cd ./frontend
-npm install
-```
-
-```bash
-# For macOS users
-cd ./frontend
-npm install
-chmod +x node_modules/.bin/vite   # Grant execution permission (to prevent Vite permission errors)
-```
-
-#### 2️⃣ Start the Frontend Development Server
-
-📦 Run the following command to start the frontend:
-
-```bash
-npm run dev
-```
-
-✅ Once started successfully, the terminal will display:
-
-```
-VITE v6.x.x  ready in 500 ms
-
-➜  Local:   http://localhost:3000/
-➜  Network: http://192.168.xx.xx:3000/
-```
-
-🎉 Open the browser and visit the address above to start using the app.
+🎉 Open your browser and visit http://localhost:3000/
 
 ## 🌄 Scenario Introduction
 
-1. Our browser extension automatically and seamlessly records the information you browse on web pages.
-2. On any webpage, you can click the floating button to open the chatbox and freely interact with your life context.
+1. LifeContext automatically and seamlessly records the information you browse on web pages.
+2. On any webpage, click the floating chat orb to open the Chatbox and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your life context.
 
 ![img](src/product01.png)
 
 ![img](src/product02.png)
 
-3. LifeContext will silently record all your browsing experiences and generate smart tips, to-do lists, and daily reports based on them, which will appear as instant notifications on the right side of the webpage you are browsing. You can also view all the information on the homepage.
+3. LifeContext seamlessly records all your browsing experiences and generates smart tips, to-dos, and daily reports based on them, appearing as instant notifications on the right side of the webpage you're browsing. You can also view all information on the homepage.
 
 ![img](src/product03.png)
 
-- Tips are content recommended based on your browsing information. You can click on the card to view detailed tips.
+- Tips are content recommendations based on your browsing information. Click the card to view detailed tip information.
 
 ![img](src/product04.png)
 
-- The to-do list is automatically generated based on your activities. You can manually edit, delete, or add to-dos.
+- The TodoList is automatically generated based on your activities. You can manually edit, delete, or add items.
 
 ![img](src/product05.png)
 
-- Click the date in the left sidebar of the homepage to view the details of that day's daily report. The default generation time is 8:30 the following day, which you can modify in the settings.
+- Click the date in the left sidebar of the homepage to view that day's daily report details.
+The default generation time is 8:30 the next day, which you can modify in the settings.
 
 ![img](src/product06.png)
 
-4. Privacy issues
+4. Privacy
 
-- If you do not want certain websites recorded in your life context, you can block the corresponding URL in the settings. If you do not want to record any browsing activity, you can disable the browser extension.
+- If you don't want specific websites recorded in your life context, you can block the corresponding URL in the settings.
+If you don't want to record any browser activity, you can disable the extension.
 
 ![img](src/product07.png)
 
-- You can also manage storage by selecting the Timeline page at the top left of the homepage and delete pages you do not want to retain in LifeContext.
+- You can also manage storage by selecting the Timeline page at the top left of the homepage and delete pages you don't want to keep in LifeContext.
 
 ![img](src/product08.png)
 

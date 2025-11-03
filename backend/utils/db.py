@@ -218,17 +218,37 @@ def update_todo(todo_id, **kwargs):
     return affected_rows > 0
 
 
-def insert_todo(title, description="", priority=0):
-    """插入待办事项"""
+def insert_todo(title, description="", priority=0, start_time=None, end_time=None):
+    """插入待办事项
+    
+    Args:
+        title: 标题
+        description: 描述
+        priority: 优先级 (0-3)
+        start_time: 开始时间（字符串格式 'YYYY-MM-DD HH:MM:SS' 或 datetime 对象）
+        end_time: 结束时间（字符串格式 'YYYY-MM-DD HH:MM:SS' 或 datetime 对象）
+    
+    Returns:
+        int: 新插入的待办事项ID
+    """
     conn = get_db_connection()
     cursor = conn.cursor()
     
     create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    # 处理开始时间
+    if start_time is None:
+        start_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    elif isinstance(start_time, datetime):
+        start_time = start_time.strftime('%Y-%m-%d %H:%M:%S')
+    
+    # 处理结束时间
+    if end_time is not None and isinstance(end_time, datetime):
+        end_time = end_time.strftime('%Y-%m-%d %H:%M:%S')
     
     cursor.execute(
-        "INSERT INTO todos (title, description, priority, start_time, create_time) VALUES (?, ?, ?, ?, ?)",
-        (title, description, priority, start_time, create_time)
+        "INSERT INTO todos (title, description, priority, start_time, end_time, create_time) VALUES (?, ?, ?, ?, ?, ?)",
+        (title, description, priority, start_time, end_time, create_time)
     )
     
     todo_id = cursor.lastrowid

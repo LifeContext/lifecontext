@@ -99,6 +99,12 @@ ENABLE_VECTOR_STORAGE = bool(EMBEDDING_API_KEY)
 # 定时任务调度器：自动生成报告、待办等
 ENABLE_SCHEDULER = True  # 设置为 False 可关闭定时任务
 
+# 各个定时任务的独立开关
+ENABLE_SCHEDULER_ACTIVITY = True   # 每15分钟生成活动记录
+ENABLE_SCHEDULER_TODO = False       # 每30分钟生成待办任务
+ENABLE_SCHEDULER_TIP = True        # 每小时整生成智能提示
+ENABLE_SCHEDULER_REPORT = True     # 每天早上8点生成日报
+
 # ============================================================================
 # 📡 事件推送配置
 # ============================================================================
