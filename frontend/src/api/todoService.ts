@@ -25,6 +25,7 @@ export class TodoService {
       const priorityMap = { low: 1, medium: 2, high: 3 } as const;
       
       const payload = {
+        title: text,
         description: text,
         priority: priorityMap[priority]
       };
