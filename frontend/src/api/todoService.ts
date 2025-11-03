@@ -21,16 +21,26 @@ export class TodoService {
   // 添加新的Todo项
   async addTodo(text: string, priority: 'low' | 'medium' | 'high'): Promise<TodoItem> {
     try {
-      const response = await fetch(`${API_BASE_URL}/todos`, {
+      // 将前端优先级 low/medium/high 映射为后端数值 1/2/3
+      const priorityMap = { low: 1, medium: 2, high: 3 } as const;
+      
+      const payload = {
+        description: text,
+        priority: priorityMap[priority]
+      };
+
+      const response = await fetch(`/api/generation/todos`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ content: text, urgency: priority, status: false })
+        body: JSON.stringify(payload)
       });
       
       if (!response.ok) {
-        throw new Error(`Failed to add todo: ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`Failed to add todo: ${response.statusText} - ${errorText}`);
       }
       
       return await response.json();

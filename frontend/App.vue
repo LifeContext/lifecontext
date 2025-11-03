@@ -246,7 +246,6 @@ const addTodo = async (text: string, priority: 'low' | 'medium' | 'high') => {
     todos.value = [...todos.value, newTodo];
   } catch (error) {
     console.error('Failed to add todo:', error);
-    // 可以在这里添加用户通知
     throw error;
   }
 };
