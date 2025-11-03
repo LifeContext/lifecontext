@@ -71,7 +71,7 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 ```
 
 #### 2️⃣ Create conda environment (only needed for first run)
-📦 In the `backend` directory, create the environment based on `environment.yml`:
+📦 In conda environment in the `backend` directory, create the environment based on `environment.yml`:
 ```bash
 conda env create -f environment.yml
 ```
@@ -81,7 +81,7 @@ conda env create -f environment.yml
 
 Start all services
 
-Double-click `deploy.bat` or run in command line:
+In conda environment:
 
 ```cmd
 deploy.bat
@@ -89,7 +89,7 @@ deploy.bat
 
 Stop all services
 
-Double-click `stop.bat` or run in command line:
+In conda environment:
 
 ```cmd
 stop.bat

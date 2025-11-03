@@ -61,7 +61,7 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 ```
 
 #### 2️⃣ 创建conda环境（仅首次运行需要）
-📦 在 backend 目录下，根据 `environment.yml` 创建环境并启动：
+📦 在 conda 环境 backend 目录下，根据 `environment.yml` 创建环境：
 ```bash
 conda env create -f environment.yml
 ```
@@ -71,7 +71,7 @@ conda env create -f environment.yml
 
 启动所有服务
 
-双击运行 `deploy.bat` 或在命令行中执行：
+在conda环境中执行：
 
 ```cmd
 deploy.bat
@@ -79,7 +79,7 @@ deploy.bat
 
 停止所有服务
 
-双击运行 `stop.bat` 或在命令行中执行：
+在conda环境中执行：
 
 ```cmd
 stop.bat
