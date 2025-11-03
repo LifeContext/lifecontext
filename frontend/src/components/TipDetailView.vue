@@ -486,6 +486,7 @@ main {
 :deep(.markdown-content h4),
 :deep(.markdown-content h5),
 :deep(.markdown-content h6) {
+  color: rgb(15 23 42) !important;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
   font-weight: 700;

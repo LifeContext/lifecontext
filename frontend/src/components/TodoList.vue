@@ -46,7 +46,7 @@
       <div class="space-y-2 flex-1 overflow-y-auto min-h-0" ref="listContainer">
         <!-- 空状态 -->
         <div v-if="todos.length === 0" class="flex flex-col items-center justify-center py-12 text-slate-500 dark:text-slate-400 animate-fade-in-up">
-          <div class="mb-4">
+          <div class="mb-4 p-4 rounded-full bg-slate-100 dark:bg-slate-800 animate-float">
             <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" class="text-slate-400 dark:text-slate-500" viewBox="0 0 16 16">
               <path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/>
               <path d="M5.354 4.646a.5.5 0 1 0-.708.708L7.293 8l-2.647 2.646a.5.5 0 0 0 .708.708L8 8.707l2.646 2.647a.5.5 0 0 0 .708-.708L8.707 8l2.647-2.646a.5.5 0 0 0-.708-.708L8 7.293 5.354 4.646z"/>
