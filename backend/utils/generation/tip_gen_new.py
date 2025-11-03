@@ -11,9 +11,9 @@ from utils.helpers import (
     get_logger, 
     estimate_tokens, 
     truncate_web_data_by_tokens, 
-    calculate_available_context_tokens,
-    parse_llm_json_response
+    calculate_available_context_tokens
 )
+from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_activities, get_todos, insert_tip, get_tips
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
