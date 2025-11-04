@@ -4,17 +4,98 @@
 
 import json
 import logging
+import logging.handlers
 from functools import wraps
 from typing import List, Dict, Any
 from flask import request, jsonify
+from datetime import datetime
 import config
 from .json_utils import parse_llm_json_response
 
-# 配置日志
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
+# 日志配置标志，确保只配置一次
+_logging_configured = False
+
+def setup_logging():
+    """
+    配置日志系统：同时输出到控制台和文件
+    
+    功能说明：
+    1. 控制台输出：方便开发时实时查看日志
+    2. 文件输出：保存历史日志，方便排查问题
+    3. 日志轮转：使用 RotatingFileHandler，防止单个日志文件过大
+       - 每个日志文件最大 10MB
+       - 最多保留 5 个备份文件（总计约 50MB）
+       - 自动按日期命名：backend_YYYY-MM-DD.log
+    """
+    global _logging_configured
+    if _logging_configured:
+        return
+    
+    # 获取根日志记录器
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.INFO)
+    
+    # 日志格式：时间 - 模块名 - 级别 - 消息
+    log_format = logging.Formatter(
+        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
+    )
+    
+    # 1. 控制台处理器（StreamHandler）- 输出到控制台
+    console_handler = logging.StreamHandler()
+    console_handler.setLevel(logging.INFO)
+    console_handler.setFormatter(log_format)
+    root_logger.addHandler(console_handler)
+    
+    # 2. 文件处理器（RotatingFileHandler）- 保存到文件
+    # 日志文件名：backend_YYYY-MM-DD.log
+    log_filename = config.LOG_DIR / f"backend_{datetime.now().strftime('%Y-%m-%d')}.log"
+    
+    # 确保日志目录存在（跨平台兼容：Windows/Linux/macOS）
+    try:
+        config.LOG_DIR.mkdir(parents=True, exist_ok=True)
+    except Exception as e:
+        # 如果目录创建失败，只输出到控制台
+        print(f"⚠️ 警告: 无法创建日志目录 {config.LOG_DIR}: {e}")
+        print("⚠️ 日志将只输出到控制台")
+        _logging_configured = True
+        return
+    
+    # 使用 RotatingFileHandler 实现日志轮转
+    # maxBytes: 单个文件最大 10MB (10 * 1024 * 1024)
+    # backupCount: 保留 5 个备份文件
+    try:
+        file_handler = logging.handlers.RotatingFileHandler(
+            filename=str(log_filename),
+            mode='a',  # 追加模式
+            maxBytes=10 * 1024 * 1024,  # 10MB
+            backupCount=5,  # 保留5个备份
+            encoding='utf-8'  # 支持中文
+        )
+        file_handler.setLevel(logging.INFO)
+        file_handler.setFormatter(log_format)
+        root_logger.addHandler(file_handler)
+        
+        _logging_configured = True
+        
+        # 输出日志配置信息
+        logging.info("=" * 60)
+        logging.info("📝 日志系统已配置")
+        logging.info(f"   控制台输出: ✅ 已启用")
+        logging.info(f"   文件输出: ✅ 已启用")
+        logging.info(f"   日志文件: {log_filename}")
+        logging.info(f"   文件大小限制: 10MB")
+        logging.info(f"   备份文件数: 5")
+        logging.info("=" * 60)
+    except Exception as e:
+        # 如果文件处理器创建失败，只输出到控制台
+        print(f"⚠️ 警告: 无法创建日志文件 {log_filename}: {e}")
+        print("⚠️ 日志将只输出到控制台")
+        _logging_configured = True
+
+# 初始化日志配置
+setup_logging()
+
 logger = logging.getLogger(__name__)
 
 

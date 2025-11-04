@@ -36,11 +36,13 @@ DATA_DIR = BASE_DIR / "data"
 SCREENSHOT_DIR = DATA_DIR / "screenshots"
 DATABASE_PATH = DATA_DIR / "database.db"
 CHROMA_PERSIST_DIR = DATA_DIR / "chromadb"
+LOG_DIR = BASE_DIR.parent / "logs"  # 日志目录在项目根目录
 
 # 确保目录存在
-DATA_DIR.mkdir(exist_ok=True)
-SCREENSHOT_DIR.mkdir(exist_ok=True)
-CHROMA_PERSIST_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+CHROMA_PERSIST_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)  # 确保日志目录存在（包括父目录）
 
 # ============================================================================
 # 🌐 Flask 服务配置
