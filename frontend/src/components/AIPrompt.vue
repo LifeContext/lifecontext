@@ -538,21 +538,6 @@ const recalcGridState = () => {
   }
 }
 
-.dark .tip-card .markdown-content h1,
-.dark .tip-card .markdown-content h2,
-.dark .tip-card .markdown-content h3,
-.dark .tip-card .markdown-content h4,
-.dark .tip-card .markdown-content h5,
-.dark .tip-card .markdown-content h6,
-.dark :global(.tip-card .markdown-content h1),
-.dark :global(.tip-card .markdown-content h2),
-.dark :global(.tip-card .markdown-content h3),
-.dark :global(.tip-card .markdown-content h4),
-.dark :global(.tip-card .markdown-content h5),
-.dark :global(.tip-card .markdown-content h6) {
-  color: rgb(15 23 42) !important;
-}
-
 .markdown-preview {
   max-height: 5.5rem;
   overflow: hidden;
