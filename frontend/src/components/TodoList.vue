@@ -260,14 +260,20 @@ const completedTodos = computed(() => {
   return props.todos.filter(todo => todo.status).length;
 });
 
-// Sort todos: incomplete first, then completed
+// Sort todos: incomplete first, then by priority (high -> low), then by id
 const sortedTodos = computed(() => {
   return [...props.todos].sort((a, b) => {
     // 未完成的 todo 排在前面 (status: false = 0, true = 1)
-    // 如果状态相同，按 id 排序保持稳定
     if (a.status !== b.status) {
       return a.status ? 1 : -1;
     }
+    // 优先级高的在前（3: 高, 2: 中, 1: 低）。缺省按 0 处理
+    const aPriority = typeof a.priority === 'number' ? a.priority : 0;
+    const bPriority = typeof b.priority === 'number' ? b.priority : 0;
+    if (aPriority !== bPriority) {
+      return bPriority - aPriority;
+    }
+    // 兜底保持稳定
     return a.id - b.id;
   });
 });
