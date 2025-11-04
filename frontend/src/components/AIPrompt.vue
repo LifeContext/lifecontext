@@ -467,13 +467,6 @@ const recalcGridState = () => {
 :global(.tip-card .markdown-content h4),
 :global(.tip-card .markdown-content h5),
 :global(.tip-card .markdown-content h6) {
-<<<<<<< HEAD
-  color: #ffffff;
-}
-
-.dark .markdown-content code {
-  background-color: rgba(255, 255, 255, 0.12);
-=======
   color: rgb(15 23 42) !important;
 }
 
@@ -496,7 +489,6 @@ const recalcGridState = () => {
   :global(.tip-card .markdown-content h6) {
     color: #ffffff !important;
   }
->>>>>>> 279dd5e8c485ce199810ee53eeb5ab7f5b151cde
 }
 
 .dark .tip-card .markdown-content h1,
