@@ -42,8 +42,11 @@
       <div 
         v-for="tip in tips" 
         :key="tip.id"
-        @click="() => props.onSelectTip(tip)"
-        class="tip-card bg-white dark:bg-slate-700 rounded-lg p-3 cursor-pointer transition-all duration-300 shadow-sm hover:shadow-md relative"
+        @click="() => { selectedTipId = tip.id; props.onSelectTip(tip); }"
+        :class="[
+          'tip-card bg-white dark:bg-slate-700 rounded-lg p-3 cursor-pointer transition-all duration-300 relative',
+          selectedTipId === tip.id ? 'tip-card-selected' : ''
+        ]"
       >
         <!-- 右上角图标 -->
         <div class="absolute top-3 right-3">
@@ -83,6 +86,7 @@ const props = defineProps<Props>();
 const tips = ref<Tip[]>([]);
 const isLoading = ref(true);
 const error = ref<string | null>(null);
+const selectedTipId = ref<number | null>(null);
 
 // 分类图标配置
 const TIP_CATEGORY_ICONS = {
@@ -123,7 +127,7 @@ const loadTips = async () => {
     isLoading.value = true;
     error.value = null;
     const tipsData = await tipService.getTips();
-    tips.value = tipsData.data.tips;
+    tips.value = Array.isArray(tipsData) ? tipsData : (tipsData as any)?.data?.tips || tipsData || [];
     await nextTick();
     recalcGridState();
   } catch (err) {
@@ -312,6 +316,11 @@ const recalcGridState = () => {
   overflow: hidden;
   min-height: 100px;
   max-height: 200px;
+  /* 默认阴影：Material Design elevation 2 */
+  box-shadow: 
+    0 1px 3px 0 rgba(0, 0, 0, 0.12),
+    0 1px 2px 0 rgba(0, 0, 0, 0.24);
+  border: 1px solid transparent;
 }
 
 .tip-card h3 {
@@ -329,16 +338,31 @@ const recalcGridState = () => {
   font-size: 0.8rem;
 }
 
+/* 浅色模式悬停：Material Design elevation 4 */
 .tip-card:hover {
-  transform: translateY(-3px);
+  transform: translateY(-2px);
   box-shadow: 
-    0 10px 30px rgba(0, 0, 0, 0.08),
-    0 4px 12px rgba(0, 0, 0, 0.04);
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
   border-color: rgba(59, 130, 246, 0.2);
 }
 
 .tip-card:hover h3 {
-  color: #1e40af;
+  color: #3b82f6;
+  font-weight: 700;
+}
+
+/* 选中状态阴影 */
+.tip-card-selected {
+  box-shadow: 
+    0 8px 16px -4px rgba(59, 130, 246, 0.2),
+    0 4px 8px -2px rgba(59, 130, 246, 0.15),
+    0 0 0 2px rgba(59, 130, 246, 0.3);
+  transform: translateY(-2px);
+}
+
+.tip-card-selected h3 {
+  color: #3b82f6;
   font-weight: 700;
 }
 
@@ -350,20 +374,43 @@ const recalcGridState = () => {
   color: #6b7280;
 }
 
-.dark .tip-card:hover {
+/* 深色模式默认阴影 */
+.dark .tip-card {
   box-shadow: 
-    0 10px 30px rgba(0, 0, 0, 0.4),
-    0 4px 12px rgba(0, 0, 0, 0.2);
+    0 1px 3px 0 rgba(0, 0, 0, 0.3),
+    0 1px 2px 0 rgba(0, 0, 0, 0.24);
+}
+
+/* 深色模式悬停：增强阴影 */
+.dark .tip-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.4),
+    0 2px 4px -1px rgba(0, 0, 0, 0.3);
   border-color: rgba(96, 165, 250, 0.3);
 }
 
 .dark .tip-card:hover h3 {
-  color: #93c5fd;
+  color: #60a5fa;
+  font-weight: 700;
+}
+
+/* 深色模式选中状态 */
+.dark .tip-card-selected {
+  box-shadow: 
+    0 8px 16px -4px rgba(96, 165, 250, 0.3),
+    0 4px 8px -2px rgba(96, 165, 250, 0.2),
+    0 0 0 2px rgba(96, 165, 250, 0.4);
+  transform: translateY(-2px);
+}
+
+.dark .tip-card-selected h3 {
+  color: #60a5fa;
   font-weight: 700;
 }
 
 .dark .tip-card:hover p {
-  color: #1f2937;
+  color: #e2e8f0;
 }
 
 .dark .tip-card:hover .text-xs {
