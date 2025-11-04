@@ -1,7 +1,13 @@
 <template>
   <div class="flex flex-col h-full min-h-0">
     <div :style="{ height: `${promptHeight}px` }" class="flex-shrink-0">
-      <TipsPanel :on-select-tip="onSelectTip" />
+      <TipsPanel 
+        :on-select-tip="onSelectTip"
+        :tips="tips"
+        :is-loading="isLoadingTips"
+        :error="errorLoadingTips"
+        :refresh-tips="refreshTips"
+      />
     </div>
     
     <div class="h-4 flex-shrink-0 relative">
@@ -41,6 +47,10 @@ interface Props {
   isLoading?: boolean;
   error?: string | null;
   refreshTodos?: () => Promise<void>;
+  tips: Tip[];
+  isLoadingTips?: boolean;
+  errorLoadingTips?: string | null;
+  refreshTips?: () => Promise<void>;
 }
 
 const props = defineProps<Props>();

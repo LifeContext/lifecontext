@@ -3,16 +3,16 @@
     <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Tips</h2>
     
     <!-- 加载状态 -->
-    <div v-if="isLoading" class="flex items-center justify-center h-full min-h-[200px]">
+    <div v-if="props.isLoading" class="flex items-center justify-center h-full min-h-[200px]">
       <div class="text-slate-500 dark:text-slate-400">加载中...</div>
     </div>
     
     <!-- 错误状态 -->
-    <div v-else-if="error" class="flex items-center justify-center h-full min-h-[200px]">
+    <div v-else-if="props.error" class="flex items-center justify-center h-full min-h-[200px]">
       <div class="text-red-500 dark:text-red-400 text-center">
-        <p>{{ error }}</p>
+        <p>{{ props.error }}</p>
         <button 
-          @click="loadTips" 
+          @click="props.refreshTips?.()" 
           class="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
         >
           重试
@@ -21,7 +21,7 @@
     </div>
 
     <!-- 无数据状态 -->
-    <div v-else-if="tips.length === 0" class="pt-4 pb-8 flex items-center justify-center h-full min-h-[200px]">
+    <div v-else-if="props.tips.length === 0" class="pt-4 pb-8 flex items-center justify-center h-full min-h-[200px]">
       <div class="text-center">
         <div class="text-slate-300 dark:text-slate-600 mb-2">
           <svg class="w-10 h-10 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -40,7 +40,7 @@
       isFirstRowNotFull ? 'tips-grid-fixed' : 'tips-grid-fit'
     ]">
       <div 
-        v-for="tip in tips" 
+        v-for="tip in props.tips" 
         :key="tip.id"
         @click="() => { selectedTipId = tip.id; props.onSelectTip(tip); }"
         :class="[
@@ -71,21 +71,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, onUnmounted, defineProps, nextTick } from 'vue';
+import { ref, onMounted, onUnmounted, defineProps, nextTick, watch } from 'vue';
 import { marked } from 'marked';
-import { tipService } from '../api/tipService';
 import type { Tip, TipCategory } from '../../types';
 
 interface Props {
   onSelectTip: (tip: Tip) => void;
+  tips: Tip[];
+  isLoading?: boolean;
+  error?: string | null;
+  refreshTips?: () => Promise<void>;
 }
 
 const props = defineProps<Props>();
 
 // 响应式数据
-const tips = ref<Tip[]>([]);
-const isLoading = ref(true);
-const error = ref<string | null>(null);
 const selectedTipId = ref<number | null>(null);
 
 // 分类图标配置
@@ -119,23 +119,6 @@ const getCategoryColor = (category: string) => {
     ? (category as TipCategory) 
     : defaultCategory;
   return tipCategoryConfig[validCategory].color;
-};
-
-// 加载tips数据
-const loadTips = async () => {
-  try {
-    isLoading.value = true;
-    error.value = null;
-    const tipsData = await tipService.getTips();
-    tips.value = Array.isArray(tipsData) ? tipsData : (tipsData as any)?.data?.tips || tipsData || [];
-    await nextTick();
-    recalcGridState();
-  } catch (err) {
-    console.error('Failed to load tips:', err);
-    error.value = 'Failed to load tips. Please try again later.';
-  } finally {
-    isLoading.value = false;
-  }
 };
 
 // 截断内容函数
@@ -177,11 +160,13 @@ const formatTimeAgo = (dateString: string): string => {
   }
 };
 
-// 组件挂载时加载数据
-onMounted(() => {
-  loadTips();
-  if (tipsScroll.value) tipsScroll.value.addEventListener('scroll', handleTipsScroll);
+// 组件挂载时初始化
+onMounted(async () => {
+  await nextTick();
+  recalcGridState();
+  
   if (tipsScroll.value) {
+    tipsScroll.value.addEventListener('scroll', handleTipsScroll);
     resizeObserver = new ResizeObserver(() => recalcGridState());
     resizeObserver.observe(tipsScroll.value);
   }
@@ -194,6 +179,13 @@ onUnmounted(() => {
   if (resizeObserver && tipsScroll.value) resizeObserver.unobserve(tipsScroll.value);
   window.removeEventListener('resize', recalcGridState);
 });
+
+// 监听 tips 数据变化，重新计算网格状态
+watch(() => props.tips, () => {
+  nextTick(() => {
+    recalcGridState();
+  });
+}, { deep: true });
 
 const tipsScroll = ref<HTMLElement | null>(null);
 const isScrollingTips = ref(false);
@@ -222,7 +214,7 @@ const recalcGridState = () => {
     return;
   }
   const maxColumns = Math.max(1, Math.floor((containerWidth + GRID_GAP_PX) / (MIN_CARD_WIDTH + GRID_GAP_PX)));
-  isFirstRowNotFull.value = tips.value.length > 0 && tips.value.length < maxColumns;
+  isFirstRowNotFull.value = props.tips.length > 0 && props.tips.length < maxColumns;
 };
 </script>
 
