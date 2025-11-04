@@ -260,3 +260,46 @@ def get_scheduled_jobs():
         })
     
     return jobs
+
+
+def update_scheduler_settings():
+    """更新调度器设置（当设置改变时调用）"""
+    global scheduler
+    if scheduler is None:
+        return
+    
+    try:
+        # 更新 tips 生成间隔
+        if ENABLE_SCHEDULER_TIP:
+            tips_interval_minutes = int(get_setting('tips_interval_minutes', '60'))
+            try:
+                scheduler.remove_job('tips_interval')
+            except:
+                pass  # 任务可能不存在，忽略错误
+            scheduler.add_job(
+                func=job_generate_tips,
+                trigger=IntervalTrigger(minutes=tips_interval_minutes),
+                id='tips_interval',
+                name=f'每{tips_interval_minutes}分钟生成智能提示',
+                replace_existing=True
+            )
+            logger.info(f"✅ Updated tip scheduler interval to {tips_interval_minutes} minutes")
+        
+        # 更新 daily report 生成时间
+        if ENABLE_SCHEDULER_REPORT:
+            report_hour = int(get_setting('daily_report_hour', '8'))
+            report_minute = int(get_setting('daily_report_minute', '0'))
+            try:
+                scheduler.remove_job('daily_report')
+            except:
+                pass  # 任务可能不存在，忽略错误
+            scheduler.add_job(
+                func=job_generate_daily_report,
+                trigger=CronTrigger(hour=report_hour, minute=report_minute),
+                id='daily_report',
+                name=f'每日{report_hour:02d}:{report_minute:02d}生成报告',
+                replace_existing=True
+            )
+            logger.info(f"✅ Updated report scheduler time to {report_hour:02d}:{report_minute:02d}")
+    except Exception as e:
+        logger.exception(f"Error updating scheduler settings: {e}")
