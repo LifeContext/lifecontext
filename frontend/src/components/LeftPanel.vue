@@ -48,13 +48,12 @@
         </div>
       </div>
       
-      <!-- 折叠状态下无数据 -->
+      <!-- 折叠状态下无数据 - 只显示图标 -->
       <div v-else-if="isCollapsed && reports.length === 0" class="py-8 flex items-center justify-center">
         <div class="text-center">
           <div class="text-slate-300 dark:text-slate-600 mb-2">
             <Icon path="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" class="h-6 w-6 mx-auto" />
           </div>
-          <p class="text-xs text-slate-400 dark:text-slate-500">暂无报告</p>
         </div>
       </div>
       
