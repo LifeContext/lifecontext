@@ -105,13 +105,13 @@ const tipCategoryConfig: { [key in TipCategory]: { icon: string; color: string; 
 };
 
 const getCategoryIcon = (category: string) => {
-  const defaultCategory = 'suggestion'; // 默认分类
+  const defaultCategory = 'RISK_ANALYSIS'; // 默认分类
   const validCategory = category && tipCategoryConfig[category as TipCategory] ? category as TipCategory : defaultCategory;
   return tipCategoryConfig[validCategory].icon;
 };
 
 const getCategoryColor = (category: string) => {
-  const defaultCategory = 'suggestion'; // 默认分类
+  const defaultCategory = 'RISK_ANALYSIS'; // 默认分类
   const validCategory = category && tipCategoryConfig[category as TipCategory] ? category as TipCategory : defaultCategory;
   return tipCategoryConfig[validCategory].color;
 };

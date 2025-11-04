@@ -40,6 +40,10 @@ echo    • Backend Service:   http://localhost:8000
 echo    • Frontend UI:       http://localhost:3000
 echo    • Extension Service: http://localhost:3001
 echo.
+echo 📊 Log Files:
+echo    • Backend Log:   logs\backend_YYYY-MM-DD.log
+echo       (日志文件保存在项目根目录的 logs\ 文件夹)
+echo.
 echo 💡 Tips:
 echo    1. For first run, ensure conda environment is created:
 echo       conda env create -f backend/environment.yml
