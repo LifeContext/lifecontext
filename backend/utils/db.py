@@ -101,6 +101,29 @@ def init_db():
         )
     """)
     
+    # 创建设置表
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS settings (
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL,
+            description TEXT,
+            update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
+    # 初始化默认设置
+    default_settings = [
+        ('tips_interval_minutes', '60', 'Tips生成间隔（分钟）'),
+        ('daily_report_hour', '8', 'Daily Report生成时间（小时，0-23）'),
+        ('daily_report_minute', '0', 'Daily Report生成时间（分钟，0-59）')
+    ]
+    
+    for key, value, description in default_settings:
+        cursor.execute("""
+            INSERT OR IGNORE INTO settings (key, value, description) 
+            VALUES (?, ?, ?)
+        """, (key, value, description))
+    
     conn.commit()
     conn.close()
     logger.info("Database initialized successfully")
@@ -501,3 +524,82 @@ def get_screenshots(start_time=None, end_time=None, limit=10, offset=0):
     screenshots = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return screenshots
+
+
+# 设置相关操作
+def get_setting(key, default_value=None):
+    """获取设置值
+    
+    Args:
+        key: 设置键名
+        default_value: 如果不存在时返回的默认值
+    
+    Returns:
+        str: 设置值，如果不存在则返回 default_value
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+    row = cursor.fetchone()
+    conn.close()
+    
+    if row:
+        return row['value']
+    return default_value
+
+
+def set_setting(key, value, description=None):
+    """设置配置值
+    
+    Args:
+        key: 设置键名
+        value: 设置值（字符串）
+        description: 设置描述（可选）
+    
+    Returns:
+        bool: 是否设置成功
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    update_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    if description:
+        cursor.execute("""
+            INSERT OR REPLACE INTO settings (key, value, description, update_time)
+            VALUES (?, ?, ?, ?)
+        """, (key, str(value), description, update_time))
+    else:
+        cursor.execute("""
+            INSERT OR REPLACE INTO settings (key, value, update_time)
+            VALUES (?, ?, ?)
+        """, (key, str(value), update_time))
+    
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_all_settings():
+    """获取所有设置
+    
+    Returns:
+        dict: 所有设置的键值对
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("SELECT key, value, description FROM settings")
+    rows = cursor.fetchall()
+    conn.close()
+    
+    settings = {}
+    for row in rows:
+        row_dict = dict(row)  # 转换为字典
+        settings[row_dict['key']] = {
+            'value': row_dict['value'],
+            'description': row_dict.get('description', '')  # 现在可以使用 .get() 了
+        }
+    
+    return settings

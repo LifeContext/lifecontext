@@ -7,6 +7,7 @@ import asyncio
 from datetime import datetime, timedelta
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.cron import CronTrigger
+from apscheduler.triggers.interval import IntervalTrigger
 from utils.helpers import get_logger
 from utils.generation import (
     create_activity_report,
@@ -15,7 +16,7 @@ from utils.generation import (
     generate_task_list
 )
 from utils.event_manager import EventType, publish_event
-from utils.db import get_reports
+from utils.db import get_reports, get_setting
 from config import (
     ENABLE_SCHEDULER_ACTIVITY,
     ENABLE_SCHEDULER_TODO,
@@ -63,29 +64,32 @@ def init_scheduler():
     else:
         logger.info("⏸️ Todo scheduler disabled")
     
-    # 3. 每小时整生成智能提示
+    # 3. 生成智能提示（支持任意时间间隔）
     if ENABLE_SCHEDULER_TIP:
+        tips_interval_minutes = int(get_setting('tips_interval_minutes', '60'))
         scheduler.add_job(
             func=job_generate_tips,
-            trigger=CronTrigger(minute=0),  # 每小时整
-            id='tips_hourly',
-            name='每小时整生成智能提示',
+            trigger=IntervalTrigger(minutes=tips_interval_minutes),
+            id='tips_interval',
+            name=f'每{tips_interval_minutes}分钟生成智能提示',
             replace_existing=True
         )
-        logger.info("✅ Tip scheduler enabled")
+        logger.info(f"✅ Tip scheduler enabled (interval: {tips_interval_minutes} minutes)")
     else:
         logger.info("⏸️ Tip scheduler disabled")
     
-    # 4. 每天早上8点生成日报
+    # 4. 生成日报（支持自定义时间）
     if ENABLE_SCHEDULER_REPORT:
+        report_hour = int(get_setting('daily_report_hour', '8'))
+        report_minute = int(get_setting('daily_report_minute', '0'))
         scheduler.add_job(
             func=job_generate_daily_report,
-            trigger=CronTrigger(hour=8, minute=0),
+            trigger=CronTrigger(hour=report_hour, minute=report_minute),
             id='daily_report',
-            name='每日8点生成报告',
+            name=f'每日{report_hour:02d}:{report_minute:02d}生成报告',
             replace_existing=True
         )
-        logger.info("✅ Report scheduler enabled")
+        logger.info(f"✅ Report scheduler enabled (time: {report_hour:02d}:{report_minute:02d})")
     else:
         logger.info("⏸️ Report scheduler disabled")
     
@@ -156,10 +160,11 @@ def job_generate_todos():
 
 
 def job_generate_tips():
-    """定时任务：生成智能提示（每小时）"""
+    """定时任务：生成智能提示（可配置间隔）"""
     try:
-        logger.info("Starting scheduled tip generation (hourly)")
-        result = asyncio.run(generate_smart_tips(history_mins=60))  # 1小时
+        tips_interval_minutes = int(get_setting('tips_interval_minutes', '60'))
+        logger.info(f"Starting scheduled tip generation (interval: {tips_interval_minutes} minutes)")
+        result = asyncio.run(generate_smart_tips(history_mins=tips_interval_minutes))
         
         if result.get('success'):
             tip_ids = result.get('tip_ids', [])

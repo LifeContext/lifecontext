@@ -9,6 +9,70 @@ async function getApiUrl() {
 }
 
 
+// 语言与文案
+function getLocale() {
+  try {
+    const lang = (chrome && chrome.i18n && typeof chrome.i18n.getUILanguage === 'function')
+      ? chrome.i18n.getUILanguage()
+      : (navigator.language || 'en');
+    return (lang || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  } catch (e) {
+    return 'en';
+  }
+}
+
+const I18N = {
+  zh: {
+    genericTitle: '新事件提醒',
+    genericMessage: '您有新的重要事件需要关注',
+    listMessage: (count) => `您有 ${count} 条新的智能提示`,
+    tipTitle: (count) => `您有 ${count} 条新的智能提示`,
+    tipMessageFallback: '您有新的智能提示',
+    todoTitle: '📝 待办事项',
+    todoMessageFallback: '您有新的待办事项',
+    activityTitle: '🎯 活动通知',
+    activityMessageFallback: '您有新的活动通知',
+    reportTitle: '📊 报告提醒',
+    reportMessageFallback: '您有新的报告',
+    systemStatusTitle: '⚙️ 系统状态',
+    systemStatusMessageFallback: '系统状态更新',
+    defaultTitle: (type) => `📢 ${type || '事件通知'}`,
+    defaultMessageFallback: '您有新的重要事件需要关注',
+    viewDetails: '查看详情',
+    remindLater: '稍后提醒',
+    simpleTestTitle: 'LifeContext 简单测试',
+    simpleTestMessage: '这是一个简单的测试通知',
+    reminderTitle: 'LifeContext 提醒',
+    reminderMessage: '您之前选择稍后提醒的事件',
+    dateLocale: 'zh-CN'
+  },
+  en: {
+    genericTitle: 'New Event',
+    genericMessage: 'You have new important updates',
+    listMessage: (count) => `You have ${count} new tips`,
+    tipTitle: (count) => `You have ${count} new tips`,
+    tipMessageFallback: 'You have new tips',
+    todoTitle: '📝 Todo',
+    todoMessageFallback: 'You have a new todo',
+    activityTitle: '🎯 Activity',
+    activityMessageFallback: 'You have a new activity notification',
+    reportTitle: '📊 Report',
+    reportMessageFallback: 'You have a new report',
+    systemStatusTitle: '⚙️ System Status',
+    systemStatusMessageFallback: 'System status updated',
+    defaultTitle: (type) => `📢 ${type || 'Event'}`,
+    defaultMessageFallback: 'You have new important updates',
+    viewDetails: 'View details',
+    remindLater: 'Remind me later',
+    simpleTestTitle: 'LifeContext Simple Test',
+    simpleTestMessage: 'This is a simple test notification',
+    reminderTitle: 'LifeContext Reminder',
+    reminderMessage: 'Reminder for a previously deferred event',
+    dateLocale: 'en-US'
+  }
+};
+
+
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Extension installed');
   
@@ -74,6 +138,8 @@ async function checkEventsAndNotify() {
 // 显示事件通知
 async function showEventNotification(event) {
   const notificationId = `event_${event.id || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  const locale = getLocale();
+  const t = I18N[locale] || I18N.en;
     // 若为智能提示，且后端提供 tips 列表，则使用列表型通知展示每条标题
     const tipTitles = (event.type === 'tip' && event.data && Array.isArray(event.data.tips))
     ? event.data.tips.map(t => String(t?.title || '').trim()).filter(Boolean)
@@ -81,27 +147,27 @@ async function showEventNotification(event) {
   const tipsCount = event?.data?.count ?? (tipTitles ? tipTitles.length : 0);
 
   // 根据事件类型生成不同的通知内容
-  let title = '新事件提醒';
-  let message = '您有新的重要事件需要关注';
+  let title = t.genericTitle;
+  let message = t.genericMessage;
   
   if (event.type === 'tip') {
-    title = `您有 ${tipsCount} 条新的智能提示`;
-    message = event.data?.content || event.data?.message || event.data?.title || '您有新的智能提示';
+    title = t.tipTitle(tipsCount);
+    message = event.data?.content || event.data?.message || event.data?.title || t.tipMessageFallback;
   } else if (event.type === 'todo') {
-    title = '📝 待办事项';
-    message = event.data?.content || event.data?.message || event.data?.title || '您有新的待办事项';
+    title = t.todoTitle;
+    message = event.data?.content || event.data?.message || event.data?.title || t.todoMessageFallback;
   } else if (event.type === 'activity') {
-    title = '🎯 活动通知';
-    message = event.data?.content || event.data?.message || event.data?.title || '您有新的活动通知';
+    title = t.activityTitle;
+    message = event.data?.content || event.data?.message || event.data?.title || t.activityMessageFallback;
   } else if (event.type === 'report') {
-    title = '📊 报告提醒';
-    message = event.data?.content || event.data?.message || event.data?.title || '您有新的报告';
+    title = t.reportTitle;
+    message = event.data?.content || event.data?.message || event.data?.title || t.reportMessageFallback;
   } else if (event.type === 'system_status') {
-    title = '⚙️ 系统状态';
-    message = event.data?.content || event.data?.message || event.data?.title || '系统状态更新';
+    title = t.systemStatusTitle;
+    message = event.data?.content || event.data?.message || event.data?.title || t.systemStatusMessageFallback;
   } else {
-    title = `📢 ${event.type || '事件通知'}`;
-    message = event.data?.content || event.data?.message || event.data?.title || '您有新的重要事件需要关注';
+    title = (typeof t.defaultTitle === 'function') ? t.defaultTitle(event.type) : t.genericTitle;
+    message = event.data?.content || event.data?.message || event.data?.title || t.defaultMessageFallback;
   }
   
 
@@ -112,31 +178,31 @@ async function showEventNotification(event) {
       type: 'list',
       iconUrl: 'icon.png',
       title: title,
-      message: `您有 ${tipsCount} 条新的智能提示`,
+      message: t.listMessage(tipsCount),
       items: items,
-      contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString('zh-CN')}`,
+      contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString(t.dateLocale)}`,
       priority: 2,
       requireInteraction: true,
       buttons: [
-        { title: '查看详情' },
-        { title: '稍后提醒' }
+        { title: t.viewDetails },
+        { title: t.remindLater }
       ]
     };
   } else {
     if (event.type === 'tip' && tipsCount > 0) {
-      message = `您有 ${tipsCount} 条新的智能提示`;
+      message = t.listMessage(tipsCount);
     }
     notificationOptions = {
       type: 'basic',
       iconUrl: 'icon.png',
       title: title,
       message: message,
-      contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString('zh-CN')}`,
+      contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString(t.dateLocale)}`,
       priority: 2,
       requireInteraction: true,
       buttons: [
-        { title: '查看详情' },
-        { title: '稍后提醒' }
+        { title: t.viewDetails },
+        { title: t.remindLater }
       ]
     };
   }
@@ -155,8 +221,8 @@ async function showEventNotification(event) {
         type: 'basic',
         iconUrl: 'icon.png',
 
-        title: 'LifeContext 简单测试',
-        message: '这是一个简单的测试通知',
+        title: t.simpleTestTitle,
+        message: t.simpleTestMessage,
         contextMessage: 'LifeContext'
 
       });
@@ -202,17 +268,19 @@ chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) =
     console.log('用户选择稍后提醒，3分钟后重新提醒');
 
     setTimeout(() => {
+      const locale = getLocale();
+      const t = I18N[locale] || I18N.en;
       chrome.notifications.create(`reminder_${Date.now()}`, {
         type: 'basic',
         iconUrl: 'icon.png',
 
-        title: 'LifeContext 提醒',
-        message: '您之前选择稍后提醒的事件',
+        title: t.reminderTitle,
+        message: t.reminderMessage,
         contextMessage: 'LifeContext',
         priority: 1,
         buttons: [
-          { title: '查看详情' },
-          { title: '稍后提醒' }
+          { title: t.viewDetails },
+          { title: t.remindLater }
         ]
       });
     }, 30 * 1000); // 3分钟后提醒

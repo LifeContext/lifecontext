@@ -31,7 +31,7 @@
       </div>
       
       <!-- Clear History Button -->
-      <div class="relative">
+      <div class="relative hidden">
         <button 
           @click="toggleClearDropdown"
           class="flex items-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
@@ -98,15 +98,20 @@
           <!-- Content -->
           <div class="ml-12">
             <!-- Section Header -->
-            <div class="flex items-center space-x-3 mb-3">
-              <!-- Segment Select Checkbox -->
-              <input 
-                type="checkbox" 
-                :checked="isSegmentChecked(segment)" 
-                @change="toggleSegment(segment)"
-                class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
-              />
-              <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">{{ segment.title }}</h3>
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center space-x-3">
+                <!-- Segment Select Checkbox -->
+                <input 
+                  type="checkbox" 
+                  :checked="isSegmentChecked(segment)" 
+                  @change="toggleSegment(segment)"
+                  class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 hidden"
+                />
+                <h3 class="text-base font-semibold text-slate-800 dark:text-slate-200">{{ segment.title }}</h3>
+              </div>
+              <span class="text-xs text-slate-500 dark:text-slate-400">
+                {{ formatTime(segment.start_time) }}
+              </span>
             </div>
             
             <!-- Activity List -->
@@ -121,7 +126,7 @@
                   type="checkbox" 
                   :checked="isItemChecked(segment.id, url)" 
                   @change="toggleItem(segment.id, url)"
-                  class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500"
+                  class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 hidden"
                 />
                 <span class="w-4 h-4 shrink-0 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
                   <svg class="w-3 h-3 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15.3 15.3 0 010 20a15.3 15.3 0 010-20z"></path></svg>
@@ -179,6 +184,18 @@ const formatTitle = (url: string): string => {
     return clean || url;
   } catch {
     return url;
+  }
+};
+
+const formatTime = (timeString: string): string => {
+  if (!timeString) return '';
+  try {
+    const date = new Date(timeString);
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+  } catch {
+    return '';
   }
 };
 
