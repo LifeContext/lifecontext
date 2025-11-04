@@ -82,21 +82,47 @@ mermaid.initialize({
   }
 });
 
+// 修复渲染后 HTML 中被分割的单词
+const fixSplitWordsInHTML = () => {
+  if (!markdownContainer.value) return;
+  
+  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify'];
+  
+  const walker = document.createTreeWalker(markdownContainer.value, NodeFilter.SHOW_TEXT, null);
+  const textNodes: Text[] = [];
+  let node;
+  while (node = walker.nextNode()) {
+    textNodes.push(node as Text);
+  }
+  
+  textNodes.forEach(textNode => {
+    let text = textNode.textContent || '';
+    commonWords.forEach(word => {
+      for (let i = 3; i < word.length; i++) {
+        const part1 = word.substring(0, i);
+        const part2 = word.substring(i);
+        if (part2.length === 1) {
+          const pattern = new RegExp(`(${part1})\\s+(${part2})(?=\\s|$|[.,;:!?\)\\]\\}\\>\\[\\]])`, 'gi');
+          if (pattern.test(text)) {
+            textNode.textContent = text.replace(pattern, word);
+            return;
+          }
+        }
+      }
+    });
+  });
+};
+
 // 渲染 Mermaid 图表
 const renderMermaid = async () => {
   await nextTick();
   if (!markdownContainer.value) return;
   
-  // 查找所有 mermaid 代码块（marked 会生成 <code class="language-mermaid">）
-  const mermaidCodeBlocks = markdownContainer.value.querySelectorAll('code.language-mermaid');
-  console.log('找到 Mermaid 代码块数量:', mermaidCodeBlocks.length);
+  // 先修复被分割的单词
+  fixSplitWordsInHTML();
   
-  // 也查找可能的其他语言标识（如 language-mermai 等）
-  const allCodeBlocks = markdownContainer.value.querySelectorAll('code[class*="language-"]');
-  console.log('找到所有代码块数量:', allCodeBlocks.length);
-  allCodeBlocks.forEach((el, i) => {
-    console.log(`代码块 ${i}:`, el.className, el.textContent?.substring(0, 50));
-  });
+  // 查找所有 mermaid 代码块
+  const mermaidCodeBlocks = markdownContainer.value.querySelectorAll('code.language-mermaid');
   
   mermaidCodeBlocks.forEach((codeElement, index) => {
     // 检查是否已经渲染过
@@ -132,234 +158,116 @@ const normalizeMarkdown = (raw: string): string => {
   if (!raw) return '';
   
   let text = raw;
-  
-  // 调试：输出原始数据
-  console.log('=== normalizeMarkdown 调试 ===');
-  console.log('原始内容前300字符:', text.substring(0, 300));
-  // 查找所有包含 mermaid 或 mermai 的位置
-  const mermaidIndex = text.indexOf('mermaid');
-  const mermaiIndex = text.indexOf('mermai');
-  if (mermaidIndex >= 0) {
-    console.log('原始中找到 mermaid 位置:', mermaidIndex);
-    console.log('mermaid 前后50字符:', text.substring(Math.max(0, mermaidIndex - 50), mermaidIndex + 57));
-  }
-  if (mermaiIndex >= 0) {
-    console.log('原始中找到 mermai 位置:', mermaiIndex);
-    console.log('mermai 前后50字符:', text.substring(Math.max(0, mermaiIndex - 50), mermaiIndex + 57));
-  }
-  
-  // 0. 先修复被分割的语言标识（在转义处理之前，因为可能影响转义处理）
-  // 常见语言标识列表
   const commonLanguages = ['mermaid', 'javascript', 'typescript', 'python', 'bash', 'sh', 'sql', 'json', 'html', 'css', 'java', 'cpp', 'c', 'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'yaml', 'xml', 'markdown', 'dockerfile', 'makefile', 'ini', 'toml', 'diff', 'plaintext', 'text'];
   
-  // 在转义处理前，先修复可能的语言标识分割（考虑转义序列）
-  // 模式：```部分标识\\n 单个字母\\n 或 ```部分标识\\n 单个字母
+  // 修复被分割的语言标识（在转义处理之前处理转义序列格式）
   text = text.replace(/```(\w+)\\n\s*([a-z])\\n/g, (match, p1, p2) => {
     const combined = p1 + p2;
-    console.log('转义前检测到分割模式:', p1, '+', p2, '=', combined);
-    if (commonLanguages.includes(combined)) {
-      console.log('转义前匹配到语言标识:', combined);
-      return `\`\`\`${combined}\\n`;
-    }
-    return match;
+    return commonLanguages.includes(combined) ? `\`\`\`${combined}\\n` : match;
   });
   
   text = text.replace(/```(\w+)\\n\s*([a-z])(?=\s|graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z])/g, (match, p1, p2) => {
     const combined = p1 + p2;
-    if (commonLanguages.includes(combined)) {
-      console.log('转义前模式2匹配到语言标识:', combined);
-      return `\`\`\`${combined}\\n`;
-    }
-    return match;
+    return commonLanguages.includes(combined) ? `\`\`\`${combined}\\n` : match;
   });
   
   // 1. 处理所有 JSON 字符串转义序列（转换为实际字符）
-  text = text.replace(/\\r\\n/g, '\n');  // \r\n
-  text = text.replace(/\\n/g, '\n');      // \n
-  text = text.replace(/\\r/g, '\n');      // \r
-  
-  // 处理转义的引号
+  text = text.replace(/\\r\\n/g, '\n');
+  text = text.replace(/\\n/g, '\n');
+  text = text.replace(/\\r/g, '\n');
   text = text.replace(/\\"/g, '"');
   text = text.replace(/\\'/g, "'");
-  
-  // 处理转义的 Markdown 特殊字符
-  text = text.replace(/\\`/g, '`');      // 转义的反引号
-  text = text.replace(/\\\*/g, '*');     // 转义的星号
-  text = text.replace(/\\_/g, '_');      // 转义的下划线
-  text = text.replace(/\\\(/g, '(');      // 转义的左括号
-  text = text.replace(/\\\)/g, ')');     // 转义的右括号
-  text = text.replace(/\\\[/g, '[');     // 转义的左方括号
-  text = text.replace(/\\\]/g, ']');     // 转义的右方括号
-  text = text.replace(/\\#/g, '#');      // 转义的井号
-  text = text.replace(/\\-/g, '-');      // 转义的连字符
-  
-  // 处理双反斜杠（转义的反斜杠本身）- 必须在最后处理
+  text = text.replace(/\\`/g, '`');
+  text = text.replace(/\\\*/g, '*');
+  text = text.replace(/\\_/g, '_');
+  text = text.replace(/\\\(/g, '(');
+  text = text.replace(/\\\)/g, ')');
+  text = text.replace(/\\\[/g, '[');
+  text = text.replace(/\\\]/g, ']');
+  text = text.replace(/\\#/g, '#');
+  text = text.replace(/\\-/g, '-');
   text = text.replace(/\\\\/g, '\\');
   
-  // 2. 处理代码块格式，确保代码块前后有正确的换行
-  // 2.1 再次修复被分割的语言标识（在转义处理后，处理实际换行符的情况）
-  // 模式1: ```部分标识\n 单个字母\n (如 ```mermai\n d\n)
-  text = text.replace(/```(\w+)\n\s*([a-z])\s*\n/g, (match, p1, p2) => {
+  // 修复被分割的常见单词（在代码块格式处理之前）
+  const commonWords = ['notion', 'bash', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify'];
+  
+  // 修复被分割单词的通用函数
+  const fixSplitWords = (inputText: string): string => {
+    // 保护代码块
+    const codeBlockRegex = /```[\s\S]*?```/g;
+    const codeBlocks: string[] = [];
+    let protectedText = inputText.replace(codeBlockRegex, (match) => {
+      codeBlocks.push(match);
+      return `__CODE_BLOCK_${codeBlocks.length - 1}__`;
+    });
+    
+    // 修复被分割的单词（多种模式）
+    protectedText = protectedText.replace(/(\w{3,})\n\s*([a-z])\s*\n/g, (match, p1, p2) => {
+      const combined = p1 + p2;
+      return commonWords.includes(combined.toLowerCase()) ? combined + '\n' : match;
+    });
+    
+    protectedText = protectedText.replace(/(\w{3,})\n\s*([a-z])\s*(?=\s|[.,;:!?\)\]\}>\[]|$)/g, (match, p1, p2) => {
+      const combined = p1 + p2;
+      return commonWords.includes(combined.toLowerCase()) ? combined : match;
+    });
+    
+    protectedText = protectedText.replace(/(\w{3,})\n+\s*([a-z])\s*(?=\s|\n|[.,;:!?\)\]\}>\[]|$)/g, (match, p1, p2) => {
+      const combined = p1 + p2;
+      return commonWords.includes(combined.toLowerCase()) ? combined : match;
+    });
+    
+    // 修复 Markdown 链接中的文本
+    protectedText = protectedText.replace(/\[([^\]]*?)(\w{3,})\n\s*([a-z])([^\]]*?)\]\(/g, (match, before, p1, p2, after) => {
+      const combined = p1 + p2;
+      return commonWords.includes(combined.toLowerCase()) ? `[${before}${combined}${after}](` : match;
+    });
+    
+    // 修复 URL 中的单词
+    protectedText = protectedText.replace(/https?:\/\/notio\s*\n*\s*n([\w.-]+)/gi, (match, rest) => `https://notion${rest}`);
+    
+    // 恢复代码块
+    return protectedText.replace(/__CODE_BLOCK_(\d+)__/g, (match, index) => codeBlocks[parseInt(index)]);
+  };
+  
+  text = fixSplitWords(text);
+  
+  // 2. 修复被分割的语言标识（处理实际换行符的情况）
+  const fixSplitLanguage = (match: string, p1: string, p2: string) => {
     const combined = p1 + p2;
-    console.log('转义后检测到分割模式1:', p1, '+', p2, '=', combined);
     if (commonLanguages.includes(combined)) {
-      console.log('转义后匹配到语言标识:', combined);
       return `\`\`\`${combined}\n`;
     }
     const matchedLang = commonLanguages.find(lang => {
       const langStart = lang.substring(0, combined.length);
       return langStart === combined && lang.length <= combined.length + 2;
     });
-    if (matchedLang) {
-      console.log('转义后匹配到相似语言标识:', matchedLang);
-      return `\`\`\`${matchedLang}\n`;
-    }
-    return match;
-  });
+    return matchedLang ? `\`\`\`${matchedLang}\n` : match;
+  };
   
-  // 模式2: ```部分标识\n 单个字母 (如 ```mermai\n d，后面直接跟代码)
-  text = text.replace(/```(\w+)\n\s*([a-z])(?=\s|graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z])/g, (match, p1, p2) => {
-    const combined = p1 + p2;
-    console.log('转义后模式2检测:', p1, '+', p2, '=', combined);
-    if (commonLanguages.includes(combined)) {
-      console.log('转义后模式2匹配到语言标识:', combined);
-      return `\`\`\`${combined}\n`;
-    }
-    const matchedLang = commonLanguages.find(lang => {
-      const langStart = lang.substring(0, combined.length);
-      return langStart === combined && lang.length <= combined.length + 2;
-    });
-    if (matchedLang) {
-      console.log('转义后模式2匹配到相似语言标识:', matchedLang);
-      return `\`\`\`${matchedLang}\n`;
-    }
-    return match;
-  });
+  // 修复转义后的分割语言标识
+  text = text.replace(/```(\w+)\n\s*([a-z])\s*\n/g, fixSplitLanguage);
+  text = text.replace(/```(\w+)\n\s*([a-z])(?=\s|graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z])/g, fixSplitLanguage);
+  text = text.replace(/```\n+\s*(\w+)\s*\n+\s*([a-z])\s*\n+\s*(?=(?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z]))/g, fixSplitLanguage);
   
-  // 模式3: 处理已经被分割成独立行的语言标识（如 ```后跟换行，然后 mermai，然后 d）
-  // 这种情况：```\n\nmermai\nd\ngraph 或 ```\n\nmermai\n\nd\ngraph
-  // 必须在代码块格式处理之前执行，因为格式处理可能会改变结构
-  // 匹配：```后跟一个或多个换行，然后是单词（如 mermai），换行，单个字母（如 d），换行，后面跟着 graph 等
-  text = text.replace(/```\n+\s*(\w+)\s*\n\s*([a-z])\s*\n(?=\s*(?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z]))/g, (match, p1, p2) => {
-    const combined = p1 + p2;
-    console.log('模式3检测:', p1, '+', p2, '=', combined, '匹配内容:', match.substring(0, 50));
-    if (commonLanguages.includes(combined)) {
-      console.log('模式3匹配到语言标识:', combined);
-      return `\`\`\`${combined}\n`;
-    }
-    const matchedLang = commonLanguages.find(lang => {
-      const langStart = lang.substring(0, combined.length);
-      return langStart === combined && lang.length <= combined.length + 2;
-    });
-    if (matchedLang) {
-      console.log('模式3匹配到相似语言标识:', matchedLang);
-      return `\`\`\`${matchedLang}\n`;
-    }
-    return match;
-  });
-  
-  // 模式4: 处理 ```mermai\nd\n 后跟代码的情况（代码块标记后直接跟部分语言标识）
-  text = text.replace(/```(\w+)\s*\n\s*([a-z])\s*\n(?=\s*(?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z]))/g, (match, p1, p2) => {
-    const combined = p1 + p2;
-    console.log('模式4检测:', p1, '+', p2, '=', combined, '匹配内容:', match.substring(0, 50));
-    if (commonLanguages.includes(combined)) {
-      console.log('模式4匹配到语言标识:', combined);
-      return `\`\`\`${combined}\n`;
-    }
-    const matchedLang = commonLanguages.find(lang => {
-      const langStart = lang.substring(0, combined.length);
-      return langStart === combined && lang.length <= combined.length + 2;
-    });
-    if (matchedLang) {
-      console.log('模式4匹配到相似语言标识:', matchedLang);
-      return `\`\`\`${matchedLang}\n`;
-    }
-    return match;
-  });
-  
-  // 模式5: 更宽松的匹配，处理 ```后跟换行，然后 mermai，然后 d，然后换行，然后 graph（中间可能有多个换行）
-  // 匹配格式：```\n\nmermai\n\nd\n\ngraph 或 ```\n\nmermai\n d\n\ngraph
-  text = text.replace(/```\n+\s*(\w+)\s*\n+\s*([a-z])\s*\n+\s*(?=(?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z]))/g, (match, p1, p2) => {
-    const combined = p1 + p2;
-    console.log('模式5检测:', p1, '+', p2, '=', combined, '匹配内容:', match.substring(0, 50));
-    if (commonLanguages.includes(combined)) {
-      console.log('模式5匹配到语言标识:', combined);
-      return `\`\`\`${combined}\n`;
-    }
-    const matchedLang = commonLanguages.find(lang => {
-      const langStart = lang.substring(0, combined.length);
-      return langStart === combined && lang.length <= combined.length + 2;
-    });
-    if (matchedLang) {
-      console.log('模式5匹配到相似语言标识:', matchedLang);
-      return `\`\`\`${matchedLang}\n`;
-    }
-    return match;
-  });
-  
-  // 2.2 现在处理代码块格式：确保 ```语言标识 后紧跟换行
-  // 注意：这个处理必须在修复分割的语言标识之后，且只处理还没有正确格式的代码块
-  // 处理 ```语言标识后直接跟非换行字符的情况（如 ```mermaid代码）
-  // 但要排除已经正确格式的代码块（语言标识后已经有换行）
+  // 3. 处理代码块格式
   text = text.replace(/```(\w+)([^\n\r\s`])/g, (match, lang, next) => {
-    // 如果下一个字符看起来像代码内容（不是反引号），才添加换行
-    // 避免处理已经正确格式的代码块
-    if (!next.match(/[`]/)) {
-      return `\`\`\`${lang}\n${next}`;
-    }
-    return match;
+    return !next.match(/[`]/) ? `\`\`\`${lang}\n${next}` : match;
   });
-  // 处理 ```后直接跟非换行字符的情况（无语言标识）
   text = text.replace(/```([^\n\r\s`])/g, '```\n$1');
-  
-  // 2.3 修复代码块结束标记：确保 ``` 前有换行
   text = text.replace(/([^\n\r])```/g, '$1\n```');
-  
-  // 2.4 确保代码块前后有空行（Markdown 规范要求）
-  // 但要注意：如果代码块标记后已经跟着换行和代码内容，不要添加额外的空行
-  // 代码块前需要空行（如果前面是文本，添加一个空行）
   text = text.replace(/([^\n\r])\n```/g, '$1\n\n```');
-  // 代码块后需要空行（如果后面是文本，添加一个空行）
-  // 但不要破坏已经正确格式的代码块
-  text = text.replace(/```(\w+)\n([^\n\r])/g, '```$1\n\n$2'); // 语言标识后需要空行
-  text = text.replace(/```\n([^\n\r`])/g, '```\n\n$1'); // 无语言标识时也需要空行
+  text = text.replace(/```(\w+)\n([^\n\r])/g, '```$1\n\n$2');
+  text = text.replace(/```\n([^\n\r`])/g, '```\n\n$1');
   
-  // 2.5 在代码块格式处理之后，再次尝试修复被分割的语言标识
-  // 这是因为代码块格式处理可能会改变结构，导致分割的格式更明显
-  // 处理：```\n\nmermai\nd\ngraph 这种情况
-  text = text.replace(/```\n+\s*(\w+)\s*\n+\s*([a-z])\s*\n+\s*(?=(?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z]))/g, (match, p1, p2) => {
-    const combined = p1 + p2;
-    console.log('格式处理后模式检测:', p1, '+', p2, '=', combined, '匹配内容:', match.substring(0, 60));
-    if (commonLanguages.includes(combined)) {
-      console.log('格式处理后匹配到语言标识:', combined);
-      return `\`\`\`${combined}\n`;
-    }
-    const matchedLang = commonLanguages.find(lang => {
-      const langStart = lang.substring(0, combined.length);
-      return langStart === combined && lang.length <= combined.length + 2;
-    });
-    if (matchedLang) {
-      console.log('格式处理后匹配到相似语言标识:', matchedLang);
-      return `\`\`\`${matchedLang}\n`;
-    }
-    return match;
-  });
+  // 4. 在代码块格式处理之后再次修复被分割的语言标识
+  text = text.replace(/```\n+\s*(\w+)\s*\n+\s*([a-z])\s*\n+\s*(?=(?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram|erDiagram|gantt|pie|gitgraph|[A-Z]))/g, fixSplitLanguage);
   
-  // 3. 清理多余的空行（保留必要的空行用于段落分隔）
-  text = text.replace(/\n{4,}/g, '\n\n\n'); // 最多保留3个连续换行
+  // 5. 修复被分割的单词（处理代码块格式处理可能影响的情况）
+  text = fixSplitWords(text);
   
-  console.log('处理后内容前300字符:', text.substring(0, 300));
-  // 查找处理后 mermaid 的位置
-  const mermaidIndexAfter = text.indexOf('mermaid');
-  const mermaiIndexAfter = text.indexOf('mermai');
-  if (mermaidIndexAfter >= 0) {
-    console.log('处理后找到 mermaid 位置:', mermaidIndexAfter);
-  }
-  if (mermaiIndexAfter >= 0) {
-    console.log('处理后找到 mermai 位置:', mermaiIndexAfter);
-    console.log('mermai 前后50字符:', text.substring(Math.max(0, mermaiIndexAfter - 50), mermaiIndexAfter + 57));
-  }
-  console.log('=== normalizeMarkdown 完成 ===');
+  // 6. 清理多余的空行
+  text = text.replace(/\n{4,}/g, '\n\n\n');
   
   return text;
 };
@@ -401,12 +309,13 @@ watch(() => props.selectedTip?.id, () => {
   }, 100);
 }, { immediate: true });
 
-// 也监听 renderedContent 的变化
-watch(() => renderedContent.value, () => {
-  nextTick(() => {
-    renderMermaid();
-  });
-});
+        // 也监听 renderedContent 的变化
+        watch(() => renderedContent.value, () => {
+          nextTick(() => {
+            fixSplitWordsInHTML();
+            renderMermaid();
+          });
+        });
 
 const TIP_CATEGORY_ICONS = {
   blocker: 'M1 21h22L12 2 1 21zm12-3h-2v-2h2v2zm0-4h-2v-4h2v4z',
@@ -749,6 +658,10 @@ main {
   line-height: 1.8;
   font-size: 16px;
   color: rgb(51 65 85);
+  /* 防止单词被意外分割 */
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  hyphens: none;
 }
 
 :deep(.markdown-content h1),
@@ -771,6 +684,8 @@ main {
 :deep(.markdown-content p) {
   margin-bottom: 1em;
   color: rgb(51 65 85);
+  word-break: keep-all;
+  overflow-wrap: break-word;
 }
 
 :deep(.markdown-content ul),
@@ -784,7 +699,6 @@ main {
 }
 
 :deep(.markdown-content code) {
-  background-color: rgba(0, 0, 0, 0.1);
   padding: 0.125em 0.25em;
   border-radius: 0.25em;
   font-size: 0.875em;
@@ -811,6 +725,12 @@ main {
 
 :deep(.markdown-content em) {
   font-style: italic;
+}
+
+:deep(.markdown-content a) {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+  white-space: normal;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -851,6 +771,9 @@ main {
 
   :deep(.markdown-content) {
     color: rgb(226 232 240);
+    word-break: keep-all;
+    overflow-wrap: break-word;
+    hyphens: none;
   }
 
   /* 深色模式下的标题颜色 */
@@ -866,11 +789,8 @@ main {
   /* 深色模式下的段落颜色 */
   :deep(.markdown-content p) {
     color: rgb(226 232 240);
-  }
-  
-  /* 深色模式下的代码块背景 */
-  :deep(.markdown-content code) {
-    background-color: rgba(255, 255, 255, 0.1);
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
   
   :deep(.markdown-content pre) {
