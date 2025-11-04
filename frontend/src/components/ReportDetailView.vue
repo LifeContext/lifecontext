@@ -214,42 +214,48 @@ main:hover::-webkit-scrollbar-thumb {
 
 /* Markdown内容样式 */
 :deep(.prose h1), :deep(.prose h2), :deep(.prose h3), :deep(.prose h4), :deep(.prose h5), :deep(.prose h6) {
-  color: rgb(15 23 42);
+  color: rgb(15 23 42) !important;
   font-weight: 600;
   line-height: 1.25;
   margin-top: 1.5em;
   margin-bottom: 0.5em;
 }
 
-:global(.dark) .markdown-content h1,
-:global(.dark) .markdown-content h2,
-:global(.dark) .markdown-content h3,
-:global(.dark) .markdown-content h4,
-:global(.dark) .markdown-content h5,
-:global(.dark) .markdown-content h6 {
-  color: rgb(241 245 249) !important;
-}
+@media (prefers-color-scheme: dark) {
+  :deep(.markdown-content h1),
+  :deep(.markdown-content h2),
+  :deep(.markdown-content h3),
+  :deep(.markdown-content h4),
+  :deep(.markdown-content h5),
+  :deep(.markdown-content h6) {
+    color: rgb(241 245 249) !important;
+  }
 
-:global(.dark) .markdown-content {
-  color: rgb(226 232 240) !important;
-}
+  :deep(.markdown-content) {
+    color: rgb(226 232 240);
+  }
 
-:global(.dark) .markdown-content {
-  --tw-prose-body: 226 232 240;
-  --tw-prose-headings: 241 245 249;
-  --tw-prose-links: 241 245 249;
-  --tw-prose-bold: 241 245 249;
-  --tw-prose-counters: 203 213 225;
-  --tw-prose-bullets: 203 213 225;
-  --tw-prose-hr: 51 65 85;
-  --tw-prose-quotes: 226 232 240;
-  --tw-prose-quote-borders: 96 165 250;
-  --tw-prose-captions: 203 213 225;
-  --tw-prose-code: 241 245 249;
-  --tw-prose-pre-code: 226 232 240;
-  --tw-prose-pre-bg: 30 41 59;
-  --tw-prose-th-borders: 51 65 85;
-  --tw-prose-td-borders: 51 65 85;
+  :deep(.markdown-content) {
+    --tw-prose-body: 226 232 240;
+  }
+
+  :deep(.markdown-content) {
+    --tw-prose-body: 226 232 240;
+    --tw-prose-headings: 241 245 249;
+    --tw-prose-links: 241 245 249;
+    --tw-prose-bold: 241 245 249;
+    --tw-prose-counters: 203 213 225;
+    --tw-prose-bullets: 203 213 225;
+    --tw-prose-hr: 51 65 85;
+    --tw-prose-quotes: 226 232 240;
+    --tw-prose-quote-borders: 96 165 250;
+    --tw-prose-captions: 203 213 225;
+    --tw-prose-code: 241 245 249;
+    --tw-prose-pre-code: 226 232 240;
+    --tw-prose-pre-bg: 30 41 59;
+    --tw-prose-th-borders: 51 65 85;
+    --tw-prose-td-borders: 51 65 85;
+  }
 }
 
 :deep(.prose h1) {
@@ -467,9 +473,5 @@ main:hover::-webkit-scrollbar-thumb {
   --tw-prose-headings: 255 255 255;
   --tw-prose-links: 255 255 255;
   --tw-prose-bold: 255 255 255;
-}
-
-.dark .markdown-content :where(h1,h2,h3,h4,h5,h6) {
-  color: #ffffff !important;
 }
 </style>
