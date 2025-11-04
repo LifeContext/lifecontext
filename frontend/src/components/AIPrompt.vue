@@ -102,14 +102,18 @@ const tipCategoryConfig: { [key in TipCategory]: { icon: string; color: string; 
 };
 
 const getCategoryIcon = (category: string) => {
-  const defaultCategory = 'suggestion'; // 默认分类
-  const validCategory = category && tipCategoryConfig[category as TipCategory] ? category as TipCategory : defaultCategory;
+  const defaultCategory: TipCategory = 'RISK_ANALYSIS'; // 默认分类
+  const validCategory = (category && tipCategoryConfig[category as TipCategory]) 
+    ? (category as TipCategory) 
+    : defaultCategory;
   return tipCategoryConfig[validCategory].icon;
 };
 
 const getCategoryColor = (category: string) => {
-  const defaultCategory = 'suggestion'; // 默认分类
-  const validCategory = category && tipCategoryConfig[category as TipCategory] ? category as TipCategory : defaultCategory;
+  const defaultCategory: TipCategory = 'RISK_ANALYSIS'; // 默认分类
+  const validCategory = (category && tipCategoryConfig[category as TipCategory]) 
+    ? (category as TipCategory) 
+    : defaultCategory;
   return tipCategoryConfig[validCategory].color;
 };
 
@@ -463,26 +467,28 @@ const recalcGridState = () => {
 :global(.tip-card .markdown-content h4),
 :global(.tip-card .markdown-content h5),
 :global(.tip-card .markdown-content h6) {
-  color: #ffffff;
-}
-
-.dark .markdown-content code {
-  background-color: rgba(255, 255, 255, 0.12);
-}
-
-.dark .tip-card .markdown-content h1,
-.dark .tip-card .markdown-content h2,
-.dark .tip-card .markdown-content h3,
-.dark .tip-card .markdown-content h4,
-.dark .tip-card .markdown-content h5,
-.dark .tip-card .markdown-content h6,
-.dark :global(.tip-card .markdown-content h1),
-.dark :global(.tip-card .markdown-content h2),
-.dark :global(.tip-card .markdown-content h3),
-.dark :global(.tip-card .markdown-content h4),
-.dark :global(.tip-card .markdown-content h5),
-.dark :global(.tip-card .markdown-content h6) {
   color: rgb(15 23 42) !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .markdown-content code {
+    background-color: rgba(255, 255, 255, 0.12);
+  }
+
+  .tip-card .markdown-content h1,
+  .tip-card .markdown-content h2,
+  .tip-card .markdown-content h3,
+  .tip-card .markdown-content h4,
+  .tip-card .markdown-content h5,
+  .tip-card .markdown-content h6,
+  :global(.tip-card .markdown-content h1),
+  :global(.tip-card .markdown-content h2),
+  :global(.tip-card .markdown-content h3),
+  :global(.tip-card .markdown-content h4),
+  :global(.tip-card .markdown-content h5),
+  :global(.tip-card .markdown-content h6) {
+    color: #ffffff !important;
+  }
 }
 
 .markdown-preview {
