@@ -21,12 +21,16 @@
     </div>
 
     <!-- 无数据状态 -->
-    <div v-else-if="tips.length === 0" class="flex flex-col items-center justify-center h-full min-h-[200px]">
-      <svg class="w-12 h-12 text-slate-400 dark:text-slate-500 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-      </svg>
-      <h3 class="text-lg font-medium text-slate-600 dark:text-slate-300 mb-2">No tips yet</h3>
-      <p class="text-sm text-slate-500 dark:text-slate-400">Wait for generation</p>
+    <div v-else-if="tips.length === 0" class="py-8 flex items-center justify-center h-full min-h-[200px]">
+      <div class="text-center">
+        <div class="text-slate-300 dark:text-slate-600 mb-2">
+          <svg class="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+        </div>
+        <p class="text-sm text-slate-400 dark:text-slate-500">No tips yet</p>
+        <p class="text-xs text-slate-300 dark:text-slate-500 mt-1">Waiting for generation</p>
+      </div>
     </div>
     
     <!-- Tips列表 -->

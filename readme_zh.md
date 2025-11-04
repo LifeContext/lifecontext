@@ -119,6 +119,8 @@ chmod +x deploy.sh stop.sh
 
 🎉打开浏览器访问 http://localhost:3000/ 
 
+如果部署还有问题，请参考 [deploy_guide_zh.md](deploy_guide_zh.md)
+
 ## 🌄 场景介绍
 
 1. LifeContext会自动无感地记录您在网页上浏览的信息。

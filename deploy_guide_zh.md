@@ -34,7 +34,7 @@ cd ..
 
 #### 启动所有服务
 
-双击运行 `deploy.bat` 或在命令行中执行：
+在conda环境中执行：
 
 ```cmd
 deploy.bat
@@ -42,7 +42,7 @@ deploy.bat
 
 #### 停止所有服务
 
-双击运行 `stop.bat` 或在命令行中执行：
+在conda环境中执行：
 
 ```cmd
 stop.bat

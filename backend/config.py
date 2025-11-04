@@ -46,7 +46,7 @@ CHROMA_PERSIST_DIR.mkdir(exist_ok=True)
 # 🌐 Flask 服务配置
 # ============================================================================
 SECRET_KEY = "dev-secret-key-change-in-production"
-DEBUG = True
+DEBUG = False  # 禁用调试模式以避免调度器重复初始化
 HOST = "0.0.0.0"
 PORT = 8000
 
