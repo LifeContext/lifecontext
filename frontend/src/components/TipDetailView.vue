@@ -46,6 +46,27 @@
             </h2>
             <div class="markdown-content max-w-7xl mx-auto text-slate-700 dark:text-slate-300 h-full">
               <div ref="markdownContainer" v-html="renderedContent"></div>
+              
+              <!-- 关联网址 -->
+              <div v-if="props.selectedTip.source_urls && props.selectedTip.source_urls.length > 0" class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-600">
+                <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
+                  <Icon path="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" class="h-5 w-5 text-blue-500" />
+                  <span>关联网址</span>
+                </h3>
+                <ul class="space-y-2">
+                  <li v-for="(url, index) in props.selectedTip.source_urls" :key="index" class="flex items-start gap-2">
+                    <Icon path="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" class="h-4 w-4 text-slate-400 dark:text-slate-500 mt-1 flex-shrink-0" />
+                    <a 
+                      :href="url" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      class="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 hover:underline break-all"
+                    >
+                      {{ url }}
+                    </a>
+                  </li>
+                </ul>
+              </div>
             </div>
           </section>
         </div>

@@ -37,6 +37,7 @@ export interface Tip {
   title: string;
   content: string;
   tip_type: string;
+  source_urls: string[];
 }
 
 export interface TimelineItem {
