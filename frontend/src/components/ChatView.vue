@@ -30,22 +30,9 @@
                 ? 'user-message ml-12' 
                 : 'ai-message mr-12'"
             >
-              <div class="flex items-start space-x-3">
-                <!-- AI头像 -->
-                <div v-if="message.sender === 'ai'" class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-4 h-4 text-white" />
-                </div>
-                
-                <!-- 用户头像 -->
-                <div v-if="message.sender === 'user'" class="user-avatar w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1">
-                  <Icon path="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" class="w-4 h-4 text-white" />
-                </div>
-                
+              <div class="flex items-start space-x-3">                
                 <div class="flex-1">
                   <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ message.content }}</p>
-                  <p class="text-xs mt-2 opacity-70">
-                    {{ formatTime(message.timestamp) }}
-                  </p>
                 </div>
               </div>
             </div>
@@ -55,9 +42,6 @@
           <div v-if="isLoading" class="flex justify-start">
             <div class="loading-message mr-12 px-4 py-3 rounded-lg">
               <div class="flex items-center space-x-3">
-                <div class="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                  <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-4 h-4 text-white" />
-                </div>
                 <div class="flex space-x-1">
                   <div class="loading-dot w-2 h-2 rounded-full animate-bounce"></div>
                   <div class="loading-dot w-2 h-2 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
@@ -108,15 +92,6 @@ const isLoading = ref(false);
 const messagesContainer = ref<HTMLElement>();
 const currentWorkflowId = ref<string>('');
 const hasUnsavedMessages = ref(false);
-
-// 格式化时间显示
-const formatTime = (timestamp: string) => {
-  const date = new Date(timestamp);
-  return date.toLocaleTimeString('zh-CN', { 
-    hour: '2-digit', 
-    minute: '2-digit' 
-  });
-};
 
 // 滚动到底部
 const scrollToBottom = async () => {
@@ -235,13 +210,12 @@ const handleSend = async () => {
 </script>
 
 <style scoped>
-/* 暗色模式样式（默认） */
 .chat-container {
-  background-color: #0f172a; /* bg-slate-900 */
+  background-color: #0f172a;
 }
 
 .ai-avatar-container {
-  background-color: #1e293b; /* bg-slate-800 */
+  background-color: #1e293b;
 }
 
 .main-title {
@@ -249,85 +223,86 @@ const handleSend = async () => {
 }
 
 .user-message {
-  background-color: #2563eb; /* bg-blue-600 */
+  background-color: #2563eb;
   color: white;
 }
 
 .ai-message {
-  background-color: #1e293b; /* bg-slate-800 */
+  /* background-color: #1e293b; */
   color: white;
+  width: 100%;
+  margin: 0;
 }
 
 .user-avatar {
-  background-color: #475569; /* bg-slate-600 */
+  background-color: #475569;
 }
 
 .loading-message {
-  background-color: #1e293b; /* bg-slate-800 */
   color: white;
 }
 
 .loading-dot {
-  background-color: #94a3b8; /* bg-slate-400 */
+  background-color: #94a3b8;
 }
 
 .chat-input {
-  background-color: #1e293b; /* bg-slate-800 */
+  background-color: #1e293b;
   color: white;
-  border: 1px solid #334155; /* border-slate-700 */
+  border: 1px solid #334155;
 }
 
 .chat-input::placeholder {
-  color: #94a3b8; /* placeholder-slate-400 */
+  color: #94a3b8;
 }
 
 /* 亮色模式样式 */
 @media (prefers-color-scheme: light) {
   .chat-container {
-    background-color: #f9fafb; /* bg-gray-50 */
+    background-color: #f9fafb;
   }
 
   .ai-avatar-container {
-    background-color: #e5e7eb; /* bg-gray-200 */
+    background-color: #e5e7eb;
   }
 
   .main-title {
-    color: #111827; /* text-gray-900 */
+    color: #111827;
   }
 
   .user-message {
-    background-color: #2563eb; /* bg-blue-600 */
+    background-color: #2563eb;
     color: white;
   }
 
   .ai-message {
     background-color: white;
-    color: #111827; /* text-gray-900 */
-    border: 1px solid #e5e7eb; /* border-gray-200 */
+    color: #111827;
+    border: 1px solid #e5e7eb;
   }
 
   .user-avatar {
-    background-color: #9ca3af; /* bg-gray-400 */
+    background-color: #9ca3af;
   }
 
   .loading-message {
     background-color: white;
-    color: #111827; /* text-gray-900 */
-    border: 1px solid #e5e7eb; /* border-gray-200 */
+    color: #111827;
+    border: 1px solid #e5e7eb;
   }
 
   .loading-dot {
-    background-color: #9ca3af; /* bg-gray-400 */
+    background-color: #9ca3af;
   }
 
   .chat-input {
     background-color: white;
-    color: #111827; /* text-gray-900 */
-    border: 1px solid #d1d5db; /* border-gray-300 */
+    color: #111827;
+    border: 1px solid #d1d5db;
   }
 
   .chat-input::placeholder {
-    color: #6b7280; /* placeholder-gray-500 */
+    color: #6b7280;
   }
 }
 </style>

@@ -129,7 +129,7 @@
                   class="h-4 w-4 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 hidden"
                 />
                 <span class="w-4 h-4 shrink-0 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
-                  <svg class="w-3 h-3 text-slate-500 dark:text-slate-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20M12 2a15.3 15.3 0 010 20a15.3 15.3 0 010-20z"></path></svg>
+                  <Icon path="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" class="h-4 w-4 text-slate-400 dark:text-slate-500 mt-1 flex-shrink-0" />
                 </span>
                 <div class="min-w-0">
                   <a :href="url" target="_blank" rel="noopener" class="block text-sm font-medium text-slate-800 dark:text-slate-200 truncate hover:underline">{{ formatTitle(url) }}</a>
@@ -256,8 +256,19 @@ const buildDateOptions = (segments: TimelineSegment[]) => {
       opts.push({ label, value });
     }
   }
-  // 可按时间倒序
-  dateOptions.value = opts.sort((a,b)=> a.label==='Today'? -1 : a.label==='Yesterday' && b.label!=='Today' ? -1 : a.value < b.value ? 1 : -1);
+  // 按时间倒序排序：Today > Yesterday > 其他日期（最新的在前）
+  dateOptions.value = opts.sort((a, b) => {
+    // Today 始终在最前面
+    if (a.label === 'Today') return -1;
+    if (b.label === 'Today') return 1;
+    
+    // Yesterday 在 Today 之后，但在所有其他日期之前
+    if (a.label === 'Yesterday') return -1;
+    if (b.label === 'Yesterday') return 1;
+    
+    // 其他日期按时间倒序（最新的在前）
+    return a.value > b.value ? -1 : a.value < b.value ? 1 : 0;
+  });
 };
 
 // Filter segments by selected date

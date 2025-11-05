@@ -70,14 +70,14 @@
           :on-close="handleToggleChatHistory" 
         />
         <div class="flex-1 relative bg-slate-900">
-          <button 
+          <!-- <button 
             v-if="!isChatHistoryOpen && activeView === 'chat'"
             @click="handleToggleChatHistory"
             class="chat-history-toggle-btn absolute top-4 left-4 z-10 p-2 rounded-md transition-colors"
             aria-label="Expand chat history"
           >
             <Icon path="M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z" class="h-4 w-4 transition-transform duration-200" />
-          </button>
+          </button> -->
           <ChatView />
         </div>
       </div>
