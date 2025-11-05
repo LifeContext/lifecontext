@@ -1,14 +1,14 @@
 <template>
   <div class="chat-container h-full flex flex-col">
     <!-- 聊天消息区域 -->
-    <div class="flex-1 overflow-y-auto py-6" ref="messagesContainer">
+    <div class="flex-1 overflow-y-auto py-6 messagesContainer" ref="messagesContainer">
       <div class="max-w-4xl mx-auto px-8 h-full flex flex-col">
         <!-- 如果没有消息，显示欢迎界面 -->
         <div v-if="messages.length === 0" class="flex flex-col items-center justify-center flex-1">
           <!-- AI Avatar -->
           <div class="ai-avatar-container w-16 h-16 rounded-full flex items-center justify-center mb-6">
-            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-              <Icon path="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 00-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 001.423-1.423l.394-1.183.394 1.183a2.25 2.25 0 001.423 1.423l1.183.394-1.183.394a2.25 2.25 0 00-1.423 1.423z" class="w-8 h-8 text-white" />
+            <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-500 rounded-full flex items-center justify-center">
+              <img src="../../Logo.png" class="w-8 h-8 text-white" />
             </div>
           </div>
           
@@ -25,7 +25,7 @@
             :class="message.sender === 'user' ? 'justify-end' : 'justify-start'"
           >
             <div 
-              class="max-w-3xl px-4 py-3 rounded-lg message-bubble"
+              class="max-w-4xl px-4 py-3 rounded-lg message-bubble"
               :class="message.sender === 'user' 
                 ? 'user-message ml-12' 
                 : 'ai-message mr-12'"
@@ -256,6 +256,30 @@ const handleSend = async () => {
   color: #94a3b8;
 }
 
+/* 滚动条样式 - 暗色模式 */
+.messagesContainer::-webkit-scrollbar {
+  width: 8px;
+}
+
+.messagesContainer::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb {
+  background: #475569;
+  border-radius: 4px;
+}
+
+.messagesContainer::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Firefox滚动条样式 */
+.messagesContainer {
+  scrollbar-width: thin;
+  scrollbar-color: #475569 transparent;
+}
+
 /* 亮色模式样式 */
 @media (prefers-color-scheme: light) {
   .chat-container {
@@ -276,9 +300,7 @@ const handleSend = async () => {
   }
 
   .ai-message {
-    background-color: white;
     color: #111827;
-    border: 1px solid #e5e7eb;
   }
 
   .user-avatar {
@@ -286,9 +308,7 @@ const handleSend = async () => {
   }
 
   .loading-message {
-    background-color: white;
     color: #111827;
-    border: 1px solid #e5e7eb;
   }
 
   .loading-dot {
@@ -303,6 +323,19 @@ const handleSend = async () => {
 
   .chat-input::placeholder {
     color: #6b7280;
+  }
+
+  /* 亮色模式滚动条样式 */
+  .messagesContainer::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+  }
+
+  .messagesContainer::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+  }
+
+  .messagesContainer {
+    scrollbar-color: #cbd5e1 transparent;
   }
 }
 </style>
