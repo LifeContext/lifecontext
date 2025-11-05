@@ -8,6 +8,30 @@ async function getApiUrl() {
     return `http://${config.API_HOST}:${config.API_PORT}/api`;
 }
 
+// 主总开关（Controls）- 使用 crawlEnabled 作为插件全局开关
+async function isPluginEnabled() {
+  try {
+    const result = await new Promise((resolve) => {
+      chrome.storage.sync.get({ crawlEnabled: true }, (cfg) => resolve(cfg));
+    });
+    return result.crawlEnabled !== false;
+  } catch (_) {
+    return true; // 默认开启
+  }
+}
+
+// 读取通知开关
+async function areNotificationsEnabled() {
+  try {
+    const result = await new Promise((resolve) => {
+      chrome.storage.sync.get({ notificationsEnabled: true }, (cfg) => resolve(cfg));
+    });
+    return result.notificationsEnabled !== false;
+  } catch (_) {
+    return true; // 默认开启
+  }
+}
+
 
 // 语言与文案
 function getLocale() {
@@ -102,6 +126,14 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // 获取事件数据并显示通知
 async function checkEventsAndNotify() {
   try {
+    // 需要 Controls 和 Notifications 同时开启
+    const [pluginOn, notifOn] = await Promise.all([
+      isPluginEnabled(),
+      areNotificationsEnabled()
+    ]);
+    if (!pluginOn || !notifOn) {
+      return;
+    }
     const apiUrl = await getApiUrl();
     const response = await fetch(`${apiUrl}/events/fetch`, {
       method: 'GET',
@@ -268,21 +300,28 @@ chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) =
     console.log('用户选择稍后提醒，3分钟后重新提醒');
 
     setTimeout(() => {
-      const locale = getLocale();
-      const t = I18N[locale] || I18N.en;
-      chrome.notifications.create(`reminder_${Date.now()}`, {
-        type: 'basic',
-        iconUrl: 'icon.png',
+      (async () => {
+        const [pluginOn, notifOn] = await Promise.all([
+          isPluginEnabled(),
+          areNotificationsEnabled()
+        ]);
+        if (!pluginOn || !notifOn) return;
+        const locale = getLocale();
+        const t = I18N[locale] || I18N.en;
+        chrome.notifications.create(`reminder_${Date.now()}`, {
+          type: 'basic',
+          iconUrl: 'icon.png',
 
-        title: t.reminderTitle,
-        message: t.reminderMessage,
-        contextMessage: 'LifeContext',
-        priority: 1,
-        buttons: [
-          { title: t.viewDetails },
-          { title: t.remindLater }
-        ]
-      });
+          title: t.reminderTitle,
+          message: t.reminderMessage,
+          contextMessage: 'LifeContext',
+          priority: 1,
+          buttons: [
+            { title: t.viewDetails },
+            { title: t.remindLater }
+          ]
+        });
+      })();
     }, 30 * 1000); // 3分钟后提醒
 
   }
