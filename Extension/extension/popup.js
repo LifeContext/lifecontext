@@ -48,32 +48,10 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-// 更新状态显示
+// 更新状态显示（已移除状态显示区域，保留函数以避免错误）
 function updateStatus(status, mainText, subText) {
   currentStatus = status;
-  
-  const statusBox = document.getElementById('status-box');
-  const statusMain = document.getElementById('status-main');
-  const statusSub = document.getElementById('status-sub');
-  
-  if (statusBox) {
-    statusBox.className = 'status-box';
-    if (status === 'crawling') {
-      statusBox.classList.add('crawling');
-    } else if (status === 'error') {
-      statusBox.classList.add('error');
-    } else if (status === 'disabled') {
-      statusBox.classList.add('disabled');
-    }
-  }
-  
-  if (statusMain) {
-    statusMain.textContent = mainText;
-  }
-  
-  if (statusSub) {
-    statusSub.textContent = subText;
-  }
+  // 状态区域已移除，不再更新UI
 }
 
 // 悬浮球切换功能
@@ -139,18 +117,9 @@ function updateToggleUI() {
   }
 }
 
-// 根据开关状态统一刷新状态文案
+// 根据开关状态统一刷新状态文案（已移除状态显示区域，保留函数以避免错误）
 function refreshStatusByFlags() {
-  if (!crawlEnabled) {
-    updateStatus('disabled', 'Controls off', 'Extension paused');
-    return;
-  }
-  // Controls 开：根据通知状态调整副文案
-  if (notificationsEnabled) {
-    updateStatus('success', 'Remembering...', 'Saving page content');
-  } else {
-    updateStatus('success', 'Remembering...', 'Notifications off');
-  }
+  // 状态区域已移除，不再更新UI
 }
 
 // 获取悬浮球状态
@@ -278,10 +247,10 @@ function updateCrawlToggleUI() {
   if (crawlToggleBtn) {
     if (crawlEnabled) {
       crawlToggleBtn.classList.add('enabled');
-      crawlToggleBtn.title = 'Disable Controls';
+      crawlToggleBtn.title = 'Disable Recording';
     } else {
       crawlToggleBtn.classList.remove('enabled');
-      crawlToggleBtn.title = 'Enable Controls';
+      crawlToggleBtn.title = 'Enable Recording';
     }
   }
 }
@@ -357,7 +326,7 @@ function updateNotificationsToggleUI() {
       notifBtn.classList.add('off');
       notifBtn.classList.remove('on');
       notifBtn.classList.add('disabled');
-      notifBtn.title = 'Enable Controls first';
+      notifBtn.title = 'Enable Recording first';
       return;
     }
     // Controls 开启时，可用
