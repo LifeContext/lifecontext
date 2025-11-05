@@ -69,15 +69,33 @@ async def generate_smart_tips(history_mins: int = 60) -> Dict[str, Any]:
         
         logger.info(f"✅ LLM 生成了 {len(tips_list)} 个提示")
         
-        # 保存提示
+        # 保存提示（使用LLM返回的source_urls）
         logger.info("第三步：保存提示到数据库...")
         tip_ids = []
         for idx, tip_item in enumerate(tips_list):
             try:
+                # 使用LLM返回的source_urls，如果没有则使用空数组
+                source_urls = tip_item.get('source_urls', [])
+                if not isinstance(source_urls, list):
+                    # 如果不是列表，尝试转换
+                    source_urls = [source_urls] if source_urls else []
+                
+                # 验证URL格式（只保留有效的URL）
+                valid_urls = []
+                for url in source_urls:
+                    if url and isinstance(url, str) and url.strip():
+                        url = url.strip()
+                        # 简单验证：以http://或https://开头
+                        if url.startswith('http://') or url.startswith('https://'):
+                            valid_urls.append(url)
+                
+                logger.info(f"  Tip {idx + 1} 的 source_urls: {len(valid_urls)} 个有效URL")
+                
                 tid = insert_tip(
                     title=tip_item['title'],
                     content=tip_item['content'],
-                    tip_type=tip_item.get('type', 'smart')
+                    tip_type=tip_item.get('type', 'smart'),
+                    source_urls=valid_urls if valid_urls else None
                 )
                 tip_ids.append(tid)
                 logger.info(f"  ✅ Tip {idx + 1} 保存成功，ID: {tid}")
@@ -496,6 +514,25 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
 - 避免与existing_tips重复
 - ⚠️ 数学公式使用普通文本或代码块，不要使用LaTeX语法（如\\[、\\frac等）
 
+## 来源URL要求（重要）
+每个tip必须包含`source_urls`字段，列出生成该tip时真正参考的URL。
+
+**选择source_urls的原则**：
+1. 只选择与当前tip内容**直接相关**的URL
+2. 从上下文数据中的`web_data`和`relevant_history`字段中选择
+3. 每个tip的source_urls应该包含1-5个最相关的URL
+4. 只选择真正作为有效参考的URL，不要包含所有URL
+5. 如果某个tip不基于任何URL（例如基于活动记录或待办事项），可以返回空数组
+
+**URL来源说明**：
+- `web_data`：当前时间段的网页浏览记录，每个条目包含`url`字段
+- `relevant_history`：通过语义搜索找到的相关历史记录，每个条目包含`url`字段
+
+**示例**：
+- 如果tip是关于"Docker部署"，只选择包含Docker相关内容的URL
+- 如果tip是关于"React Hooks优化"，只选择React相关的URL
+- 不要选择与tip内容无关的URL
+
 ## ⚠️ 输出格式（极其重要）
 直接返回JSON对象，包含一个tips数组。
 
@@ -505,7 +542,11 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
     {
       "title": "React Hooks性能优化关键技巧",
       "content": "## 核心优化策略\n\n### 1. 使用useMemo和useCallback\n\n这两个Hook可以避免不必要的重新计算和重新渲染...\n\n```javascript\nconst memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);\n```",
-      "type": "DEEP_DIVE"
+      "type": "DEEP_DIVE",
+      "source_urls": [
+        "https://react.dev/reference/react/useMemo",
+        "https://react.dev/reference/react/useCallback"
+      ]
     }
   ]
 }
@@ -520,13 +561,40 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
 
 记住：返回JSON对象，包含tips数组！"""
         
+        # 构建可用的URL列表，供LLM参考
+        available_urls = []
+        
+        # 从web_data提取URL
+        for item in web_data_trimmed:
+            url = item.get('url')
+            if url:
+                available_urls.append(url)
+        
+        # 从relevant_history提取URL
+        for item in relevant_history:
+            url = item.get('url')
+            if url:
+                available_urls.append(url)
+        
+        # 去重
+        available_urls = list(set(available_urls))
+        
         user_prompt = f"""请分析以下用户行为数据，生成1-3个有价值的Tips。
 
 **上下文数据:**
 
 {context_json}
 
-⚠️ 重要提醒：直接返回JSON对象，格式为 {{"tips": [{{"title": "...", "content": "...", "type": "..."}}]}}，不要添加任何其他文字或代码块标记。"""
+**可用的URL列表（供参考选择）:**
+{json.dumps(available_urls, ensure_ascii=False, indent=2)}
+
+**重要要求**：
+1. 为每个tip选择真正相关的URL，填写到`source_urls`字段中
+2. `source_urls`应该包含1-5个与tip内容直接相关的URL
+3. 只选择真正作为有效参考的URL，不要包含所有URL
+4. 如果tip不基于URL（例如基于活动或待办），`source_urls`可以为空数组[]
+
+⚠️ 重要提醒：直接返回JSON对象，格式为 {{"tips": [{{"title": "...", "content": "...", "type": "...", "source_urls": [...]}}]}}，不要添加任何其他文字或代码块标记。"""
         
         logger.info("正在调用 LLM API...")
         logger.info(f"模型: {config.LLM_MODEL}, 温度: 0.3, max_tokens: 8196")
@@ -581,10 +649,15 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
             logger.info("=" * 60)
             logger.info(f"✅ JSON 解析成功！生成了 {len(tips)} 个 tips")
             for idx, tip in enumerate(tips):
+                source_urls = tip.get('source_urls', [])
                 logger.info(f"  Tip {idx + 1}:")
                 logger.info(f"    - title: {tip.get('title', 'N/A')[:50]}...")
                 logger.info(f"    - type: {tip.get('type', 'N/A')}")
                 logger.info(f"    - content 长度: {len(tip.get('content', ''))} 字符")
+                logger.info(f"    - source_urls: {len(source_urls)} 个URL（由LLM选择）")
+                if source_urls:
+                    for url in source_urls[:3]:  # 只显示前3个
+                        logger.info(f"      * {url[:60]}...")
             logger.info("=" * 60)
             return tips
         else:
