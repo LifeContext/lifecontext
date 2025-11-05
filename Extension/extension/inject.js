@@ -90,7 +90,7 @@
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
           </svg>
         </button>
-        <h2 style="font-size: 18px; font-weight: bold; color: #f1f5f9; margin: 0;">AI Assistant</h2>
+        <h2 style="font-size: 18px; font-weight: bold; color: #f1f5f9; margin: 0;">LifeContext</h2>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <button id="toggle-chat" style="padding: 8px; border-radius: 50%; color: #94a3b8; background: transparent; border: none; cursor: pointer; transition: background-color 0.2s;" aria-label="Expand chat">
@@ -104,6 +104,44 @@
           </svg>
         </button>
       </div>
+    `;
+
+    // 页面上下文展示 Pill（默认隐藏，打开聊天时显示）
+    const contextPill = document.createElement('div');
+    contextPill.id = 'page-context-pill';
+    contextPill.style.cssText = `
+      flex-shrink: 0;
+      align-self: flex-start; /* 不拉伸，占内容宽度 */
+      width: auto;
+      max-width: min(70%, 560px); /* 上限，避免太宽 */
+      margin: 8px 16px 0 16px;
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #e2e8f0;
+      border: 1px solid rgba(71,85,105,0.5);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+      backdrop-filter: saturate(150%) blur(6px);
+      pointer-events: auto;
+    `;
+    contextPill.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+        <span style="display:inline-flex; width:20px; height:20px; align-items:center; justify-content:center; color:#60a5fa;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 5h16v14H4z" stroke="currentColor" stroke-width="1.6" fill="none"/>
+            <path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/>
+          </svg>
+        </span>
+        <span id="page-context-text" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 360px;"></span>
+      </div>
+      <button id="page-context-close" aria-label="Remove page context" title="Remove page context" style="margin-left:6px; border:none; background:transparent; color:#94a3b8; cursor:pointer; padding:2px; border-radius:6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+        </svg>
+      </button>
     `;
 
     // 创建消息区域
@@ -124,10 +162,15 @@
       display: flex;
       justify-content: flex-start;
     `;
+    const isDarkMode = () => {
+      try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (_) { return true; }
+    };
+    const wmBg = isDarkMode() ? '#1e293b' : '#e2e8f0';
+    const wmColor = isDarkMode() ? 'white' : '#0f172a';
     welcomeMessage.innerHTML = `
       <div style="
-        background: #1e293b;
-        color: white;
+        background: ${wmBg};
+        color: ${wmColor};
         padding: 12px 16px;
         border-radius: 18px;
         max-width: 80%;
@@ -138,7 +181,7 @@
       ">
         
         <div>
-          <div style="font-size: 14px; line-height: 1.5;">你好！我是AI助手，有什么可以帮助您的吗？</div>
+          <div style="font-size: 14px; line-height: 1.5;">您好！欢迎使用LifeContext，我是您的专属助手，有什么可以帮助您的吗？</div>
           <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       </div>
@@ -195,9 +238,10 @@
     chatInput.appendChild(inputField);
     chatInput.appendChild(sendBtn);
 
-    // 组装聊天框
+    // 组装聊天框（Pill 放在消息区与输入框之间）
     chatBox.appendChild(chatHeader);
     chatBox.appendChild(chatMessages);
+    chatBox.appendChild(contextPill);
     chatBox.appendChild(chatInput);
 
     container.appendChild(ballElement);
@@ -235,13 +279,16 @@
         messageContainer.appendChild(avatar);
       }
 
+      const darkNow = isDarkMode();
+      const bubbleBg = sender === 'user' ? '#2563eb' : (darkNow ? '#334155' : '#e2e8f0');
+      const bubbleFg = sender === 'user' ? 'white' : (darkNow ? '#e2e8f0' : '#0f172a');
       const messageBubble = document.createElement('div');
       messageBubble.style.cssText = `
         max-width: 320px;
         padding: 12px;
         border-radius: 16px;
-        background: ${sender === 'user' ? '#2563eb' : '#334155'};
-        color: ${sender === 'user' ? 'white' : '#e2e8f0'};
+        background: ${bubbleBg};
+        color: ${bubbleFg};
         font-size: 14px;
         line-height: 1.4;
         word-wrap: break-word;
@@ -267,10 +314,12 @@
         margin-bottom: 16px;
       `;
       
+      const lbBg = isDarkMode() ? '#1e293b' : '#e2e8f0';
+      const dot = isDarkMode() ? '#64748b' : '#94a3b8';
       loadingContainer.innerHTML = `
         <div style="
-          background: #1e293b;
-          color: white;
+          background: ${lbBg};
+          color: inherit;
           padding: 12px 16px;
           border-radius: 18px;
           max-width: 80%;
@@ -282,9 +331,9 @@
           
           <div style="flex: 1;">
             <div style="display: flex; gap: 4px; align-items: center;">
-              <div style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out;"></div>
-              <div style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.2s;"></div>
-              <div style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.4s;"></div>
+              <div style="width: 6px; height: 6px; background: ${dot}; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out;"></div>
+              <div style="width: 6px; height: 6px; background: ${dot}; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.2s;"></div>
+              <div style="width: 6px; height: 6px; background: ${dot}; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.4s;"></div>
             </div>
           </div>
         </div>
@@ -312,10 +361,13 @@
               type: 'SEND_CHAT_MESSAGE', 
               payload: {
                 query: message,
-                context: {
-                  session_id: sessionId,
-                  user_preferences: {}
-                },
+                context: (function(){
+                  const base = { session_id: sessionId, user_preferences: {} };
+                  if (usePageContext) {
+                    base.page = { url: location.href, title: document.title || '' };
+                  }
+                  return base;
+                })(),
                 session_id: sessionId,
                 user_id: 'user_123'
               }
@@ -401,6 +453,9 @@
         ballElement.style.display = 'none';
         container.style.pointerEvents = 'auto';
         inputField.focus();
+        // 展示页面上下文 pill
+        usePageContext = true;
+        updateContextPill();
       } else {
         // 关闭聊天框时显示悬浮球
         ballElement.style.display = 'flex';
@@ -548,6 +603,35 @@
     // 初始化按钮状态
     updateSendButton();
 
+    // 页面上下文逻辑
+    let usePageContext = true;
+
+    function updateContextPill() {
+      const textEl = contextPill.querySelector('#page-context-text');
+      if (!usePageContext) {
+        contextPill.style.display = 'none';
+        return;
+      }
+      try {
+        const title = document.title || '';
+        const host = location.hostname || '';
+        const display = title || host || location.href;
+        if (textEl) textEl.textContent = display;
+        contextPill.style.display = 'flex';
+      } catch (_) {
+        contextPill.style.display = 'none';
+      }
+    }
+
+    const pillCloseBtn = contextPill.querySelector('#page-context-close');
+    if (pillCloseBtn) {
+      pillCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        usePageContext = false;
+        updateContextPill();
+      });
+    }
+
     // 悬浮球拖拽功能
     ballElement.addEventListener('mousedown', (e) => {
       e.preventDefault();
@@ -584,8 +668,54 @@
       }
     });
 
+    // 主题（浅/深）自适应：根据浏览器设置调整背景与文本
+    const themeSheet = document.createElement('style');
+    chatBox.appendChild(themeSheet);
+    const headerTitle = chatHeader.querySelector('h2');
+    const iconBtns = [chatHeader.querySelector('#home-btn'), chatHeader.querySelector('#toggle-chat'), chatHeader.querySelector('#close-chat')];
+    const mq = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)')) || null;
+    function applyTheme(isDark) {
+      try {
+        if (isDark) {
+          chatBox.style.background = '#1e293b';
+          chatHeader.style.borderBottom = '1px solid rgba(71, 85, 105, 0.5)';
+          headerTitle && (headerTitle.style.color = '#f1f5f9');
+          iconBtns.forEach(b => b && (b.style.color = '#94a3b8'));
+          chatInput.style.background = '#1e293b';
+          inputField.style.background = '#334155';
+          inputField.style.color = '#e2e8f0';
+          contextPill.style.background = 'rgba(15, 23, 42, 0.85)';
+          contextPill.style.border = '1px solid rgba(71,85,105,0.5)';
+          contextPill.style.color = '#e2e8f0';
+          ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+          themeSheet.textContent = `#chat-input::placeholder{color:#94a3b8;opacity:.8}`;
+        } else {
+          chatBox.style.background = '#f8fafc';
+          chatHeader.style.borderBottom = '1px solid #e2e8f0';
+          headerTitle && (headerTitle.style.color = '#0f172a');
+          iconBtns.forEach(b => b && (b.style.color = '#64748b'));
+          chatInput.style.background = '#ffffff';
+          inputField.style.background = '#e2e8f0';
+          inputField.style.color = '#0f172a';
+          contextPill.style.background = 'rgba(241,245,249,0.95)';
+          contextPill.style.border = '1px solid #cbd5e1';
+          contextPill.style.color = '#0f172a';
+          ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
+          themeSheet.textContent = `#chat-input::placeholder{color:#64748b;opacity:.9}`;
+        }
+      } catch (_) {}
+    }
+    if (mq) {
+      applyTheme(mq.matches);
+      const handler = (e) => applyTheme(e.matches);
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', handler);
+      else if (typeof mq.addListener === 'function') mq.addListener(handler);
+    } else {
+      applyTheme(true);
+    }
+
     return container;
-  }
+  } 
 
   // 悬浮球状态管理
   let floatingChatEnabled = true;
