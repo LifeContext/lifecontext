@@ -1,7 +1,9 @@
 // 弹窗状态管理
 let currentStatus = 'success'; // 'success', 'crawling', 'error'
 let floatingChatEnabled = true;
-let crawlEnabled = true; // 爬取开关，默认开启
+let crawlEnabled = true; // 爬取开关，默认开启（Controls 主开关）
+let notificationsEnabled = true; // 通知开关，默认开启
+let notificationsPreferred = true; // 记录用户偏好，用于 Controls 重新开启时恢复
 
 // 从存储中加载悬浮球状态
 async function loadFloatingChatState() {
@@ -35,7 +37,7 @@ chrome.runtime.onMessage.addListener((message) => {
         const isIncremental = message.data.isIncremental;
         
         if (message.data.serverResponse && message.data.serverResponse.ok) {
-          updateStatus('success', 'Remembering...', 'Page content saved');
+          updateStatus('success', 'Remembering...', notificationsEnabled ? 'Page content saved' : 'Saved (notifications off)');
         } else {
           updateStatus('error', 'Save Failed', message.data.serverResponse?.error || 'Unknown error');
         }
@@ -46,32 +48,10 @@ chrome.runtime.onMessage.addListener((message) => {
   }
 });
 
-// 更新状态显示
+// 更新状态显示（已移除状态显示区域，保留函数以避免错误）
 function updateStatus(status, mainText, subText) {
   currentStatus = status;
-  
-  const statusBox = document.getElementById('status-box');
-  const statusMain = document.getElementById('status-main');
-  const statusSub = document.getElementById('status-sub');
-  
-  if (statusBox) {
-    statusBox.className = 'status-box';
-    if (status === 'crawling') {
-      statusBox.classList.add('crawling');
-    } else if (status === 'error') {
-      statusBox.classList.add('error');
-    } else if (status === 'disabled') {
-      statusBox.classList.add('disabled');
-    }
-  }
-  
-  if (statusMain) {
-    statusMain.textContent = mainText;
-  }
-  
-  if (statusSub) {
-    statusSub.textContent = subText;
-  }
+  // 状态区域已移除，不再更新UI
 }
 
 // 悬浮球切换功能
@@ -137,6 +117,11 @@ function updateToggleUI() {
   }
 }
 
+// 根据开关状态统一刷新状态文案（已移除状态显示区域，保留函数以避免错误）
+function refreshStatusByFlags() {
+  // 状态区域已移除，不再更新UI
+}
+
 // 获取悬浮球状态
 async function getFloatingChatStatus() {
   // 从存储中加载状态
@@ -191,15 +176,28 @@ async function toggleCrawl() {
   crawlEnabled = !crawlEnabled;
   updateCrawlToggleUI();
   
-  // 更新状态显示
-  if (crawlEnabled) {
-    updateStatus('success', 'Remembering...', 'Saving page content');
-  } else {
-    updateStatus('disabled', 'Memory Disabled', 'Page saving stopped');
-  }
   
   // 保存到存储
   await saveCrawlState(crawlEnabled);
+  
+  // Controls 关闭时：强制关闭通知并禁用 UI；开启时：恢复用户偏好
+  if (!crawlEnabled) {
+    // 记录当前偏好，再强制关闭
+    notificationsPreferred = notificationsEnabled;
+    notificationsEnabled = false;
+    await saveNotificationsPreferred(notificationsPreferred);
+    await saveNotificationsState(false);
+  } else {
+    // 恢复到用户偏好（默认 true）
+    const stored = await chrome.storage.sync.get(['notificationsPreferred']);
+    notificationsPreferred = (typeof stored.notificationsPreferred === 'boolean')
+      ? stored.notificationsPreferred
+      : notificationsPreferred;
+    notificationsEnabled = notificationsPreferred;
+    await saveNotificationsState(notificationsEnabled);
+  }
+  updateNotificationsToggleUI();
+  refreshStatusByFlags();
   
   // 尝试通知content script
   try {
@@ -247,21 +245,12 @@ async function toggleCrawl() {
 function updateCrawlToggleUI() {
   const crawlToggleBtn = document.getElementById('crawl-toggle-btn');
   if (crawlToggleBtn) {
-    const icon = crawlToggleBtn.querySelector('.crawl-icon');
-    const iconStatic = crawlToggleBtn.querySelector('.crawl-icon-static');
-    
     if (crawlEnabled) {
       crawlToggleBtn.classList.add('enabled');
-      crawlToggleBtn.title = 'Disable Memory';
-      // 显示启用图标
-      if (icon) icon.style.display = 'block';
-      if (iconStatic) iconStatic.style.display = 'none';
+      crawlToggleBtn.title = 'Disable Recording';
     } else {
       crawlToggleBtn.classList.remove('enabled');
-      crawlToggleBtn.title = 'Enable Memory';
-      // 显示静态图标
-      if (icon) icon.style.display = 'none';
-      if (iconStatic) iconStatic.style.display = 'block';
+      crawlToggleBtn.title = 'Enable Recording';
     }
   }
 }
@@ -270,13 +259,7 @@ function updateCrawlToggleUI() {
 async function getCrawlStatus() {
   // 从存储中加载状态
   await loadCrawlState();
-  
-  // 根据爬取状态更新显示
-  if (crawlEnabled) {
-    updateStatus('success', 'Remembering...', 'Saving page content');
-  } else {
-    updateStatus('disabled', 'Memory Disabled', 'Page saving stopped');
-  }
+  refreshStatusByFlags();
   
   // 尝试同步content script状态（可选）
   try {
@@ -291,18 +274,84 @@ async function getCrawlStatus() {
         crawlEnabled = response.enabled;
         await saveCrawlState(crawlEnabled);
         updateCrawlToggleUI();
-  // 更新状态显示
-  if (crawlEnabled) {
-    updateStatus('success', 'Remembering...', 'Saving page content');
-  } else {
-    updateStatus('disabled', 'Memory Disabled', 'Page saving stopped');
-  }
+        refreshStatusByFlags();
       }
     }
   } catch (error) {
     // Content script未加载，使用存储中的状态
     console.log('Content script未加载，使用存储状态');
   }
+}
+
+// ===== 通知开关：存储、UI与事件处理 =====
+async function loadNotificationsState() {
+  try {
+    const result = await chrome.storage.sync.get(['notificationsEnabled', 'notificationsPreferred']);
+    notificationsEnabled = result.notificationsEnabled !== false; // 默认为true
+    notificationsPreferred = (typeof result.notificationsPreferred === 'boolean')
+      ? result.notificationsPreferred
+      : notificationsEnabled;
+    updateNotificationsToggleUI();
+    refreshStatusByFlags();
+  } catch (error) {
+    console.log('加载通知开关状态失败，使用默认值');
+    notificationsEnabled = true;
+    notificationsPreferred = true;
+    updateNotificationsToggleUI();
+    refreshStatusByFlags();
+  }
+}
+
+async function saveNotificationsState(enabled) {
+  try {
+    await chrome.storage.sync.set({ notificationsEnabled: enabled });
+  } catch (error) {
+    console.log('保存通知开关状态失败:', error);
+  }
+}
+
+async function saveNotificationsPreferred(preferred) {
+  try {
+    await chrome.storage.sync.set({ notificationsPreferred: preferred });
+  } catch (error) {
+    console.log('保存通知偏好失败:', error);
+  }
+}
+
+function updateNotificationsToggleUI() {
+  const notifBtn = document.getElementById('notif-btn');
+  if (notifBtn) {
+    // Controls 关闭时，禁用并强制显示为 off
+    if (!crawlEnabled) {
+      notifBtn.classList.add('off');
+      notifBtn.classList.remove('on');
+      notifBtn.classList.add('disabled');
+      notifBtn.title = 'Enable Recording first';
+      return;
+    }
+    // Controls 开启时，可用
+    notifBtn.classList.remove('disabled');
+    if (notificationsEnabled) {
+      notifBtn.classList.add('on');
+      notifBtn.classList.remove('off');
+      notifBtn.title = 'Disable Notifications';
+    } else {
+      notifBtn.classList.add('off');
+      notifBtn.classList.remove('on');
+      notifBtn.title = 'Enable Notifications';
+    }
+  }
+}
+
+async function toggleNotifications() {
+  // Controls 关闭时不可切换
+  if (!crawlEnabled) return;
+  notificationsEnabled = !notificationsEnabled;
+  notificationsPreferred = notificationsEnabled; // 同步偏好
+  updateNotificationsToggleUI();
+  await saveNotificationsState(notificationsEnabled);
+  await saveNotificationsPreferred(notificationsPreferred);
+  refreshStatusByFlags();
 }
 
 // 主页面按钮事件
@@ -344,6 +393,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 获取悬浮球状态
   await getFloatingChatStatus();
   
+  // 获取通知开关状态
+  await loadNotificationsState();
+  
   // 添加按钮事件监听 - logo和文字都可以点击打开主页
   const logoSection = document.getElementById('logo-section');
   if (logoSection) {
@@ -365,5 +417,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const toggleSwitch = document.getElementById('toggle-switch');
   if (toggleSwitch) {
     toggleSwitch.addEventListener('click', toggleFloatingChat);
+  }
+
+  // 通知开关事件
+  const notifBtn = document.getElementById('notif-btn');
+  if (notifBtn) {
+    notifBtn.addEventListener('click', toggleNotifications);
   }
 });

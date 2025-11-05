@@ -11,13 +11,13 @@
     
     body {
       font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      width: 320px;
+      width: 220px;
       height: auto;
-      min-height: 160px;
-      background: #0f172a; /* slate-900 */
-      color: #e2e8f0; /* slate-200 */
+      min-height: auto;
+      background: linear-gradient(to bottom, #1e3a5f, #0a1628, #000000);
+      color: #ffffff; /* 纯白色，更明显 */
       overflow: hidden;
-      border-radius: 16px;
+      border-radius: 12px;
       display: flex;
       flex-direction: column;
     }
@@ -26,16 +26,16 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 16px 20px;
-      background: #0f172a; /* slate-900 */
-      border-bottom: 1px solid #334155; /* slate-700 */
-      border-radius: 16px 16px 0 0;
+      padding: 12px 16px;
+      background: linear-gradient(to bottom, #1e3a5f, #0a1628);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px 12px 0 0;
     }
     
     .logo-section {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       cursor: pointer;
       transition: opacity 0.2s;
     }
@@ -45,8 +45,8 @@
     }
     
     .logo {
-      width: 24px;
-      height: 24px;
+      width: 20px;
+      height: 20px;
       background-image: url('Logo.png');
       background-size: contain;
       background-repeat: no-repeat;
@@ -56,7 +56,7 @@
     }
     
     .app-name {
-      font-size: 16px;
+      font-size: 14px;
       font-weight: 600;
       background: linear-gradient(135deg, #3b82f6, #14b8a6); /* blue-500 to teal-500 */
       background-clip: text;
@@ -73,12 +73,12 @@
     }
     
     .header-btn {
-      width: 32px;
-      height: 32px;
+      width: 28px;
+      height: 28px;
       border: none;
       background: transparent;
-      border-radius: 8px;
-      color: #94a3b8; /* slate-400 */
+      border-radius: 6px;
+      color: #ffffff; /* 纯白色，更明显 */
       cursor: pointer;
       display: flex;
       align-items: center;
@@ -87,145 +87,81 @@
     }
     
     .header-btn:hover {
-      background: #334155; /* slate-700 */
-      color: #e2e8f0; /* slate-200 */
+      background: rgba(255, 255, 255, 0.1);
+      color: #ffffff;
     }
     
-    /* 爬取开关按钮 - 现代简洁风格 */
+    /* 爬取开关按钮 - 无边框简洁风格 */
     .crawl-toggle-btn {
       width: 36px;
       height: 36px;
       border: none;
       background: transparent;
       border-radius: 8px;
-      color: #ef4444; /* red-500 - 默认关闭状态为红色 */
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: all 0.2s ease;
+      transition: opacity 0.2s ease;
       position: relative;
       padding: 0;
     }
     
-    .crawl-toggle-btn:hover {
-      background: rgba(239, 68, 68, 0.1);
-      color: #dc2626; /* red-600 */
+    .crawl-toggle-btn:hover { 
+      opacity: 0.7;
     }
-    
     .crawl-toggle-btn.enabled {
-      color: #10b981; /* emerald-500 */
+      animation: breathe 2s ease-in-out infinite;
     }
-    
     .crawl-toggle-btn.enabled:hover {
-      background: rgba(16, 185, 129, 0.1);
-      color: #059669; /* emerald-600 */
+      opacity: 0.7;
+      animation: breathe 2s ease-in-out infinite;
     }
+    .crawl-toggle-btn .record-ring { stroke: #94a3b8; /* 更亮的灰色，在蓝黑背景下更明显 */ }
+    .crawl-toggle-btn.enabled .record-ring { stroke: #ef4444; }
+    .crawl-toggle-btn .record-dot { fill: #94a3b8; /* 更亮的灰色，在蓝黑背景下更明显 */ }
+    .crawl-toggle-btn.enabled .record-dot { fill: #ef4444; }
     
-    .crawl-toggle-btn.enabled .pulse-dot {
-      animation: pulse-dot 2s ease-in-out infinite;
-    }
-    
-    @keyframes pulse-dot {
+    @keyframes breathe {
       0%, 100% {
         opacity: 1;
-        transform: scale(1);
       }
       50% {
-        opacity: 0.4;
-        transform: scale(1.3);
+        opacity: 0.65;
       }
     }
     
-    .crawl-toggle-btn svg {
-      position: relative;
-      z-index: 1;
-    }
-    
-    .crawl-toggle-btn:not(.enabled) .crawl-icon {
-      display: none;
-    }
-    
-    .crawl-toggle-btn:not(.enabled) .crawl-icon-static {
-      display: block;
-    }
-    
-    .crawl-toggle-btn.enabled .crawl-icon {
-      display: block;
-    }
-    
-    .crawl-toggle-btn.enabled .crawl-icon-static {
-      display: none;
-    }
-    
-    .status-container {
-      padding: 16px 20px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      flex: 1;
-      min-height: 0;
-    }
-    
-    .status-box {
-      background: #059669; /* emerald-600 */
-      border-radius: 12px;
-      padding: 16px 20px;
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 12px;
-      box-shadow: 0 4px 12px rgba(5, 150, 105, 0.3);
-    }
-    
-    .status-icon {
-      width: 20px;
-      height: 20px;
-      background: #ffffff;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-    
-    .status-icon::before {
-      content: '✓';
-      color: #059669; /* emerald-600 */
-      font-size: 14px;
-      font-weight: bold;
-    }
-    
-    .status-text {
-      flex: 1;
-    }
-    
-    .status-main {
-      font-size: 16px;
-      font-weight: 600;
-      color: #ffffff;
-      margin-bottom: 2px;
-    }
-    
-    .status-sub {
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.8);
-    }
     
     .footer {
-      padding: 16px 20px;
-      border-top: 1px solid #334155; /* slate-700 */
+      padding: 12px 16px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      border-radius: 0 0 12px 12px;
+      background: linear-gradient(to bottom, #0a1628, #000000);
+    }
+    
+    .footer-section {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    
+    .footer-row {
       display: flex;
       align-items: center;
       justify-content: space-between;
-      border-radius: 0 0 16px 16px;
+      gap: 12px;
+      padding: 4px 0;
     }
     
     .footer-label {
-      font-size: 14px;
-      color: #e2e8f0; /* slate-200 */
-      font-weight: 500;
+      font-size: 11px;
+      color: #ffffff; /* 纯白色，更明显 */
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
     
     .toggle-switch {
@@ -257,44 +193,102 @@
     .toggle-switch.off::before {
       transform: translateX(-20px);
     }
+    /* 禁用状态 */
+    .toggle-switch.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      pointer-events: none;
+    }
+
+    /* 通知铃铛按钮 - 无边框简洁风格 */
+    .notif-btn {
+      width: 36px;
+      height: 36px;
+      border: none;
+      background: transparent;
+      border-radius: 8px;
+      color: #94a3b8; /* 更亮的灰色，在蓝黑背景下更明显 */
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: opacity 0.2s ease;
+    }
+    .notif-btn:hover { 
+      opacity: 0.7;
+    }
+    .notif-btn.on { 
+      color: #10b981; /* emerald-500 */
+    }
+    .notif-btn.off { 
+      color: #94a3b8; /* 更亮的灰色，在蓝黑背景下更明显 */
+    }
+    .notif-btn.disabled { 
+      opacity: 0.5; 
+      cursor: not-allowed; 
+      pointer-events: none; 
+    }
+    .notif-btn .bell-on { display: none; }
+    .notif-btn .bell-off { display: none; }
+    .notif-btn.on .bell-on { display: block; }
+    .notif-btn.off .bell-off { display: block; }
     
-    /* 状态变化样式 */
-    .status-box.crawling {
-      background: #3b82f6; /* blue-500 */
-      box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+    /* 浅色主题 - 跟随系统设置 */
+    @media (prefers-color-scheme: light) {
+      body {
+        background: linear-gradient(to bottom, #e0f2fe, #f0f9ff, #ffffff);
+        color: #1e293b; /* 深色文字 */
+      }
+      
+      .header {
+        background: linear-gradient(to bottom, #e0f2fe, #f0f9ff);
+        border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+      }
+      
+      .header-btn {
+        color: #475569; /* 深灰色 */
+      }
+      
+      .header-btn:hover {
+        background: rgba(0, 0, 0, 0.05);
+        color: #1e293b;
+      }
+      
+      .footer {
+        border-top: 1px solid rgba(0, 0, 0, 0.1);
+        background: linear-gradient(to bottom, #f0f9ff, #ffffff);
+      }
+      
+      .footer-label {
+        color: #1e293b; /* 深色文字 */
+      }
+      
+      .crawl-toggle-btn .record-ring {
+        stroke: #94a3b8; /* 浅色主题下的灰色 */
+      }
+      
+      .crawl-toggle-btn .record-dot {
+        fill: #94a3b8; /* 浅色主题下的灰色 */
+      }
+      
+      .notif-btn {
+        color: #64748b; /* 浅色主题下的灰色 */
+      }
+      
+      .notif-btn.off {
+        color: #64748b; /* 浅色主题下的灰色 */
+      }
+      
+      /* 浅色主题下的 app-name 渐变文字 */
+      .app-name {
+        background: linear-gradient(135deg, #2563eb, #0891b2); /* 深蓝色到青色 */
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+      }
     }
     
-    .status-box.crawling .status-icon::before {
-      content: '⟳';
-      color: #3b82f6; /* blue-500 */
-      animation: spin 1s linear infinite;
-    }
-    
-    .status-box.error {
-      background: #dc2626; /* red-600 */
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-    }
-    
-    .status-box.error .status-icon::before {
-      content: '✕';
-      color: #dc2626; /* red-600 */
-    }
-    
-    .status-box.disabled {
-      background: #dc2626; /* red-600 */
-      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
-    }
-    
-    .status-box.disabled .status-icon::before {
-      content: '○';
-      color: #dc2626; /* red-600 */
-      font-size: 16px;
-    }
-    
-    @keyframes spin {
-      from { transform: rotate(0deg); }
-      to { transform: rotate(360deg); }
-    }
   </style>
 </head>
 <body>
@@ -305,47 +299,51 @@
       <div class="app-name" id="app-name">LifeContext</div>
     </div>
     <div class="header-buttons">
-      <button id="crawl-toggle-btn" class="crawl-toggle-btn enabled" aria-label="Toggle Memory" title="Memory Toggle">
-        <!-- 启用状态：记忆/保存图标 -->
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="crawl-icon">
-          <path d="M19 21H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h11l5 5v11c0 1.1-.9 2-2 2z" stroke="currentColor" stroke-width="1.8" fill="none"/>
-          <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="1.8" fill="none"/>
-          <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="1.8" fill="none"/>
-          <circle cx="12" cy="16" r="1.8" fill="currentColor" class="pulse-dot"/>
-        </svg>
-        <!-- 禁用状态：文档图标（无活动指示） -->
-        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="crawl-icon-static" style="display: none;">
-          <path d="M19 21H5c-1.1 0-2-.9-2-2V5c0-1.1.9-2 2-2h11l5 5v11c0 1.1-.9 2-2 2z" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.4"/>
-          <polyline points="17,21 17,13 7,13 7,21" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.4"/>
-          <polyline points="7,3 7,8 15,8" stroke="currentColor" stroke-width="1.8" fill="none" opacity="0.4"/>
-        </svg>
-      </button>
       <button id="close-btn" class="header-btn" aria-label="Close" title="关闭">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
         </svg>
       </button>
     </div>
   </div>
   
-  <!-- 中间状态区域 -->
-  <div class="status-container">
-    <div class="status-box" id="status-box">
-      <div class="status-icon" id="status-icon"></div>
-      <div class="status-text">
-        <div class="status-main" id="status-main">Page remembered</div>
-        <div class="status-sub" id="status-sub">Successfully added to memory</div>
+  <!-- 底部控制区域：按钮上下排列 -->
+  <div class="footer">
+    <!-- Recording 按钮区域 -->
+    <div class="footer-section">
+      <div class="footer-row">
+        <span class="footer-label">Recording</span>
+        <button id="crawl-toggle-btn" class="crawl-toggle-btn enabled" aria-label="Toggle Recording" title="Recording">
+          <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <circle class="record-ring" cx="12" cy="12" r="8" fill="none" stroke-width="2" />
+            <circle class="record-dot" cx="12" cy="12" r="4" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notifications 按钮区域 -->
+    <div class="footer-section">
+      <div class="footer-row">
+        <span class="footer-label">Notifications</span>
+        <button id="notif-btn" class="notif-btn on" aria-label="Toggle Notifications" title="Toggle Notifications">
+          <!-- 开启：响铃 -->
+          <svg class="bell-on" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z" fill="currentColor"/>
+            <path d="M18 16v-5a6 6 0 1 0-12 0v5l-1.5 1.5a1 1 0 0 0 .7 1.7h14.6a1 1 0 0 0 .7-1.7L18 16z" stroke="currentColor" stroke-width="1.6" fill="none"/>
+            <path d="M5 8c.6-2.4 2.9-4 5.5-4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          </svg>
+          <!-- 关闭：休眠铃铛 + Z 标记 -->
+          <svg class="bell-off" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 22a2.5 2.5 0 0 0 2.45-2h-4.9A2.5 2.5 0 0 0 12 22z" fill="currentColor" opacity="0.6"/>
+            <path d="M18 16v-5a6 6 0 1 0-12 0v5l-1.5 1.5a1 1 0 0 0 .7 1.7h14.6a1 1 0 0 0 .7-1.7L18 16z" stroke="currentColor" stroke-width="1.6" fill="none" opacity="0.6"/>
+            <path d="M16.5 7.2l2.3-2.3m0 0h-2.3m2.3 0v2.3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+            <text x="16.8" y="10.8" font-size="5" fill="currentColor" style="font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;" opacity="0.8">Z</text>
+          </svg>
+        </button>
       </div>
     </div>
   </div>
-  
-  <!-- 底部设置区域（暂时注释掉悬浮球按钮，保留代码以便后续恢复）
-  <div class="footer">
-    <div class="footer-label">Floating Chat Orb</div>
-    <div class="toggle-switch" id="toggle-switch" title="切换悬浮聊天球">
-    </div>
-  </div>
-  -->
 
   <script src="popup.js"></script>
 </body>
