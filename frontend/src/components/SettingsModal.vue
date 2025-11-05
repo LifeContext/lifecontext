@@ -59,6 +59,29 @@
             </p>
           </div>
 
+          <!-- Todo Generation Interval Setting -->
+          <div class="space-y-1.5">
+            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
+              Todo Generation Interval (minutes)
+            </label>
+            <div class="flex items-center gap-3">
+              <input
+                v-model.number="localSettings.todo_interval_minutes"
+                type="number"
+                min="1"
+                step="1"
+                class="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                placeholder="Enter minutes"
+              />
+              <span class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                minutes
+              </span>
+            </div>
+            <p v-if="localSettings.todo_interval_minutes < 1" class="text-xs text-red-500 mt-0.5">
+              Interval must be greater than 0
+            </p>
+          </div>
+
           <!-- Daily Report Generation Time Setting -->
           <div class="space-y-1.5">
             <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
@@ -141,6 +164,7 @@ const isSaving = ref(false);
 const error = ref<string | null>(null);
 const localSettings = ref<Settings>({
   tips_interval_minutes: 60,
+  todo_interval_minutes: 30,
   daily_report_hour: 8,
   daily_report_minute: 0
 });
@@ -148,6 +172,7 @@ const localSettings = ref<Settings>({
 const isValid = computed(() => {
   return (
     localSettings.value.tips_interval_minutes >= 1 &&
+    localSettings.value.todo_interval_minutes >= 1 &&
     localSettings.value.daily_report_hour >= 0 &&
     localSettings.value.daily_report_hour <= 23 &&
     localSettings.value.daily_report_minute >= 0 &&

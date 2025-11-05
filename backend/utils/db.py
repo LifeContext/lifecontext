@@ -71,9 +71,18 @@ def init_db():
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             tip_type TEXT,
+            source_urls TEXT,
             create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
+    
+    # 如果表已存在但没有 source_urls 字段，添加该字段
+    try:
+        cursor.execute("ALTER TABLE tips ADD COLUMN source_urls TEXT")
+        logger.info("Added source_urls column to tips table")
+    except sqlite3.OperationalError:
+        # 字段已存在，忽略错误
+        pass
     
     # 创建截图表
     cursor.execute("""
@@ -362,21 +371,42 @@ def get_tips(limit=10, offset=0):
     query = "SELECT * FROM tips ORDER BY create_time DESC LIMIT ? OFFSET ?"
     cursor.execute(query, (limit, offset))
     
-    tips = [dict(row) for row in cursor.fetchall()]
+    tips = []
+    for row in cursor.fetchall():
+        tip = dict(row)
+        # 解析 source_urls JSON 字符串为列表
+        if tip.get('source_urls'):
+            try:
+                tip['source_urls'] = json.loads(tip['source_urls'])
+            except (json.JSONDecodeError, TypeError):
+                # 如果解析失败，尝试作为单个 URL 处理
+                tip['source_urls'] = [tip['source_urls']] if tip['source_urls'] else []
+        else:
+            tip['source_urls'] = []
+        tips.append(tip)
+    
     conn.close()
     return tips
 
 
-def insert_tip(title, content, tip_type="general"):
+def insert_tip(title, content, tip_type="general", source_urls=None):
     """插入提示"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
+    # 将 source_urls 转换为 JSON 字符串
+    source_urls_json = None
+    if source_urls:
+        if isinstance(source_urls, list):
+            source_urls_json = json.dumps(source_urls, ensure_ascii=False)
+        else:
+            source_urls_json = str(source_urls)
+    
     cursor.execute(
-        "INSERT INTO tips (title, content, tip_type, create_time) VALUES (?, ?, ?, ?)",
-        (title, content, tip_type, create_time)
+        "INSERT INTO tips (title, content, tip_type, source_urls, create_time) VALUES (?, ?, ?, ?, ?)",
+        (title, content, tip_type, source_urls_json, create_time)
     )
     
     tip_id = cursor.lastrowid

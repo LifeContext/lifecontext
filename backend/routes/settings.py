@@ -21,6 +21,7 @@ def get_settings():
         # 格式化返回
         result = {
             'tips_interval_minutes': int(settings.get('tips_interval_minutes', {}).get('value', '60')),
+            'todo_interval_minutes': int(settings.get('todo_interval_minutes', {}).get('value', '30')),
             'daily_report_hour': int(settings.get('daily_report_hour', {}).get('value', '8')),
             'daily_report_minute': int(settings.get('daily_report_minute', {}).get('value', '0'))
         }
@@ -54,6 +55,15 @@ def update_settings():
                 }), 400
             set_setting('tips_interval_minutes', str(tips_interval), 'Tips生成间隔（分钟）')
         
+        # 验证并更新 todo_interval_minutes
+        if 'todo_interval_minutes' in data:
+            todo_interval = data['todo_interval_minutes']
+            if not isinstance(todo_interval, int) or todo_interval < 1:
+                return jsonify({
+                    'error': 'todo_interval_minutes 必须是大于0的整数'
+                }), 400
+            set_setting('todo_interval_minutes', str(todo_interval), 'Todo生成间隔（分钟）')
+        
         # 验证并更新 daily_report_hour
         if 'daily_report_hour' in data:
             hour = data['daily_report_hour']
@@ -83,6 +93,7 @@ def update_settings():
         settings = get_all_settings()
         result = {
             'tips_interval_minutes': int(settings.get('tips_interval_minutes', {}).get('value', '60')),
+            'todo_interval_minutes': int(settings.get('todo_interval_minutes', {}).get('value', '30')),
             'daily_report_hour': int(settings.get('daily_report_hour', {}).get('value', '8')),
             'daily_report_minute': int(settings.get('daily_report_minute', {}).get('value', '0'))
         }
