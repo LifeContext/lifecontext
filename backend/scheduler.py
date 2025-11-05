@@ -51,16 +51,17 @@ def init_scheduler():
     else:
         logger.info("⏸️ Activity scheduler disabled")
     
-    # 2. 每30分钟生成待办任务
+    # 2. 生成待办任务（支持任意时间间隔）
     if ENABLE_SCHEDULER_TODO:
+        todo_interval_minutes = int(get_setting('todo_interval_minutes', '30'))
         scheduler.add_job(
             func=job_generate_todos,
-            trigger=CronTrigger(minute='*/30'),  # 每30分钟
-            id='todos_30min',
-            name='每30分钟生成待办',
+            trigger=IntervalTrigger(minutes=todo_interval_minutes),
+            id='todo_interval',
+            name=f'每{todo_interval_minutes}分钟生成待办',
             replace_existing=True
         )
-        logger.info("✅ Todo scheduler enabled")
+        logger.info(f"✅ Todo scheduler enabled (interval: {todo_interval_minutes} minutes)")
     else:
         logger.info("⏸️ Todo scheduler disabled")
     
@@ -127,10 +128,11 @@ def job_generate_activity():
 
 
 def job_generate_todos():
-    """定时任务：生成待办事项（每30分钟）"""
+    """定时任务：生成待办事项（可配置间隔）"""
     try:
-        logger.info("Starting scheduled todo generation (30min interval)")
-        result = asyncio.run(generate_task_list(lookback_mins=30))
+        todo_interval_minutes = int(get_setting('todo_interval_minutes', '30'))
+        logger.info(f"Starting scheduled todo generation (interval: {todo_interval_minutes} minutes)")
+        result = asyncio.run(generate_task_list(lookback_mins=todo_interval_minutes))
         
         if result.get('success'):
             todo_ids = result.get('todo_ids', [])
@@ -284,6 +286,22 @@ def update_scheduler_settings():
                 replace_existing=True
             )
             logger.info(f"✅ Updated tip scheduler interval to {tips_interval_minutes} minutes")
+        
+        # 更新 todo 生成间隔
+        if ENABLE_SCHEDULER_TODO:
+            todo_interval_minutes = int(get_setting('todo_interval_minutes', '30'))
+            try:
+                scheduler.remove_job('todo_interval')
+            except:
+                pass  # 任务可能不存在，忽略错误
+            scheduler.add_job(
+                func=job_generate_todos,
+                trigger=IntervalTrigger(minutes=todo_interval_minutes),
+                id='todo_interval',
+                name=f'每{todo_interval_minutes}分钟生成待办',
+                replace_existing=True
+            )
+            logger.info(f"✅ Updated todo scheduler interval to {todo_interval_minutes} minutes")
         
         # 更新 daily report 生成时间
         if ENABLE_SCHEDULER_REPORT:
