@@ -106,6 +106,43 @@
       </div>
     `;
 
+    // 页面上下文展示 Pill（默认隐藏，打开聊天时显示）
+    const contextPill = document.createElement('div');
+    contextPill.id = 'page-context-pill';
+    contextPill.style.cssText = `
+      position: absolute;
+      top: 8px;
+      left: 16px;
+      max-width: calc(100% - 120px);
+      display: none;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 12px;
+      background: rgba(15, 23, 42, 0.85);
+      color: #e2e8f0;
+      border: 1px solid rgba(71,85,105,0.5);
+      box-shadow: 0 6px 14px rgba(0,0,0,0.25);
+      backdrop-filter: saturate(150%) blur(6px);
+      pointer-events: auto;
+    `;
+    contextPill.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px; min-width:0;">
+        <span style="display:inline-flex; width:20px; height:20px; align-items:center; justify-content:center; color:#60a5fa;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M4 5h16v14H4z" stroke="currentColor" stroke-width="1.6" fill="none"/>
+            <path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/>
+          </svg>
+        </span>
+        <span id="page-context-text" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 420px;"></span>
+      </div>
+      <button id="page-context-close" aria-label="Remove page context" title="Remove page context" style="margin-left:6px; border:none; background:transparent; color:#94a3b8; cursor:pointer; padding:2px; border-radius:6px;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" fill="currentColor"/>
+        </svg>
+      </button>
+    `;
+
     // 创建消息区域
     const chatMessages = document.createElement('div');
     chatMessages.id = 'chat-messages';
@@ -197,6 +234,7 @@
 
     // 组装聊天框
     chatBox.appendChild(chatHeader);
+    chatBox.appendChild(contextPill);
     chatBox.appendChild(chatMessages);
     chatBox.appendChild(chatInput);
 
@@ -312,10 +350,13 @@
               type: 'SEND_CHAT_MESSAGE', 
               payload: {
                 query: message,
-                context: {
-                  session_id: sessionId,
-                  user_preferences: {}
-                },
+                context: (function(){
+                  const base = { session_id: sessionId, user_preferences: {} };
+                  if (usePageContext) {
+                    base.page = { url: location.href, title: document.title || '' };
+                  }
+                  return base;
+                })(),
                 session_id: sessionId,
                 user_id: 'user_123'
               }
@@ -401,6 +442,9 @@
         ballElement.style.display = 'none';
         container.style.pointerEvents = 'auto';
         inputField.focus();
+        // 展示页面上下文 pill
+        usePageContext = true;
+        updateContextPill();
       } else {
         // 关闭聊天框时显示悬浮球
         ballElement.style.display = 'flex';
@@ -547,6 +591,35 @@
     
     // 初始化按钮状态
     updateSendButton();
+
+    // 页面上下文逻辑
+    let usePageContext = true;
+
+    function updateContextPill() {
+      const textEl = contextPill.querySelector('#page-context-text');
+      if (!usePageContext) {
+        contextPill.style.display = 'none';
+        return;
+      }
+      try {
+        const title = document.title || '';
+        const host = location.hostname || '';
+        const display = title || host || location.href;
+        if (textEl) textEl.textContent = display;
+        contextPill.style.display = 'flex';
+      } catch (_) {
+        contextPill.style.display = 'none';
+      }
+    }
+
+    const pillCloseBtn = contextPill.querySelector('#page-context-close');
+    if (pillCloseBtn) {
+      pillCloseBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        usePageContext = false;
+        updateContextPill();
+      });
+    }
 
     // 悬浮球拖拽功能
     ballElement.addEventListener('mousedown', (e) => {
