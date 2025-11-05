@@ -90,7 +90,7 @@
             <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
           </svg>
         </button>
-        <h2 style="font-size: 18px; font-weight: bold; color: #f1f5f9; margin: 0;">AI Assistant</h2>
+        <h2 style="font-size: 18px; font-weight: bold; color: #f1f5f9; margin: 0;">LifeContext</h2>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <button id="toggle-chat" style="padding: 8px; border-radius: 50%; color: #94a3b8; background: transparent; border: none; cursor: pointer; transition: background-color 0.2s;" aria-label="Expand chat">
@@ -110,14 +110,15 @@
     const contextPill = document.createElement('div');
     contextPill.id = 'page-context-pill';
     contextPill.style.cssText = `
-      position: absolute;
-      top: 8px;
-      left: 16px;
-      max-width: calc(100% - 120px);
+      flex-shrink: 0;
+      align-self: flex-start; /* 不拉伸，占内容宽度 */
+      width: auto;
+      max-width: min(70%, 560px); /* 上限，避免太宽 */
+      margin: 8px 16px 0 16px;
       display: none;
       align-items: center;
       gap: 8px;
-      padding: 6px 10px;
+      padding: 6px 12px;
       border-radius: 12px;
       background: rgba(15, 23, 42, 0.85);
       color: #e2e8f0;
@@ -134,7 +135,7 @@
             <path d="M4 9h16" stroke="currentColor" stroke-width="1.6"/>
           </svg>
         </span>
-        <span id="page-context-text" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 420px;"></span>
+        <span id="page-context-text" style="font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width: 360px;"></span>
       </div>
       <button id="page-context-close" aria-label="Remove page context" title="Remove page context" style="margin-left:6px; border:none; background:transparent; color:#94a3b8; cursor:pointer; padding:2px; border-radius:6px;">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -161,10 +162,15 @@
       display: flex;
       justify-content: flex-start;
     `;
+    const isDarkMode = () => {
+      try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (_) { return true; }
+    };
+    const wmBg = isDarkMode() ? '#1e293b' : '#e2e8f0';
+    const wmColor = isDarkMode() ? 'white' : '#0f172a';
     welcomeMessage.innerHTML = `
       <div style="
-        background: #1e293b;
-        color: white;
+        background: ${wmBg};
+        color: ${wmColor};
         padding: 12px 16px;
         border-radius: 18px;
         max-width: 80%;
@@ -175,7 +181,7 @@
       ">
         
         <div>
-          <div style="font-size: 14px; line-height: 1.5;">你好！我是AI助手，有什么可以帮助您的吗？</div>
+          <div style="font-size: 14px; line-height: 1.5;">您好！欢迎使用LifeContext，我是您的专属助手，有什么可以帮助您的吗？</div>
           <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       </div>
@@ -232,10 +238,10 @@
     chatInput.appendChild(inputField);
     chatInput.appendChild(sendBtn);
 
-    // 组装聊天框
+    // 组装聊天框（Pill 放在消息区与输入框之间）
     chatBox.appendChild(chatHeader);
-    chatBox.appendChild(contextPill);
     chatBox.appendChild(chatMessages);
+    chatBox.appendChild(contextPill);
     chatBox.appendChild(chatInput);
 
     container.appendChild(ballElement);
@@ -273,13 +279,16 @@
         messageContainer.appendChild(avatar);
       }
 
+      const darkNow = isDarkMode();
+      const bubbleBg = sender === 'user' ? '#2563eb' : (darkNow ? '#334155' : '#e2e8f0');
+      const bubbleFg = sender === 'user' ? 'white' : (darkNow ? '#e2e8f0' : '#0f172a');
       const messageBubble = document.createElement('div');
       messageBubble.style.cssText = `
         max-width: 320px;
         padding: 12px;
         border-radius: 16px;
-        background: ${sender === 'user' ? '#2563eb' : '#334155'};
-        color: ${sender === 'user' ? 'white' : '#e2e8f0'};
+        background: ${bubbleBg};
+        color: ${bubbleFg};
         font-size: 14px;
         line-height: 1.4;
         word-wrap: break-word;
@@ -305,10 +314,12 @@
         margin-bottom: 16px;
       `;
       
+      const lbBg = isDarkMode() ? '#1e293b' : '#e2e8f0';
+      const dot = isDarkMode() ? '#64748b' : '#94a3b8';
       loadingContainer.innerHTML = `
         <div style="
-          background: #1e293b;
-          color: white;
+          background: ${lbBg};
+          color: inherit;
           padding: 12px 16px;
           border-radius: 18px;
           max-width: 80%;
@@ -320,9 +331,9 @@
           
           <div style="flex: 1;">
             <div style="display: flex; gap: 4px; align-items: center;">
-              <div style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out;"></div>
-              <div style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.2s;"></div>
-              <div style="width: 6px; height: 6px; background: #64748b; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.4s;"></div>
+              <div style="width: 6px; height: 6px; background: ${dot}; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out;"></div>
+              <div style="width: 6px; height: 6px; background: ${dot}; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.2s;"></div>
+              <div style="width: 6px; height: 6px; background: ${dot}; border-radius: 50%; animation: bounce 1.4s infinite ease-in-out; animation-delay: 0.4s;"></div>
             </div>
           </div>
         </div>
@@ -657,8 +668,54 @@
       }
     });
 
+    // 主题（浅/深）自适应：根据浏览器设置调整背景与文本
+    const themeSheet = document.createElement('style');
+    chatBox.appendChild(themeSheet);
+    const headerTitle = chatHeader.querySelector('h2');
+    const iconBtns = [chatHeader.querySelector('#home-btn'), chatHeader.querySelector('#toggle-chat'), chatHeader.querySelector('#close-chat')];
+    const mq = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)')) || null;
+    function applyTheme(isDark) {
+      try {
+        if (isDark) {
+          chatBox.style.background = '#1e293b';
+          chatHeader.style.borderBottom = '1px solid rgba(71, 85, 105, 0.5)';
+          headerTitle && (headerTitle.style.color = '#f1f5f9');
+          iconBtns.forEach(b => b && (b.style.color = '#94a3b8'));
+          chatInput.style.background = '#1e293b';
+          inputField.style.background = '#334155';
+          inputField.style.color = '#e2e8f0';
+          contextPill.style.background = 'rgba(15, 23, 42, 0.85)';
+          contextPill.style.border = '1px solid rgba(71,85,105,0.5)';
+          contextPill.style.color = '#e2e8f0';
+          ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
+          themeSheet.textContent = `#chat-input::placeholder{color:#94a3b8;opacity:.8}`;
+        } else {
+          chatBox.style.background = '#f8fafc';
+          chatHeader.style.borderBottom = '1px solid #e2e8f0';
+          headerTitle && (headerTitle.style.color = '#0f172a');
+          iconBtns.forEach(b => b && (b.style.color = '#64748b'));
+          chatInput.style.background = '#ffffff';
+          inputField.style.background = '#e2e8f0';
+          inputField.style.color = '#0f172a';
+          contextPill.style.background = 'rgba(241,245,249,0.95)';
+          contextPill.style.border = '1px solid #cbd5e1';
+          contextPill.style.color = '#0f172a';
+          ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
+          themeSheet.textContent = `#chat-input::placeholder{color:#64748b;opacity:.9}`;
+        }
+      } catch (_) {}
+    }
+    if (mq) {
+      applyTheme(mq.matches);
+      const handler = (e) => applyTheme(e.matches);
+      if (typeof mq.addEventListener === 'function') mq.addEventListener('change', handler);
+      else if (typeof mq.addListener === 'function') mq.addListener(handler);
+    } else {
+      applyTheme(true);
+    }
+
     return container;
-  }
+  } 
 
   // 悬浮球状态管理
   let floatingChatEnabled = true;
