@@ -1,23 +1,44 @@
 <template>
   <div class="chat-container h-full flex flex-col">
     <!-- 聊天消息区域 -->
-    <div class="flex-1 overflow-y-auto py-6 messagesContainer" ref="messagesContainer">
+    <div class="flex-1 overflow-y-auto messagesContainer" ref="messagesContainer">
       <div class="max-w-4xl mx-auto px-8 h-full flex flex-col">
         <!-- 如果没有消息，显示欢迎界面 -->
-        <div v-if="messages.length === 0" class="flex flex-col items-center justify-center flex-1">
+        <div v-if="messages.length === 0" class="flex flex-col items-center justify-center flex-1 min-h-full">
           <!-- AI Avatar -->
-          <div class="ai-avatar-container w-16 h-16 rounded-full flex items-center justify-center mb-6">
+          <div class="ai-avatar-container w-16 h-16 rounded-full flex items-center justify-center mb-4">
             <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-500 rounded-full flex items-center justify-center">
               <img src="../../Logo.png" class="w-8 h-8 text-white" />
             </div>
           </div>
           
           <!-- Main Title -->
-          <h1 class="main-title text-4xl font-bold mb-8 text-center">Chat with your life</h1>
+          <h1 class="main-title text-4xl font-bold mb-4 text-center">Chat with your life</h1>
+          
+          <!-- 输入区域（仅在无消息时显示在欢迎界面中） -->
+          <div class="w-full mt-4">
+            <div class="relative">
+              <input 
+                type="text" 
+                placeholder="Ask, search, or make anything..."
+                class="chat-input w-full rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                v-model="inputMessage"
+                @keypress.enter="handleSend"
+                :disabled="isLoading"
+              />
+              <button 
+                @click="handleSend"
+                :disabled="isLoading || !inputMessage.trim()"
+                class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors"
+              >
+                <Icon path="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" class="w-5 h-5" />
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- 消息列表 -->
-        <div v-else class="space-y-4">
+        <div v-else class="space-y-4 py-6">
           <div 
             v-for="message in messages" 
             :key="message.workflow_id"
@@ -43,9 +64,7 @@
             <div class="loading-message mr-12 px-4 py-3 rounded-lg">
               <div class="flex items-center space-x-3">
                 <div class="flex space-x-1">
-                  <div class="loading-dot w-2 h-2 rounded-full animate-bounce"></div>
-                  <div class="loading-dot w-2 h-2 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
-                  <div class="loading-dot w-2 h-2 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                  <div class="animate-bounce">Searching browser memories</div>
                 </div>
               </div>
             </div>
@@ -54,8 +73,8 @@
       </div>
     </div>
 
-    <!-- 输入区域 -->
-    <div class="pb-6">
+    <!-- 输入区域（仅在有消息时显示在底部） -->
+    <div v-if="messages.length > 0" class="pb-6">
       <div class="max-w-4xl mx-auto px-8">
         <div class="relative">
           <input 
@@ -242,10 +261,6 @@ const handleSend = async () => {
   color: white;
 }
 
-.loading-dot {
-  background-color: #94a3b8;
-}
-
 .chat-input {
   background-color: #1e293b;
   color: white;
@@ -309,10 +324,6 @@ const handleSend = async () => {
 
   .loading-message {
     color: #111827;
-  }
-
-  .loading-dot {
-    background-color: #9ca3af;
   }
 
   .chat-input {
