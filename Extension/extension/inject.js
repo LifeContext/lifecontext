@@ -249,8 +249,6 @@
     let currentWorkflowId = '';
     let sessionId = `session_${Date.now()}`;
 
-<<<<<<< HEAD
-=======
     // 保证布局与滚动正确的辅助函数
     function ensureLayout() {
       try {
@@ -271,8 +269,6 @@
         });
       } catch (_) {}
     }
-
->>>>>>> f617e73 (extension style beautification)
     // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');
@@ -493,11 +489,8 @@
         // 展示页面上下文 pill
         usePageContext = true;
         updateContextPill();
-<<<<<<< HEAD
-=======
         ensureLayout();
         scrollToLatest();
->>>>>>> f617e73 (extension style beautification)
       } else {
         // 关闭聊天框时显示悬浮球
         ballElement.style.display = 'flex';
@@ -536,11 +529,8 @@
           </svg>
         `;
         toggleBtn.title = '收缩';
-<<<<<<< HEAD
-=======
         ensureLayout();
         scrollToLatest();
->>>>>>> f617e73 (extension style beautification)
       } else {
         // 收缩状态 - 小窗口
         // 恢复自动高度
@@ -561,11 +551,8 @@
           </svg>
         `;
         toggleBtn.title = '展开';
-<<<<<<< HEAD
-=======
         ensureLayout();
         scrollToLatest();
->>>>>>> f617e73 (extension style beautification)
       }
     }
 

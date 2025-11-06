@@ -58,7 +58,7 @@ async def create_activity_report(start_ts: int, end_ts: int) -> Dict[str, Any]:
         dt_end = datetime.fromtimestamp(end_ts)
         
         # 保存到数据库
-        title = f"活动报告 {dt_start.strftime('%Y-%m-%d %H:%M')} 至 {dt_end.strftime('%H:%M')}"
+        title = f"活动报告 {dt_end.strftime('%Y-%m-%d %H:%M')}"
         brief = _extract_brief(report_text)
         
         rid = insert_report(
