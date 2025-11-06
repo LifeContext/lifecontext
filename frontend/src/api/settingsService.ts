@@ -56,4 +56,3 @@ export class SettingsService {
 
 // 导出服务实例
 export const settingsService = new SettingsService();
-

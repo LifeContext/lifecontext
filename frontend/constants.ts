@@ -41,15 +41,3 @@ export const chatSessions: ChatSession[] = [
         messages: [{id: 1, text: '生成介绍视频', sender: 'user', timestamp: '5:00 PM'}]
     }
 ];
-
-export const suggestedQuestions: string[] = [
-    "Summarize my daily report from yesterday.",
-    "What are my high-priority tasks for today?",
-    "Draft a follow-up email about the Q3 marketing strategy.",
-    "Are there any blockers I should be aware of?",
-    "Generate a project plan based on the Acme Corp kick-off.",
-    "What's the latest update on Project Phoenix?",
-    "Help me prepare for my UX design sync.",
-    "Brainstorm some ideas for video content.",
-    "Who should I talk to about the database scaling issues?",
-];

@@ -107,7 +107,7 @@ mermaid.initialize({
 const fixSplitWordsInHTML = () => {
   if (!markdownContainer.value) return;
   
-  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify'];
+  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'Dockerfile', 'bash'];
   
   const walker = document.createTreeWalker(markdownContainer.value, NodeFilter.SHOW_TEXT, null);
   const textNodes: Text[] = [];
