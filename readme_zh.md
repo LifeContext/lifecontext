@@ -2,12 +2,11 @@
 
 ![img](src/logo.jpg)
 
-## 🌍 LifeContext
+## 🌍 什么是人生上下文
 
-Shaped by your life. Empower yourself. Interact with the world.
-- 源于您独一无二的人生上下文，为您塑造一个真正‘懂你’的数字分身。
-- 提供人生级别的长周期检索，低成本的多模态数据存储，精确的上下文对齐，高效的实时上下文压缩技术等等Context Memory底层能力。
-- 重塑您的连接方式，与这个世界展开无限可能的交互、连接与创造。
+- 把人生所见所闻所做化为**AI 上下文**，让 AI 更懂你，并主动执行。
+- 一个了解你完整经历的**人生搜索引擎**。它能帮你串联起所有过往，也能帮你精准调取任何一刻的信息。
+- 提供**开源实现**和标准上下文接口。
 
 ## 🎯 核心功能
 
@@ -18,7 +17,6 @@ Shaped by your life. Empower yourself. Interact with the world.
 - **场景自适应**：基于你的指令，在特定垂直场景中提供更精准、更具执行力的响应，实现真正的“上下文驱动智能”。
 - **驱动任务**：让 AI 从思考者进化为行动者，根据你的语境主动触发、持续执行多种条件任务，让智能真正融入你的人生。
 - **内容生成**：根据需求生成文档、图片、音频、视频与笔记，高效整理与表达你的想法，让创造回归自然流畅。
-- **数字分身**：作为您的专属数字分身，与这个世界展开无限可能的交互。
 
 ![img](src/mindmap_zh.png)
 
@@ -27,7 +25,7 @@ Shaped by your life. Empower yourself. Interact with the world.
 - 聚焦您的核心工作空间——**网页浏览器**，建立强大且主动的智能存在。
 - 全自动地对您浏览的网页进行分析，生成您的数字人生上下文。
 - 不打扰您的心流状态，主动提供及时、可行动的洞察。
-
+- 代码即将开源
 
 ## 🚀 快速开始
 ### 📋 前置准备
@@ -39,56 +37,70 @@ Shaped by your life. Empower yourself. Interact with the world.
 #### 2️⃣ **Node.js 环境**
    - 安装 [Node.js](https://nodejs.org/) (推荐 v18 或更高版本)
    - 确保 `node` 和 `npm` 命令可用
-### 🛠️ 初始化与启动
+### 🛠️ 前后端配置与启动
 
-#### 1️⃣ 初始化环境并配置 API Key
-📦 运行初始化脚本以设置环境并配置 API Key：
-
-**Linux / macOS:**
+#### 1️⃣ 配置大模型与向量服务
+📦 进入 backend 目录，复制 `.env.example`文件并命名为`.env`：
 ```bash
-chmod +x setup.sh
-./setup.sh
+cd backend
+cp .env.example .env
 ```
 
-**Windows:**
-```cmd
-setup.bat
+✅ 将你的模型和向量数据库接口信息填入刚刚生成的`.env`中，示例如下：
+```python
+# LLM API 
+LLM_API_KEY = "sk-1234abcd5678efgh9012ijkl"
+LLM_BASE_URL = "https://api.openai.com/v1"
+LLM_MODEL = "gpt-4o-mini"
+
+# Embedding API 
+EMBEDDING_API_KEY = "sk-embed-9876mnop4321qrst"
+EMBEDDING_BASE_URL = "https://api.openai.com/v1"
+EMBEDDING_MODEL = "text-embedding-3-small"
+
 ```
 
-脚本将自动完成：
-- ✅ 检查依赖（conda, Node.js, npm）
-- ✅ 创建 conda 环境（如果不存在）
-- ✅ 交互式配置 API Key 并生成 `.env` 文件
-- ✅ 安装 npm 依赖
+#### 2️⃣ 创建conda环境（仅首次运行需要）
+📦 在 conda 环境 backend 目录下，根据 `environment.yml` 创建环境：
+```bash
+conda env create -f environment.yml
+```
 
-#### 2️⃣ 启动服务
-#### **Windows 系统:**
+#### 3️⃣ 启动服务
+#### Windows 系统
 
-启动所有服务（conda环境）：
+启动所有服务
+
+在conda环境中执行：
 
 ```cmd
 deploy.bat
 ```
 
-停止所有服务（conda环境）：
+停止所有服务
+
+在conda环境中执行：
 
 ```cmd
 stop.bat
 ```
 
-#### **Linux / macOS 系统:**
+#### Linux / macOS 系统
 
-**首次使用：添加执行权限**
+首次使用：添加执行权限
+
 ```bash
-chmod +x deploy.sh stop.sh setup.sh
+chmod +x deploy.sh stop.sh
 ```
 
-**启动所有服务**
+启动所有服务
+
 ```bash
 ./deploy.sh
 ```
 
-**停止所有服务**
+停止所有服务
+
 ```bash
 ./stop.sh
 ```
@@ -170,7 +182,7 @@ chmod +x deploy.sh stop.sh setup.sh
 | P1     | 文件上传         | 图片                |      |
 | P1     | 用户输入         | 笔记                |      |
 | P2     | 应用 MCP/API     | 应用信息            |      |
-| P2     | PC屏幕共享       | 用户 PC 信息        |      |
+| P2     | PC屏幕截图       | 用户 PC 信息        |      |
 | P3     | 文件上传         | 视频/音频           |      |
 | P3     | 浏览器插件       | 会议记录            |      |
 | P3     | 智能硬件（手表） | 健康数据            |      |
@@ -179,7 +191,7 @@ chmod +x deploy.sh stop.sh setup.sh
 | P4     | RSS              | 订阅网页更新信息    |      |
 | P4     | Deep Research    | 高质量研究分析      |      |
 | P4     | 文件上传         | 代码                |      |
-| P5     | 手机屏幕共享         | 用户移动端信息      |      |
+| P5     | 手机截图         | 用户移动端信息      |      |
 | P6     | 社区/导入知识库       | 官方/用户精选知识库      |      |
 | P6     | 脑机接口      | 神经编码 |      |
 
@@ -196,9 +208,9 @@ chmod +x deploy.sh stop.sh setup.sh
 | 优先级 | 功能                             | 进度 |
 | :----- | :------------------------------- | :--- |
 | P0     | 主动推送日报                     |   ✅   |
-| P0     | 主动推送提示              |   ✅   |
+| P0     | 主动推送提示 (Tips)              |   ✅   |
 | P0     | 主动推送待办事项                 |   ✅   |
-| P0     | 数字分身交互               |     |
+| P0     | 时间轴 (Timeline)                |   ✅   |
 | P1     | 知识库                           |      |
 | P1     | 联网搜索                         |      |
 | P1     | 多模态主动推送                   |      |

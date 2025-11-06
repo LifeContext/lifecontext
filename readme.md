@@ -47,69 +47,82 @@
 #### 2️⃣ **Node.js Environment**
    - Install [Node.js](https://nodejs.org/) (recommended v18 or higher)
    - Ensure `node` and `npm` commands are available
+### 🛠️ Backend and Frontend Configuration & Startup
 
-### 🛠️ Initialization and Startup
-
-#### 1️⃣ Initialize Environment and Configure API Keys
-📦 Run the initialization script to set up the environment and configure API keys:
-
-**Linux / macOS:**
+#### 1️⃣ Configure LLM and Vector Services
+📦 Navigate to the `backend` directory and copy the `.env.example` file as `.env`:
 ```bash
-chmod +x setup.sh
-./setup.sh
+cd ./backend
+cp .env.example .env
 ```
 
-**Windows:**
+✅ Fill in your model and vector database API information in the newly created `.env` file. Example configuration:
+```python
+# LLM API 
+LLM_API_KEY = "sk-1234abcd5678efgh9012ijkl"
+LLM_BASE_URL = "https://api.openai.com/v1"
+LLM_MODEL = "gpt-4o-mini"
+
+# Embedding API 
+EMBEDDING_API_KEY = "sk-embed-9876mnop4321qrst"
+EMBEDDING_BASE_URL = "https://api.openai.com/v1"
+EMBEDDING_MODEL = "text-embedding-3-small"
+
+```
+
+#### 2️⃣ Create conda environment (only needed for first run)
+📦 In conda environment in the `backend` directory, create the environment based on `environment.yml`:
+```bash
+conda env create -f environment.yml
+```
+
+#### 3️⃣ Start Services
+#### Windows
+
+Start all services
+
+In conda environment:
+
 ```cmd
-setup.bat
+deploy.bat
 ```
 
-The script will:
-- ✅ Check dependencies (conda, Node.js, npm)
-- ✅ Create conda environment (if not exists)
-- ✅ Interactively configure API keys and generate `.env` file
-- ✅ Install npm dependencies
+Stop all services
 
-#### 2️⃣ Start Services
-#### **Windows:**
-
-Start all services in conda environment:
-
-```cmd
-deploy.bat  
-```
-
-Stop all services in conda environment:
+In conda environment:
 
 ```cmd
 stop.bat
 ```
 
-#### **Linux / macOS:**
+#### Linux / macOS
 
-**First time: Add execution permissions**
+First time: Add execution permissions
+
 ```bash
-chmod +x deploy.sh stop.sh setup.sh
+chmod +x deploy.sh stop.sh
 ```
 
-**Start all services**
+Start all services
+
 ```bash
 ./deploy.sh
 ```
 
-**Stop all services**
+Stop all services
+
 ```bash
 ./stop.sh
 ```
 
-### 🧩 Browser Extension (Extension) Configuration
+### 🧩 Browser Extension Configuration
 
 #### 1️⃣ Import Browser Extension
 📦 Follow these steps:
 
 1. Open your browser (recommended: Chrome or Edge).
 2. Go to the [Manage Extensions] page and enable [Developer Mode] in the top-right corner.
-3. Click [Load unpacked extension] and select the `./Extension/extension` folder in the project directory.
+3. Click [Load unpacked extension] and select the folder `./Extension/extension` in the project directory.
 4. Once loaded, you will see the extension icon in your browser toolbar.
 5. After enabling the extension functionality, you may disable Developer Mode for better security.
 
@@ -206,7 +219,7 @@ Based on the constantly enriched context, we will gradually unlock the core capa
 | P0       | Proactive Daily Report Push                 |     ✅     |
 | P0       | Proactive Tips Push                         |     ✅     |
 | P0       | Proactive To-do List Push                   |     ✅     |
-| P0       | Digital Avatar Interaction                  |          |
+| P0       | Timeline                                    |     ✅     |
 | P1       | Knowledge Base                              |          |
 | P1       | Internet Search                             |          |
 | P1       | Multi-modal Proactive Push                  |          |
