@@ -249,6 +249,30 @@
     let currentWorkflowId = '';
     let sessionId = `session_${Date.now()}`;
 
+<<<<<<< HEAD
+=======
+    // 保证布局与滚动正确的辅助函数
+    function ensureLayout() {
+      try {
+        chatMessages.style.flex = '1 1 auto';
+        chatMessages.style.minHeight = '0';
+        chatMessages.style.overflowY = 'auto';
+        // 延迟到下一帧滚动到最新
+        requestAnimationFrame(() => {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+      } catch (_) {}
+    }
+
+    function scrollToLatest() {
+      try {
+        requestAnimationFrame(() => {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+      } catch (_) {}
+    }
+
+>>>>>>> f617e73 (extension style beautification)
     // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');
@@ -311,7 +335,7 @@
       }
 
       chatMessages.appendChild(messageContainer);
-      chatMessages.scrollTop = chatMessages.scrollHeight;
+      scrollToLatest();
     }
 
     // 显示加载状态
@@ -469,6 +493,11 @@
         // 展示页面上下文 pill
         usePageContext = true;
         updateContextPill();
+<<<<<<< HEAD
+=======
+        ensureLayout();
+        scrollToLatest();
+>>>>>>> f617e73 (extension style beautification)
       } else {
         // 关闭聊天框时显示悬浮球
         ballElement.style.display = 'flex';
@@ -491,8 +520,8 @@
       
       if (isChatExpanded) {
         // 展开状态 - 仅水平扩大，保持高度与初始一致
-        const rect = chatBox.getBoundingClientRect();
-        chatBox.style.height = rect.height + 'px';
+        // 不固定高度，使用自适应高度以确保内容占满
+        chatBox.style.height = '';
         // 不改变 top/bottom，保持与初始相同高度
         // 水平方向展开
         chatBox.style.left = '50px';
@@ -507,6 +536,11 @@
           </svg>
         `;
         toggleBtn.title = '收缩';
+<<<<<<< HEAD
+=======
+        ensureLayout();
+        scrollToLatest();
+>>>>>>> f617e73 (extension style beautification)
       } else {
         // 收缩状态 - 小窗口
         // 恢复自动高度
@@ -527,6 +561,11 @@
           </svg>
         `;
         toggleBtn.title = '展开';
+<<<<<<< HEAD
+=======
+        ensureLayout();
+        scrollToLatest();
+>>>>>>> f617e73 (extension style beautification)
       }
     }
 
@@ -623,9 +662,14 @@
     
     // 监听输入变化
     inputField.addEventListener('input', updateSendButton);
+    // 监听窗口尺寸变化，保持滚动与占满
+    window.addEventListener('resize', () => {
+      ensureLayout();
+    });
     
     // 初始化按钮状态
     updateSendButton();
+    ensureLayout();
 
     // 页面上下文逻辑
     let usePageContext = true;
@@ -653,6 +697,7 @@
         e.stopPropagation();
         usePageContext = false;
         updateContextPill();
+        ensureLayout();
       });
     }
 
