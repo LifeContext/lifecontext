@@ -15,3 +15,4 @@ dependencies:
     - sentence-transformers==2.3.1
     - APScheduler==3.10.4
     - python-dotenv>=1.0.0
+    - json-repair>=0.25.0

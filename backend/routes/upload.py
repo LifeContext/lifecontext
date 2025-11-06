@@ -14,7 +14,6 @@ from utils.helpers import convert_resp, auth_required, allowed_file, get_logger
 from utils.db import insert_screenshot, insert_web_data
 from utils.llm import analyze_web_content, summarize_content, extract_keywords, generate_embeddings
 from utils.vectorstore import add_web_data_to_vectorstore, chunk_text
-from utils.llm import generate_embedding
 
 logger = get_logger(__name__)
 
@@ -256,58 +255,37 @@ def upload_web_data():
         vector_success = False
         if config.ENABLE_VECTOR_STORAGE:
             try:
-                # 将 content 转换为文本（用于向量化）
-                if isinstance(content, dict):
-                    content_text = json.dumps(content, ensure_ascii=False, indent=2)
+                # 检查是否配置了 EMBEDDING_API_KEY
+                if not config.EMBEDDING_API_KEY:
+                    logger.warning("[upload_web_data] Vector storage is enabled but EMBEDDING_API_KEY is not configured. Skipping vector storage.")
                 else:
-                    content_text = str(content)
-                
-                # 创建批量 embedding 函数
-                def embedding_fn(docs):
-                    """批量生成 embeddings"""
-                    embeddings = []
-                    for i, doc in enumerate(docs):
-                        try:
-                            emb = generate_embedding(doc)
-                            if emb:
-                                embeddings.append(emb)
-                            else:
-                                logger.error(f"Failed to generate embedding for document {i+1}")
-                                return None
-                        except Exception as e:
-                            logger.exception(f"Exception generating embedding for document {i+1}: {e}")
-                            return None
+                    logger.info("[upload_web_data] Adding to vector store...")
                     
-                    if len(embeddings) != len(docs):
-                        logger.error(f"Embedding count mismatch: {len(embeddings)}/{len(docs)}")
-                        return None
+                    # 准备嵌入函数（使用配置的向量模型）
+                    def embedding_function(texts):
+                        embeddings = generate_embeddings(texts)
+                        return embeddings if embeddings else None
                     
-                    logger.info(f"Successfully generated {len(embeddings)} embeddings")
-                    return embeddings
-                
-                # 存入向量数据库
-                logger.info(f"[upload_web_data] Attempting to add to vectorstore: web_data_id={web_data_id}")
-                vector_success = add_web_data_to_vectorstore(
-                    web_data_id=web_data_id,
-                    title=title,
-                    url=url,
-                    content=content_text,  # 使用文本内容
-                    source=source,
-                    tags=tags,
-                    metadata=full_metadata,
-                    embedding_function=embedding_fn
-                )
-                
-                if vector_success:
-                    logger.info(f"[upload_web_data] ✅ Successfully added to vectorstore: web_data_id={web_data_id}")
-                else:
-                    logger.warning(f"[upload_web_data] ❌ Failed to add to vectorstore: web_data_id={web_data_id}")
+                    logger.info(f"[upload_web_data] Using configured embedding model: {config.EMBEDDING_MODEL}")
+                    
+                    vector_success = add_web_data_to_vectorstore(
+                        web_data_id=web_data_id,
+                        title=title,
+                        url=url or "",
+                        content=content_str,
+                        source=source,
+                        tags=tags,
+                        metadata=metadata,
+                        embedding_function=embedding_function
+                    )
+                    
+                    if vector_success:
+                        logger.info(f"[upload_web_data] Added to vector store successfully")
+                    else:
+                        logger.warning(f"[upload_web_data] Failed to add to vector store")
+                    
             except Exception as e:
-                logger.exception(f"[upload_web_data] Error adding to vectorstore: {e}")
-                vector_success = False
-        else:
-            logger.info("[upload_web_data] Vector storage is disabled (EMBEDDING_API_KEY not configured)")
-            vector_success = True  # 标记为成功，不影响流程
+                logger.warning(f"[upload_web_data] Vector storage failed: {e}, continuing without it")
         
         # 7. 构建响应数据
         response_data = {
@@ -316,7 +294,7 @@ def upload_web_data():
             "url": url,
             "processed": {
                 "llm_analysis": llm_analysis is not None,
-                "vector_storage": vector_success,  # 使用实际的向量存储结果
+                "vector_storage": vector_success,
                 "temp_file": temp_file_path
             }
         }

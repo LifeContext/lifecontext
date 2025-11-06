@@ -19,14 +19,14 @@ except ImportError:
 # ============================================================================
 
 # LLM API 配置（用于内容分析和智能对话）
-LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_BASE_URL = os.getenv("LLM_BASE_URL")
-LLM_MODEL = os.getenv("LLM_MODEL")
+LLM_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
+LLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+LLM_MODEL = "doubao-seed-1-6-flash-250828"
 
 # 向量化 Embedding API 配置（用于向量数据库）
-EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
-EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
+EMBEDDING_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
+EMBEDDING_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+EMBEDDING_MODEL = "doubao-embedding-large-text-250515"
 
 # ============================================================================
 # 📁 基础路径配置
@@ -36,17 +36,19 @@ DATA_DIR = BASE_DIR / "data"
 SCREENSHOT_DIR = DATA_DIR / "screenshots"
 DATABASE_PATH = DATA_DIR / "database.db"
 CHROMA_PERSIST_DIR = DATA_DIR / "chromadb"
+LOG_DIR = BASE_DIR.parent / "logs"  # 日志目录在项目根目录
 
 # 确保目录存在
-DATA_DIR.mkdir(exist_ok=True)
-SCREENSHOT_DIR.mkdir(exist_ok=True)
-CHROMA_PERSIST_DIR.mkdir(exist_ok=True)
+DATA_DIR.mkdir(parents=True, exist_ok=True)
+SCREENSHOT_DIR.mkdir(parents=True, exist_ok=True)
+CHROMA_PERSIST_DIR.mkdir(parents=True, exist_ok=True)
+LOG_DIR.mkdir(parents=True, exist_ok=True)  # 确保日志目录存在（包括父目录）
 
 # ============================================================================
 # 🌐 Flask 服务配置
 # ============================================================================
 SECRET_KEY = "dev-secret-key-change-in-production"
-DEBUG = True
+DEBUG = False  # 禁用调试模式以避免调度器重复初始化
 HOST = "0.0.0.0"
 PORT = 8000
 
@@ -101,7 +103,7 @@ ENABLE_SCHEDULER = True  # 设置为 False 可关闭定时任务
 
 # 各个定时任务的独立开关
 ENABLE_SCHEDULER_ACTIVITY = True   # 每15分钟生成活动记录
-ENABLE_SCHEDULER_TODO = False       # 每30分钟生成待办任务
+ENABLE_SCHEDULER_TODO = True       # 每30分钟生成待办任务
 ENABLE_SCHEDULER_TIP = True        # 每小时整生成智能提示
 ENABLE_SCHEDULER_REPORT = True     # 每天早上8点生成日报
 
@@ -114,7 +116,7 @@ ENABLE_SCHEDULER_REPORT = True     # 每天早上8点生成日报
 ENABLE_EVENT_TIP = True
 
 # Todo 生成事件推送
-ENABLE_EVENT_TODO = False
+ENABLE_EVENT_TODO = True
 
 # Activity 生成事件推送
 ENABLE_EVENT_ACTIVITY = False

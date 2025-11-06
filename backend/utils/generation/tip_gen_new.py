@@ -11,9 +11,9 @@ from utils.helpers import (
     get_logger, 
     estimate_tokens, 
     truncate_web_data_by_tokens, 
-    calculate_available_context_tokens,
-    parse_llm_json_response
+    calculate_available_context_tokens
 )
+from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_activities, get_todos, insert_tip, get_tips
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
@@ -69,15 +69,33 @@ async def generate_smart_tips(history_mins: int = 60) -> Dict[str, Any]:
         
         logger.info(f"✅ LLM 生成了 {len(tips_list)} 个提示")
         
-        # 保存提示
+        # 保存提示（使用LLM返回的source_urls）
         logger.info("第三步：保存提示到数据库...")
         tip_ids = []
         for idx, tip_item in enumerate(tips_list):
             try:
+                # 使用LLM返回的source_urls，如果没有则使用空数组
+                source_urls = tip_item.get('source_urls', [])
+                if not isinstance(source_urls, list):
+                    # 如果不是列表，尝试转换
+                    source_urls = [source_urls] if source_urls else []
+                
+                # 验证URL格式（只保留有效的URL）
+                valid_urls = []
+                for url in source_urls:
+                    if url and isinstance(url, str) and url.strip():
+                        url = url.strip()
+                        # 简单验证：以http://或https://开头
+                        if url.startswith('http://') or url.startswith('https://'):
+                            valid_urls.append(url)
+                
+                logger.info(f"  Tip {idx + 1} 的 source_urls: {len(valid_urls)} 个有效URL")
+                
                 tid = insert_tip(
                     title=tip_item['title'],
                     content=tip_item['content'],
-                    tip_type=tip_item.get('type', 'smart')
+                    tip_type=tip_item.get('type', 'smart'),
+                    source_urls=valid_urls if valid_urls else None
                 )
                 tip_ids.append(tid)
                 logger.info(f"  ✅ Tip {idx + 1} 保存成功，ID: {tid}")
@@ -464,12 +482,56 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
 - `KNOWLEDGE_EXPANSION`: 关联新知识领域
 - `ALTERNATIVE_PERSPECTIVE`: 提供替代方案或不同视角
 
+## 执行步骤
+你必须严格遵循以下五个步骤来完成任务：
+
+第一步：定义核心主题 总结出一到三个核心探索主题（例如：“研究React Hooks的性能优化”）。此主题是后续所有步骤的判断基准。
+
+第二步：定位信息缺口 收集并聚类所有potential_insights。以第一步的“核心主题”为基准，分析这些洞察集群，识别出用户知识体系中尚未覆盖或理解不够深入的关键领域。这些领域就是“信息缺口”。
+
+第三步：筛选高价值Tips 从“信息缺口”中，筛选出 1到3个 最具价值、能显著推动用户前进的核心点，作为最终要生成的Tips。如果某个缺口价值不高或过于宽泛，则直接丢弃。
+
+第四步：逐一拓展内容（循环步骤） 为筛选出的每一个Tip（不是为“信息缺口”整体），独立执行本步骤：
+
+    -选择类型: 参考内容维度，为该Tip选择一个最合适的 type。
+
+    -撰写内容: 撰写 content 内容必须真正详细和深入的，旨在为用户提供完整的上下文和可立即应用的知识，不要泛泛而谈，不要重复已有的内容，将 content 当作一篇独立的、高质量的技术博客片段或 README 中的一个完整章节来撰写。。
+
+    -严格排版: content必须使用 GitHub Flavored Markdown 格式（如 ## 标题, * 列表, **加粗**, ``` 代码块, [链接](URL)）。内容应如一篇高质量的技术文档。
+
+第五步：审查与格式化
+
+    -自我审查: 再次检查所有在第四步中生成的Tips。剔除任何宽泛、价值低、或与用户已浏览内容高度重复的Tip。
+
+    -格式化输出: 将所有通过审查的、高质量的Tips封装在一个JSON数组中，遵循 ## 输出格式。
+
+    -空值处理: 如果经过审查后，没有一个Tip能达到标准，必须返回一个空数组 []。
+
 ## 内容要求
-- `title`: 简短精炼的标题（10-30字）
+- `title`: 简短精炼的标题（10字以内）
 - `content`: 使用Markdown格式的详细内容，包含标题、列表、代码块等
 - 内容应深入、有价值，避免泛泛而谈
 - 避免与existing_tips重复
 - ⚠️ 数学公式使用普通文本或代码块，不要使用LaTeX语法（如\\[、\\frac等）
+
+## 来源URL要求（重要）
+每个tip必须包含`source_urls`字段，列出生成该tip时真正参考的URL。
+
+**选择source_urls的原则**：
+1. 只选择与当前tip内容**直接相关**的URL
+2. 从上下文数据中的`web_data`和`relevant_history`字段中选择
+3. 每个tip的source_urls应该包含1-5个最相关的URL
+4. 只选择真正作为有效参考的URL，不要包含所有URL
+5. 如果某个tip不基于任何URL（例如基于活动记录或待办事项），可以返回空数组
+
+**URL来源说明**：
+- `web_data`：当前时间段的网页浏览记录，每个条目包含`url`字段
+- `relevant_history`：通过语义搜索找到的相关历史记录，每个条目包含`url`字段
+
+**示例**：
+- 如果tip是关于"Docker部署"，只选择包含Docker相关内容的URL
+- 如果tip是关于"React Hooks优化"，只选择React相关的URL
+- 不要选择与tip内容无关的URL
 
 ## ⚠️ 输出格式（极其重要）
 直接返回JSON对象，包含一个tips数组。
@@ -480,7 +542,11 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
     {
       "title": "React Hooks性能优化关键技巧",
       "content": "## 核心优化策略\n\n### 1. 使用useMemo和useCallback\n\n这两个Hook可以避免不必要的重新计算和重新渲染...\n\n```javascript\nconst memoizedValue = useMemo(() => computeExpensiveValue(a, b), [a, b]);\n```",
-      "type": "DEEP_DIVE"
+      "type": "DEEP_DIVE",
+      "source_urls": [
+        "https://react.dev/reference/react/useMemo",
+        "https://react.dev/reference/react/useCallback"
+      ]
     }
   ]
 }
@@ -495,13 +561,40 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
 
 记住：返回JSON对象，包含tips数组！"""
         
+        # 构建可用的URL列表，供LLM参考
+        available_urls = []
+        
+        # 从web_data提取URL
+        for item in web_data_trimmed:
+            url = item.get('url')
+            if url:
+                available_urls.append(url)
+        
+        # 从relevant_history提取URL
+        for item in relevant_history:
+            url = item.get('url')
+            if url:
+                available_urls.append(url)
+        
+        # 去重
+        available_urls = list(set(available_urls))
+        
         user_prompt = f"""请分析以下用户行为数据，生成1-3个有价值的Tips。
 
 **上下文数据:**
 
 {context_json}
 
-⚠️ 重要提醒：直接返回JSON对象，格式为 {{"tips": [{{"title": "...", "content": "...", "type": "..."}}]}}，不要添加任何其他文字或代码块标记。"""
+**可用的URL列表（供参考选择）:**
+{json.dumps(available_urls, ensure_ascii=False, indent=2)}
+
+**重要要求**：
+1. 为每个tip选择真正相关的URL，填写到`source_urls`字段中
+2. `source_urls`应该包含1-5个与tip内容直接相关的URL
+3. 只选择真正作为有效参考的URL，不要包含所有URL
+4. 如果tip不基于URL（例如基于活动或待办），`source_urls`可以为空数组[]
+
+⚠️ 重要提醒：直接返回JSON对象，格式为 {{"tips": [{{"title": "...", "content": "...", "type": "...", "source_urls": [...]}}]}}，不要添加任何其他文字或代码块标记。"""
         
         logger.info("正在调用 LLM API...")
         logger.info(f"模型: {config.LLM_MODEL}, 温度: 0.3, max_tokens: 8196")
@@ -556,10 +649,15 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
             logger.info("=" * 60)
             logger.info(f"✅ JSON 解析成功！生成了 {len(tips)} 个 tips")
             for idx, tip in enumerate(tips):
+                source_urls = tip.get('source_urls', [])
                 logger.info(f"  Tip {idx + 1}:")
                 logger.info(f"    - title: {tip.get('title', 'N/A')[:50]}...")
                 logger.info(f"    - type: {tip.get('type', 'N/A')}")
                 logger.info(f"    - content 长度: {len(tip.get('content', ''))} 字符")
+                logger.info(f"    - source_urls: {len(source_urls)} 个URL（由LLM选择）")
+                if source_urls:
+                    for url in source_urls[:3]:  # 只显示前3个
+                        logger.info(f"      * {url[:60]}...")
             logger.info("=" * 60)
             return tips
         else:
