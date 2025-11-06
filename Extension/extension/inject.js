@@ -269,6 +269,10 @@
         });
       } catch (_) {}
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> bc42060 (chat box bug fixed)
     // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');
@@ -595,29 +599,36 @@
     const toggleBtn = chatHeader.querySelector('#toggle-chat');
     const closeBtn = chatHeader.querySelector('#close-chat');
     
-    homeBtn.addEventListener('mouseenter', () => {
-      homeBtn.style.backgroundColor = '#334155';
-    });
-    
-    homeBtn.addEventListener('mouseleave', () => {
-      homeBtn.style.backgroundColor = 'transparent';
-    });
-    
-    toggleBtn.addEventListener('mouseenter', () => {
-      toggleBtn.style.backgroundColor = '#334155';
-    });
-    
-    toggleBtn.addEventListener('mouseleave', () => {
-      toggleBtn.style.backgroundColor = 'transparent';
-    });
-    
-    closeBtn.addEventListener('mouseenter', () => {
-      closeBtn.style.backgroundColor = '#334155';
-    });
-    
-    closeBtn.addEventListener('mouseleave', () => {
-      closeBtn.style.backgroundColor = 'transparent';
-    });
+   homeBtn.addEventListener('mouseenter', () => {
+     const dark = isDarkMode();
+     homeBtn.style.backgroundColor = dark ? '#334155' : '#e2e8f0';
+     homeBtn.style.color = dark ? '#e2e8f0' : '#0f172a';
+   });
+   homeBtn.addEventListener('mouseleave', () => {
+     const dark = isDarkMode();
+     homeBtn.style.backgroundColor = 'transparent';
+     homeBtn.style.color = dark ? '#94a3b8' : '#64748b';
+   });
+   toggleBtn.addEventListener('mouseenter', () => {
+     const dark = isDarkMode();
+     toggleBtn.style.backgroundColor = dark ? '#334155' : '#e2e8f0';
+     toggleBtn.style.color = dark ? '#e2e8f0' : '#0f172a';
+   });
+   toggleBtn.addEventListener('mouseleave', () => {
+     const dark = isDarkMode();
+     toggleBtn.style.backgroundColor = 'transparent';
+     toggleBtn.style.color = dark ? '#94a3b8' : '#64748b';
+   });
+   closeBtn.addEventListener('mouseenter', () => {
+     const dark = isDarkMode();
+     closeBtn.style.backgroundColor = dark ? '#334155' : '#e2e8f0';
+     closeBtn.style.color = dark ? '#e2e8f0' : '#0f172a';
+   });
+   closeBtn.addEventListener('mouseleave', () => {
+     const dark = isDarkMode();
+     closeBtn.style.backgroundColor = 'transparent';
+     closeBtn.style.color = dark ? '#94a3b8' : '#64748b';
+   });
 
     // 悬浮球悬停效果
     ballElement.addEventListener('mouseenter', () => {
