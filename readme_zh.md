@@ -5,7 +5,7 @@
 ## 🌍 LifeContext
 
 Shaped by your life. Empower yourself. Interact with the world.
-- 源于您独一无二的人生上下文，为您塑造一个真正‘懂你’的数字分身。
+- 源于您独一无二的人生上下文，为您塑造一个真正'懂你'的数字分身。
 - 提供人生级别的长周期检索，低成本的多模态数据存储，精确的上下文对齐，高效的实时上下文压缩技术等等Context Memory底层能力。
 - 重塑您的连接方式，与这个世界展开无限可能的交互、连接与创造。
 
@@ -15,7 +15,7 @@ Shaped by your life. Empower yourself. Interact with the world.
 - **标准化上下文接口**：为开发者提供统一接口，用于存储、读取与管理上下文数据，让跨平台集成与扩展更加简单高效。
 - **伴随式洞察**：主动洞察你的人生上下文，在恰当的时刻呈现对你真正重要的时刻、想法与优先事项，让信息不再被动等待。
 - **上下文对话**：理解你的人生上下文，随时回答提问、回忆片段或重组灵感，成为您思维与记忆的延伸。
-- **场景自适应**：基于你的指令，在特定垂直场景中提供更精准、更具执行力的响应，实现真正的“上下文驱动智能”。
+- **场景自适应**：基于你的指令，在特定垂直场景中提供更精准、更具执行力的响应，实现真正的"上下文驱动智能"。
 - **驱动任务**：让 AI 从思考者进化为行动者，根据你的语境主动触发、持续执行多种条件任务，让智能真正融入你的人生。
 - **内容生成**：根据需求生成文档、图片、音频、视频与笔记，高效整理与表达你的想法，让创造回归自然流畅。
 - **数字分身**：作为您的专属数字分身，与这个世界展开无限可能的交互。
@@ -28,69 +28,52 @@ Shaped by your life. Empower yourself. Interact with the world.
 - 全自动地对您浏览的网页进行分析，生成您的数字人生上下文。
 - 不打扰您的心流状态，主动提供及时、可行动的洞察。
 
-
 ## 🚀 快速开始
-### 📋 前置准备
+### 🛠️ 后端（Backend）配置
 
-#### 1️⃣ **Python 环境**
-   - 安装 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) 或 [Anaconda](https://www.anaconda.com/)
-   - 确保 `conda` 命令可用
-
-#### 2️⃣ **Node.js 环境**
-   - 安装 [Node.js](https://nodejs.org/) (推荐 v18 或更高版本)
-   - 确保 `node` 和 `npm` 命令可用
-### 🛠️ 初始化与启动
-
-#### 1️⃣ 初始化环境并配置 API Key
-📦 运行初始化脚本以设置环境并配置 API Key：
-
-**Linux / macOS:**
+#### 1️⃣ 配置大模型与向量服务
+📦 进入 backend 目录，复制 `.env.example`文件并命名为`.env`：
 ```bash
-chmod +x setup.sh
-./setup.sh
+cd ./backend
+cp .env.example .env
 ```
 
-**Windows:**
-```cmd
-setup.bat
+✅ 将你的模型和向量数据库接口信息填入刚刚生成的`.env`中，示例如下：
+```python
+# LLM API 
+LLM_API_KEY = "sk-1234abcd5678efgh9012ijkl"
+LLM_BASE_URL = "https://api.openai.com/v1"
+LLM_MODEL = "gpt-4o-mini"
+
+# Embedding API 
+EMBEDDING_API_KEY = "sk-embed-9876mnop4321qrst"
+EMBEDDING_BASE_URL = "https://api.openai.com/v1"
+EMBEDDING_MODEL = "text-embedding-3-small"
+
 ```
 
-脚本将自动完成：
-- ✅ 检查依赖（conda, Node.js, npm）
-- ✅ 创建 conda 环境（如果不存在）
-- ✅ 交互式配置 API Key 并生成 `.env` 文件
-- ✅ 安装 npm 依赖
-
-#### 2️⃣ 启动服务
-#### **Windows 系统:**
-
-启动所有服务（conda环境）：
-
-```cmd
-deploy.bat
-```
-
-停止所有服务（conda环境）：
-
-```cmd
-stop.bat
-```
-
-#### **Linux / macOS 系统:**
-
-**首次使用：添加执行权限**
+#### 2️⃣ 配置 Python 环境
+📦 在 backend 目录下，根据 `environment.yml` 创建环境并启动：
 ```bash
-chmod +x deploy.sh stop.sh setup.sh
+conda env create -f environment.yml
+conda activate lifecontext
 ```
 
-**启动所有服务**
+#### 3️⃣ 启动后端服务
+📦 运行命令启动后端端口：
 ```bash
-./deploy.sh
+python app.py
 ```
-
-**停止所有服务**
-```bash
-./stop.sh
+✅ 启动成功后，终端会显示服务运行的端口信息如下
+```
+============================================================
+LifeContext API 配置状态
+============================================================
+✅ LLM 内容分析功能：已启用
+   模型：gpt-4o-mini
+✅ 向量数据库功能：已启用
+   模型：text-embedding-3-small
+============================================================
 ```
 
 
@@ -105,9 +88,45 @@ chmod +x deploy.sh stop.sh setup.sh
 4. 加载完成后，即可在浏览器工具栏中看到插件图标。
 5. 插件功能启用后，可关闭开发者模式以提升安全性。
 
-🎉打开浏览器访问 http://localhost:3000/ 
+#### 2️⃣ 启动插件
+📦 编译器中建立新终端，进入 Extension 目录并安装依赖：
+```bash
+cd ./Extension
+npm install
+node server.js
+```
 
-如果部署还有问题，请参考 [deploy_guide_zh.md](deploy_guide_zh.md)
+### 💻 前端（Frontend）配置
+
+#### 1️⃣ 安装依赖
+📦 建立新终端并进入 frontend 目录：
+
+```bash
+# Windows 用户
+cd ./frontend
+npm install
+```
+
+```bash
+# macOS 用户
+cd ./frontend
+npm install
+chmod +x node_modules/.bin/vite   # 赋予执行权限（防止 Vite 权限报错）
+```
+
+#### 2️⃣ 启动前端开发服务器
+📦 运行以下命令启动前端：
+```bash
+npm run dev
+```
+✅ 启动成功后终端会显示：
+```
+VITE v6.x.x  ready in 500 ms
+
+➜  Local:   http://localhost:3000/
+➜  Network: http://192.168.xx.xx:3000/
+```
+🎉打开浏览器访问上述地址即可使用 
 
 ## 🌄 场景介绍
 
@@ -179,7 +198,7 @@ chmod +x deploy.sh stop.sh setup.sh
 | P4     | RSS              | 订阅网页更新信息    |      |
 | P4     | Deep Research    | 高质量研究分析      |      |
 | P4     | 文件上传         | 代码                |      |
-| P5     | 手机屏幕共享         | 用户移动端信息      |      |
+| P5     | 手机屏幕截图         | 用户移动端信息      |      |
 | P6     | 社区/导入知识库       | 官方/用户精选知识库      |      |
 | P6     | 脑机接口      | 神经编码 |      |
 
@@ -196,7 +215,7 @@ chmod +x deploy.sh stop.sh setup.sh
 | 优先级 | 功能                             | 进度 |
 | :----- | :------------------------------- | :--- |
 | P0     | 主动推送日报                     |   ✅   |
-| P0     | 主动推送提示              |   ✅   |
+| P0     | 主动推送提示                     |   ✅   |
 | P0     | 主动推送待办事项                 |   ✅   |
 | P0     | 数字分身交互               |     |
 | P1     | 知识库                           |      |

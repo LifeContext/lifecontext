@@ -34,88 +34,122 @@
 * Focuses on your core workspace — **web browser** — building a powerful and proactive intelligent presence.
 * Automatically analyzes the web pages you browse to generate your digital life context.
 * Stays out of your way while providing timely, actionable insights.
-* Code will be open source soon.
 
 
 ## 🚀 Quick Start
-### 📋 Prerequisites
 
-#### 1️⃣ **Python Environment**
-   - Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/)
-   - Ensure the `conda` command is available
+### 🛠️ Backend Configuration
 
-#### 2️⃣ **Node.js Environment**
-   - Install [Node.js](https://nodejs.org/) (recommended v18 or higher)
-   - Ensure `node` and `npm` commands are available
-
-### 🛠️ Initialization and Startup
-
-#### 1️⃣ Initialize Environment and Configure API Keys
-📦 Run the initialization script to set up the environment and configure API keys:
-
-**Linux / macOS:**
+#### 1️⃣ Configure the LLM and Vector Services
+📦 Navigate to the `backend` directory and copy the `.env.example` file as `.env`:
 ```bash
-chmod +x setup.sh
-./setup.sh
+cd ./backend
+cp .env.example .env
 ```
 
-**Windows:**
-```cmd
-setup.bat
+✅ Fill in your API in the newly created `.env` file. Example configuration:
+
+```python
+# LLM API 
+LLM_API_KEY = "sk-1234abcd5678efgh9012ijkl"
+LLM_BASE_URL = "https://api.openai.com/v1"
+LLM_MODEL = "gpt-4o-mini"
+
+# Embedding API 
+EMBEDDING_API_KEY = "sk-embed-9876mnop4321qrst"
+EMBEDDING_BASE_URL = "https://api.openai.com/v1"
+EMBEDDING_MODEL = "text-embedding-3-small"
 ```
 
-The script will:
-- ✅ Check dependencies (conda, Node.js, npm)
-- ✅ Create conda environment (if not exists)
-- ✅ Interactively configure API keys and generate `.env` file
-- ✅ Install npm dependencies
+#### 2️⃣ Set Up the Python Environment
 
-#### 2️⃣ Start Services
-#### **Windows:**
+📦 In the `backend` directory, create a virtual environment, and install all dependencies automatically using `environment.yml`.
 
-Start all services in conda environment:
-
-```cmd
-deploy.bat  
-```
-
-Stop all services in conda environment:
-
-```cmd
-stop.bat
-```
-
-#### **Linux / macOS:**
-
-**First time: Add execution permissions**
 ```bash
-chmod +x deploy.sh stop.sh setup.sh
+conda env create -f environment.yml
+conda activate lifecontext
 ```
 
-**Start all services**
+#### 3️⃣ Start the Backend Service
+
+📦 Run the following command to start the backend service:
+
 ```bash
-./deploy.sh
+python app.py
 ```
 
-**Stop all services**
-```bash
-./stop.sh
+✅ Once successfully launched, the terminal will display port information as follows:
+
+```
+============================================================
+LifeContext API Configuration Status
+============================================================
+✅ LLM Content Analysis: Enabled
+   Model: gpt-4o-mini
+✅ Vector Database: Enabled
+   Model: text-embedding-3-small
+============================================================
 ```
 
-### 🧩 Browser Extension (Extension) Configuration
+### 🧩 Browser Extension Configuration
 
-#### 1️⃣ Import Browser Extension
+#### 1️⃣ Import the Browser Extension
+
 📦 Follow these steps:
 
 1. Open your browser (recommended: Chrome or Edge).
-2. Go to the [Manage Extensions] page and enable [Developer Mode] in the top-right corner.
-3. Click [Load unpacked extension] and select the `./Extension/extension` folder in the project directory.
-4. Once loaded, you will see the extension icon in your browser toolbar.
-5. After enabling the extension functionality, you may disable Developer Mode for better security.
+2. Go to the **Manage Extensions** page and enable **Developer Mode** (top-right corner).
+3. Click **Load unpacked extension** and select the folder `./Extension/extension` in the project directory.
+4. Once loaded, the extension icon will appear in your browser toolbar.
+5. After enabling the extension, you may disable Developer Mode for better security.
 
-🎉 Open your browser and visit http://localhost:3000/
+#### 2️⃣ Launch the Extension
 
-If you encounter any deployment issues, please refer to [deploy_guide.md](deploy_guide.md)
+📦 Open a new terminal in your editor, navigate to the Extension directory, and install dependencies:
+
+```bash
+cd ./Extension
+npm install
+node server.js
+```
+
+### 💻 Frontend Configuration
+
+#### 1️⃣ Install Dependencies
+
+📦 Open a new terminal and navigate to the frontend directory.
+
+```bash
+# For Windows users
+cd ./frontend
+npm install
+```
+
+```bash
+# For macOS users
+cd ./frontend
+npm install
+chmod +x node_modules/.bin/vite   # Grant execution permission (to prevent Vite permission errors)
+```
+
+#### 2️⃣ Start the Frontend Development Server
+
+📦 Run the following command to start the frontend:
+
+```bash
+npm run dev
+```
+
+✅ Once started successfully, the terminal will display:
+
+```
+VITE v6.x.x  ready in 500 ms
+
+➜  Local:   http://localhost:3000/
+➜  Network: http://192.168.xx.xx:3000/
+```
+
+🎉 Open the browser and visit the address above to start using the app.
 
 ## 🌄 Scenario Introduction
 
