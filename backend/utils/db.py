@@ -8,6 +8,7 @@ from datetime import datetime
 from pathlib import Path
 import config
 from utils.helpers import get_logger
+from typing import Optional, List
 
 logger = get_logger(__name__)
 
@@ -247,6 +248,32 @@ def update_todo(todo_id, **kwargs):
     affected_rows = cursor.rowcount
     conn.commit()
     conn.close()
+    
+    # 如果更新成功，同步到向量数据库（不改变原有逻辑，失败不影响返回值）
+    if affected_rows > 0:
+        try:
+            # 获取更新后的完整todo信息
+            todos = get_todos(limit=1000)  # 获取所有todos
+            updated_todo = None
+            for todo in todos:
+                if todo.get('id') == todo_id:
+                    updated_todo = todo
+                    break
+            
+            if updated_todo:
+                from utils.vectorstore import add_todo_to_vectorstore
+                add_todo_to_vectorstore(
+                    todo_id=todo_id,
+                    title=updated_todo.get('title', ''),
+                    description=updated_todo.get('description', ''),
+                    priority=updated_todo.get('priority', 0),
+                    start_time=updated_todo.get('start_time'),
+                    end_time=updated_todo.get('end_time'),
+                    status=updated_todo.get('status', 0)
+                )
+        except Exception as e:
+            logger.warning(f"Failed to update todo in vectorstore: {e}")
+    
     return affected_rows > 0
 
 
@@ -286,6 +313,22 @@ def insert_todo(title, description="", priority=0, start_time=None, end_time=Non
     todo_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    
+    # 添加到向量数据库（不改变原有逻辑，失败不影响返回值）
+    try:
+        from utils.vectorstore import add_todo_to_vectorstore
+        add_todo_to_vectorstore(
+            todo_id=todo_id,
+            title=title,
+            description=description,
+            priority=priority,
+            start_time=start_time,
+            end_time=end_time,
+            status=0  # 新创建的待办事项状态为0（未完成）
+        )
+    except Exception as e:
+        logger.warning(f"Failed to add todo to vectorstore: {e}")
+    
     return todo_id
 
 
@@ -306,6 +349,15 @@ def delete_todo(todo_id):
     affected_rows = cursor.rowcount
     conn.commit()
     conn.close()
+    
+    # 从向量数据库删除（不改变原有逻辑，失败不影响返回值）
+    if affected_rows > 0:
+        try:
+            from utils.vectorstore import delete_todo_from_vectorstore
+            delete_todo_from_vectorstore(todo_id)
+        except Exception as e:
+            logger.warning(f"Failed to delete todo from vectorstore: {e}")
+    
     return affected_rows > 0
 
 
@@ -412,6 +464,20 @@ def insert_tip(title, content, tip_type="general", source_urls=None):
     tip_id = cursor.lastrowid
     conn.commit()
     conn.close()
+    
+    # 添加到向量数据库（不改变原有逻辑，失败不影响返回值）
+    try:
+        from utils.vectorstore import add_tip_to_vectorstore
+        add_tip_to_vectorstore(
+            tip_id=tip_id,
+            title=title,
+            content=content,
+            tip_type=tip_type,
+            source_urls=source_urls if isinstance(source_urls, list) else [source_urls] if source_urls else None
+        )
+    except Exception as e:
+        logger.warning(f"Failed to add tip to vectorstore: {e}")
+    
     return tip_id
 
 

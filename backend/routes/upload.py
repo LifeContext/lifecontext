@@ -115,6 +115,7 @@ def upload_web_data():
         source = data.get('source', 'web_crawler')
         tags = data.get('tags', [])
         metadata = data.get('metadata', {})
+        session_id = data.get('session_id')  # 新增：获取session_id
         
         logger.info(f"[upload_web_data] Processing: title={title}, url={url}")
         
@@ -276,7 +277,8 @@ def upload_web_data():
                         source=source,
                         tags=tags,
                         metadata=metadata,
-                        embedding_function=embedding_function
+                        embedding_function=embedding_function,
+                        session_id=session_id  # 新增：传递session_id
                     )
                     
                     if vector_success:
