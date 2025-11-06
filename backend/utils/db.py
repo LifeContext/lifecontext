@@ -71,18 +71,9 @@ def init_db():
             title TEXT NOT NULL,
             content TEXT NOT NULL,
             tip_type TEXT,
-            source_urls TEXT,
             create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # 如果表已存在但没有 source_urls 字段，添加该字段
-    try:
-        cursor.execute("ALTER TABLE tips ADD COLUMN source_urls TEXT")
-        logger.info("Added source_urls column to tips table")
-    except sqlite3.OperationalError:
-        # 字段已存在，忽略错误
-        pass
     
     # 创建截图表
     cursor.execute("""
@@ -109,29 +100,6 @@ def init_db():
             create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """)
-    
-    # 创建设置表
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS settings (
-            key TEXT PRIMARY KEY,
-            value TEXT NOT NULL,
-            description TEXT,
-            update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-        )
-    """)
-    
-    # 初始化默认设置
-    default_settings = [
-        ('tips_interval_minutes', '60', 'Tips生成间隔（分钟）'),
-        ('daily_report_hour', '8', 'Daily Report生成时间（小时，0-23）'),
-        ('daily_report_minute', '0', 'Daily Report生成时间（分钟，0-59）')
-    ]
-    
-    for key, value, description in default_settings:
-        cursor.execute("""
-            INSERT OR IGNORE INTO settings (key, value, description) 
-            VALUES (?, ?, ?)
-        """, (key, value, description))
     
     conn.commit()
     conn.close()
@@ -306,6 +274,17 @@ def delete_todo(todo_id):
     affected_rows = cursor.rowcount
     conn.commit()
     conn.close()
+    
+    # 同步删除向量数据库中的数据
+    if affected_rows > 0:
+        try:
+            from utils.vectorstore import delete_todo_from_vectorstore
+            delete_todo_from_vectorstore(todo_id)
+        except Exception as e:
+            # 向量数据库删除失败不影响 SQLite 删除的成功
+            logger = get_logger(__name__)
+            logger.warning(f"Failed to delete todo from vectorstore: {e}")
+    
     return affected_rows > 0
 
 
@@ -371,48 +350,58 @@ def get_tips(limit=10, offset=0):
     query = "SELECT * FROM tips ORDER BY create_time DESC LIMIT ? OFFSET ?"
     cursor.execute(query, (limit, offset))
     
-    tips = []
-    for row in cursor.fetchall():
-        tip = dict(row)
-        # 解析 source_urls JSON 字符串为列表
-        if tip.get('source_urls'):
-            try:
-                tip['source_urls'] = json.loads(tip['source_urls'])
-            except (json.JSONDecodeError, TypeError):
-                # 如果解析失败，尝试作为单个 URL 处理
-                tip['source_urls'] = [tip['source_urls']] if tip['source_urls'] else []
-        else:
-            tip['source_urls'] = []
-        tips.append(tip)
-    
+    tips = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return tips
 
 
-def insert_tip(title, content, tip_type="general", source_urls=None):
+def insert_tip(title, content, tip_type="general"):
     """插入提示"""
     conn = get_db_connection()
     cursor = conn.cursor()
     
     create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     
-    # 将 source_urls 转换为 JSON 字符串
-    source_urls_json = None
-    if source_urls:
-        if isinstance(source_urls, list):
-            source_urls_json = json.dumps(source_urls, ensure_ascii=False)
-        else:
-            source_urls_json = str(source_urls)
-    
     cursor.execute(
-        "INSERT INTO tips (title, content, tip_type, source_urls, create_time) VALUES (?, ?, ?, ?, ?)",
-        (title, content, tip_type, source_urls_json, create_time)
+        "INSERT INTO tips (title, content, tip_type, create_time) VALUES (?, ?, ?, ?)",
+        (title, content, tip_type, create_time)
     )
     
     tip_id = cursor.lastrowid
     conn.commit()
     conn.close()
     return tip_id
+
+
+def delete_tip(tip_id):
+    """删除提示
+    
+    Args:
+        tip_id: 提示ID
+    
+    Returns:
+        bool: 是否删除成功
+    """
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM tips WHERE id = ?", (tip_id,))
+    
+    affected_rows = cursor.rowcount
+    conn.commit()
+    conn.close()
+    
+    # 同步删除向量数据库中的数据
+    if affected_rows > 0:
+        try:
+            from utils.vectorstore import delete_tip_from_vectorstore
+            delete_tip_from_vectorstore(tip_id)
+        except Exception as e:
+            # 向量数据库删除失败不影响 SQLite 删除的成功
+            logger = get_logger(__name__)
+            logger.warning(f"Failed to delete tip from vectorstore: {e}")
+    
+    return affected_rows > 0
 
 
 # 截图相关操作
@@ -554,82 +543,3 @@ def get_screenshots(start_time=None, end_time=None, limit=10, offset=0):
     screenshots = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return screenshots
-
-
-# 设置相关操作
-def get_setting(key, default_value=None):
-    """获取设置值
-    
-    Args:
-        key: 设置键名
-        default_value: 如果不存在时返回的默认值
-    
-    Returns:
-        str: 设置值，如果不存在则返回 default_value
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
-    row = cursor.fetchone()
-    conn.close()
-    
-    if row:
-        return row['value']
-    return default_value
-
-
-def set_setting(key, value, description=None):
-    """设置配置值
-    
-    Args:
-        key: 设置键名
-        value: 设置值（字符串）
-        description: 设置描述（可选）
-    
-    Returns:
-        bool: 是否设置成功
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    update_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    
-    if description:
-        cursor.execute("""
-            INSERT OR REPLACE INTO settings (key, value, description, update_time)
-            VALUES (?, ?, ?, ?)
-        """, (key, str(value), description, update_time))
-    else:
-        cursor.execute("""
-            INSERT OR REPLACE INTO settings (key, value, update_time)
-            VALUES (?, ?, ?)
-        """, (key, str(value), update_time))
-    
-    conn.commit()
-    conn.close()
-    return True
-
-
-def get_all_settings():
-    """获取所有设置
-    
-    Returns:
-        dict: 所有设置的键值对
-    """
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute("SELECT key, value, description FROM settings")
-    rows = cursor.fetchall()
-    conn.close()
-    
-    settings = {}
-    for row in rows:
-        row_dict = dict(row)  # 转换为字典
-        settings[row_dict['key']] = {
-            'value': row_dict['value'],
-            'description': row_dict.get('description', '')  # 现在可以使用 .get() 了
-        }
-    
-    return settings

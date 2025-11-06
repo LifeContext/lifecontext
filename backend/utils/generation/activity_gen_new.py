@@ -11,9 +11,9 @@ from utils.helpers import (
     get_logger,
     estimate_tokens,
     truncate_web_data_by_tokens,
-    calculate_available_context_tokens
+    calculate_available_context_tokens,
+    parse_llm_json_response
 )
-from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_screenshots, insert_activity
 from utils.llm import get_openai_client
 
@@ -290,6 +290,9 @@ async def _analyze_and_summarize(data_items: List[Dict], start_dt: datetime, end
     except Exception as e:
         logger.exception(f"LLM analysis error: {e}")
         return _create_basic_summary(data_items, start_dt, end_dt)
+
+
+# 移除旧的 _parse_activity_json 函数，改用统一的 parse_llm_json_response
 
 
 def _create_basic_summary(data_items: List[Dict], start_dt: datetime, end_dt: datetime) -> Dict[str, Any]:

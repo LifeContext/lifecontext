@@ -364,7 +364,26 @@
                 context: (function(){
                   const base = { session_id: sessionId, user_preferences: {} };
                   if (usePageContext) {
-                    base.page = { url: location.href, title: document.title || '' };
+                    // 实时获取当前页面内容
+                    let pageContent = '';
+                    try {
+                      // 获取页面可见文本内容（去除脚本和样式）
+                      const bodyClone = document.body.cloneNode(true);
+                      // 移除脚本和样式元素
+                      const scripts = bodyClone.querySelectorAll('script, style, noscript');
+                      scripts.forEach(el => el.remove());
+                      // 获取纯文本
+                      pageContent = bodyClone.innerText || bodyClone.textContent || '';
+                    } catch (e) {
+                      console.warn('Failed to extract page content:', e);
+                      pageContent = '';
+                    }
+                    
+                    base.page = { 
+                      url: location.href, 
+                      title: document.title || '',
+                      content: pageContent  // 添加实时页面内容
+                    };
                   }
                   return base;
                 })(),

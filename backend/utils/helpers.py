@@ -4,98 +4,16 @@
 
 import json
 import logging
-import logging.handlers
 from functools import wraps
 from typing import List, Dict, Any
 from flask import request, jsonify
-from datetime import datetime
 import config
-from .json_utils import parse_llm_json_response
 
-# 日志配置标志，确保只配置一次
-_logging_configured = False
-
-def setup_logging():
-    """
-    配置日志系统：同时输出到控制台和文件
-    
-    功能说明：
-    1. 控制台输出：方便开发时实时查看日志
-    2. 文件输出：保存历史日志，方便排查问题
-    3. 日志轮转：使用 RotatingFileHandler，防止单个日志文件过大
-       - 每个日志文件最大 10MB
-       - 最多保留 5 个备份文件（总计约 50MB）
-       - 自动按日期命名：backend_YYYY-MM-DD.log
-    """
-    global _logging_configured
-    if _logging_configured:
-        return
-    
-    # 获取根日志记录器
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    
-    # 日志格式：时间 - 模块名 - 级别 - 消息
-    log_format = logging.Formatter(
-        '%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        datefmt='%Y-%m-%d %H:%M:%S'
-    )
-    
-    # 1. 控制台处理器（StreamHandler）- 输出到控制台
-    console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.INFO)
-    console_handler.setFormatter(log_format)
-    root_logger.addHandler(console_handler)
-    
-    # 2. 文件处理器（RotatingFileHandler）- 保存到文件
-    # 日志文件名：backend_YYYY-MM-DD.log
-    log_filename = config.LOG_DIR / f"backend_{datetime.now().strftime('%Y-%m-%d')}.log"
-    
-    # 确保日志目录存在（跨平台兼容：Windows/Linux/macOS）
-    try:
-        config.LOG_DIR.mkdir(parents=True, exist_ok=True)
-    except Exception as e:
-        # 如果目录创建失败，只输出到控制台
-        print(f"⚠️ 警告: 无法创建日志目录 {config.LOG_DIR}: {e}")
-        print("⚠️ 日志将只输出到控制台")
-        _logging_configured = True
-        return
-    
-    # 使用 RotatingFileHandler 实现日志轮转
-    # maxBytes: 单个文件最大 10MB (10 * 1024 * 1024)
-    # backupCount: 保留 5 个备份文件
-    try:
-        file_handler = logging.handlers.RotatingFileHandler(
-            filename=str(log_filename),
-            mode='a',  # 追加模式
-            maxBytes=10 * 1024 * 1024,  # 10MB
-            backupCount=5,  # 保留5个备份
-            encoding='utf-8'  # 支持中文
-        )
-        file_handler.setLevel(logging.INFO)
-        file_handler.setFormatter(log_format)
-        root_logger.addHandler(file_handler)
-        
-        _logging_configured = True
-        
-        # 输出日志配置信息
-        logging.info("=" * 60)
-        logging.info("📝 日志系统已配置")
-        logging.info(f"   控制台输出: ✅ 已启用")
-        logging.info(f"   文件输出: ✅ 已启用")
-        logging.info(f"   日志文件: {log_filename}")
-        logging.info(f"   文件大小限制: 10MB")
-        logging.info(f"   备份文件数: 5")
-        logging.info("=" * 60)
-    except Exception as e:
-        # 如果文件处理器创建失败，只输出到控制台
-        print(f"⚠️ 警告: 无法创建日志文件 {log_filename}: {e}")
-        print("⚠️ 日志将只输出到控制台")
-        _logging_configured = True
-
-# 初始化日志配置
-setup_logging()
-
+# 配置日志
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 
@@ -669,124 +587,10 @@ def _process_parsed_data(
         return parsed_data
 
 
-def _fix_unescaped_quotes_in_json_strings(text: str) -> str:
-    """
-    修复JSON字符串值中未转义的双引号（专注于代码块）
-    
-    这个函数用于处理LLM生成的JSON中，字符串值包含代码块时，
-    代码块内的双引号没有被正确转义的情况。
-    
-    策略：
-    1. 找到JSON字符串内的所有代码块标记（```）
-    2. 在代码块内部，转义所有未转义的双引号
-    
-    Args:
-        text: 原始JSON文本
-    
-    Returns:
-        修复后的JSON文本
-    """
-    logger = get_logger(__name__)
-    
-    try:
-        # 先尝试解析，如果成功则不需要修复
-        try:
-            json.loads(text)
-            return text
-        except json.JSONDecodeError:
-            pass
-        
-        logger.info("[引号修复] 开始修复JSON字符串中代码块的引号...")
-        
-        result = []
-        i = 0
-        in_json_string = False
-        escape_next = False
-        fixes_count = 0
-        
-        while i < len(text):
-            char = text[i]
-            
-            # 处理转义
-            if escape_next:
-                result.append(char)
-                escape_next = False
-                i += 1
-                continue
-            
-            if char == '\\':
-                result.append(char)
-                escape_next = True
-                i += 1
-                continue
-            
-            # 跟踪是否在JSON字符串内
-            if char == '"':
-                in_json_string = not in_json_string
-                result.append(char)
-                i += 1
-                continue
-            
-            # 如果在JSON字符串内，查找代码块
-            if in_json_string and i + 2 < len(text) and text[i:i+3] == '```':
-                # 找到代码块的结束
-                code_block_end = text.find('```', i + 3)
-                if code_block_end != -1:
-                    # 处理代码块内容
-                    code_block_content = text[i:code_block_end+3]
-                    logger.debug(f"[引号修复] 发现代码块，位置: {i} - {code_block_end+3}")
-                    
-                    # 在代码块内容中转义所有未转义的双引号
-                    fixed_block = []
-                    j = 0
-                    block_escape_next = False
-                    block_fixes = 0
-                    for ch in code_block_content:
-                        if block_escape_next:
-                            fixed_block.append(ch)
-                            block_escape_next = False
-                        elif ch == '\\':
-                            fixed_block.append(ch)
-                            block_escape_next = True
-                        elif ch == '"':
-                            # 在代码块中，转义这个引号
-                            fixed_block.append('\\"')
-                            block_fixes += 1
-                        else:
-                            fixed_block.append(ch)
-                    
-                    if block_fixes > 0:
-                        logger.debug(f"[引号修复] 在该代码块中修复了 {block_fixes} 个引号")
-                        fixes_count += block_fixes
-                    
-                    result.extend(fixed_block)
-                    i = code_block_end + 3
-                    continue
-            
-            result.append(char)
-            i += 1
-        
-        fixed_text = ''.join(result)
-        
-        # 验证修复后的JSON
-        try:
-            json.loads(fixed_text)
-            logger.info(f"[引号修复] ✅ 成功修复JSON，共修复 {fixes_count} 个引号")
-            return fixed_text
-        except json.JSONDecodeError as e:
-            logger.warning(f"[引号修复] ❌ 修复后的JSON仍然无效: {e}")
-            return text
-        
-    except Exception as e:
-        logger.warning(f"[引号修复] 修复过程中发生错误: {e}")
-        logger.exception("详细堆栈:")
-        return text
-
-
 def _fix_latex_escapes_in_json(text: str) -> str:
-    r"""
+    """
     修复JSON字符串中的LaTeX转义字符
-    将无效的LaTeX转义序列（如 \[, \frac, \times）转换为有效的JSON转义序列
+    将无效的LaTeX转义序列（如\[, \frac, \times）转换为有效的JSON转义序列
     
     Args:
         text: 原始JSON文本
@@ -858,16 +662,14 @@ def _fix_json_string(text: str) -> str:
         text = text.replace('"', '"').replace('"', '"')
         text = text.replace(''', "'").replace(''', "'")
         
-        # 移除控制字符（保留换行符、制表符和回车符）
-        text = re.sub(r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]', '', text)
+        # 第二步：转义 JSON 字符串值内的控制字符
+        # 这是关键修复：将字符串值内的控制字符转义为合法的 JSON 转义序列
+        text = _escape_control_chars_in_json_strings(text)
         
         # 修复LaTeX转义字符（在JSON字符串中是无效的）
         text = _fix_latex_escapes_in_json(text)
         
-        # 修复JSON字符串值中未转义的双引号（用于处理包含代码块等内容的情况）
-        text = _fix_unescaped_quotes_in_json_strings(text)
-        
-        # 第二步：检测JSON结构类型
+        # 第三步：检测JSON结构类型
         text = text.strip()
         is_array = text.startswith('[')
         is_object = text.startswith('{')
@@ -894,7 +696,7 @@ def _fix_json_string(text: str) -> str:
                 logger.warning("无法找到JSON的开始标记")
                 return original_text
         
-        # 第三步：检查并修复不完整的JSON
+        # 第四步：检查并修复不完整的JSON
         if is_array:
             # 检查数组是否正确闭合
             if not text.endswith(']'):
@@ -922,6 +724,87 @@ def _fix_json_string(text: str) -> str:
     except Exception as e:
         logger.warning(f"修复JSON时发生错误: {e}")
         logger.exception("详细堆栈:")
+        return text
+
+
+def _escape_control_chars_in_json_strings(text: str) -> str:
+    """
+    转义 JSON 字符串值内的控制字符
+    
+    这是关键修复：将字符串值内的控制字符（如换行符、制表符）转义为合法的 JSON 转义序列
+    
+    Args:
+        text: 原始 JSON 文本
+    
+    Returns:
+        修复后的 JSON 文本（控制字符已转义）
+    """
+    import re
+    
+    logger = get_logger(__name__)
+    
+    try:
+        result = []
+        i = 0
+        in_string = False
+        escape_next = False
+        
+        while i < len(text):
+            char = text[i]
+            
+            # 处理转义字符
+            if escape_next:
+                result.append(char)
+                escape_next = False
+                i += 1
+                continue
+            
+            if char == '\\':
+                escape_next = True
+                result.append(char)
+                i += 1
+                continue
+            
+            # 检测字符串的开始和结束
+            if char == '"':
+                in_string = not in_string
+                result.append(char)
+                i += 1
+                continue
+            
+            # 在字符串内，转义控制字符
+            if in_string:
+                # 控制字符映射
+                control_char_map = {
+                    '\n': '\\n',  # 换行符
+                    '\r': '\\r',  # 回车符
+                    '\t': '\\t',  # 制表符
+                    '\b': '\\b',  # 退格符
+                    '\f': '\\f',  # 换页符
+                }
+                
+                if char in control_char_map:
+                    result.append(control_char_map[char])
+                    logger.debug(f"转义控制字符: {repr(char)} -> {control_char_map[char]}")
+                elif ord(char) < 32:  # 其他控制字符（ASCII < 32）
+                    # 转义为 Unicode 转义序列
+                    result.append(f'\\u{ord(char):04x}')
+                    logger.debug(f"转义控制字符: {repr(char)} -> \\u{ord(char):04x}")
+                else:
+                    result.append(char)
+            else:
+                # 不在字符串内，直接添加
+                result.append(char)
+            
+            i += 1
+        
+        fixed_text = ''.join(result)
+        if fixed_text != text:
+            logger.info("[控制字符修复] 已转义字符串内的控制字符")
+        return fixed_text
+        
+    except Exception as e:
+        logger.warning(f"转义控制字符时发生错误: {e}")
         return text
 
 
