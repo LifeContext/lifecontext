@@ -110,6 +110,10 @@
       </div>
     `;
 
+    // 主题状态（供其他函数读取）
+    let __lc_is_dark__ = true;
+    function isDarkMode() { return __lc_is_dark__; }
+
     // 页面上下文展示 Pill（默认隐藏，打开聊天时显示）
     const contextPill = document.createElement('div');
     contextPill.id = 'page-context-pill';
@@ -152,7 +156,8 @@
     const chatMessages = document.createElement('div');
     chatMessages.id = 'chat-messages';
     chatMessages.style.cssText = `
-      flex: 1;
+      flex: 1 1 auto;
+      min-height: 0; /* 允许在flex容器内正确计算高度以滚动 */
       padding: 16px;
       overflow-y: auto;
       display: flex;
@@ -166,15 +171,12 @@
       display: flex;
       justify-content: flex-start;
     `;
-    const isDarkMode = () => {
-      try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (_) { return true; }
-    };
     const aiColor = isDarkMode() ? '#e2e8f0' : '#0f172a';
     welcomeMessage.innerHTML = `
-      <div style=\"display:flex; align-items:flex-start; gap:10px;\"> 
-        <img src=\"${logoUrl}\" onerror=\"this.onerror=null;this.src='${logoFallbackUrl}'\" alt=\"LifeContext\" width=\"32\" height=\"32\" style=\"flex-shrink:0;border-radius:8px;object-fit:cover;\"/>
-        <div style=\"background:transparent;color:${aiColor};max-width:560px;padding:2px 0;font-size:15px;line-height:1.7;white-space:pre-wrap;\">您好！欢迎使用LifeContext，我是您的专属助手，有什么可以帮助您的吗？
-          <div style=\"font-size:11px;opacity:.6;margin-top:4px;\">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div style="display:flex; align-items:flex-start; gap:10px;"> 
+        <img src="${logoUrl}" onerror="this.onerror=null;this.src='${logoFallbackUrl}'" alt="LifeContext" width="32" height="32" style="flex-shrink:0;border-radius:8px;object-fit:cover;"/>
+        <div class="lc-msg-ai" style="background:transparent;color:${aiColor};max-width:560px;padding:2px 0;font-size:15px;line-height:1.7;white-space:pre-wrap;">您好！欢迎使用LifeContext，我是您的专属助手，有什么可以帮助您的吗？
+          <div style="font-size:11px;opacity:.6;margin-top:4px;">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       </div>
     `;
@@ -249,6 +251,19 @@
     let currentWorkflowId = '';
     let sessionId = `session_${Date.now()}`;
 
+    // 保证布局与滚动正确的辅助函数
+    function ensureLayout() {
+      try {
+        chatMessages.style.flex = '1 1 auto';
+        chatMessages.style.minHeight = '0';
+        chatMessages.style.overflowY = 'auto';
+        // 延迟到下一帧滚动到最新
+        requestAnimationFrame(() => {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+      } catch (_) {}
+    }
+
     // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');
@@ -307,6 +322,7 @@
           white-space: pre-wrap;
         `;
         textBlock.textContent = text;
+        textBlock.classList.add('lc-msg-ai'); // Add class for styling
         messageContainer.appendChild(textBlock);
       }
 
@@ -377,7 +393,26 @@
                 context: (function(){
                   const base = { session_id: sessionId, user_preferences: {} };
                   if (usePageContext) {
-                    base.page = { url: location.href, title: document.title || '' };
+                    // 实时获取当前页面内容
+                    let pageContent = '';
+                    try {
+                      // 获取页面可见文本内容（去除脚本和样式）
+                      const bodyClone = document.body.cloneNode(true);
+                      // 移除脚本和样式元素
+                      const scripts = bodyClone.querySelectorAll('script, style, noscript');
+                      scripts.forEach(el => el.remove());
+                      // 获取纯文本
+                      pageContent = bodyClone.innerText || bodyClone.textContent || '';
+                    } catch (e) {
+                      console.warn('Failed to extract page content:', e);
+                      pageContent = '';
+                    }
+                    
+                    base.page = { 
+                      url: location.href, 
+                      title: document.title || '',
+                      content: pageContent  // 添加实时页面内容
+                    };
                   }
                   return base;
                 })(),
@@ -469,6 +504,7 @@
         // 展示页面上下文 pill
         usePageContext = true;
         updateContextPill();
+        ensureLayout();
       } else {
         // 关闭聊天框时显示悬浮球
         ballElement.style.display = 'flex';
@@ -507,6 +543,7 @@
           </svg>
         `;
         toggleBtn.title = '收缩';
+        ensureLayout();
       } else {
         // 收缩状态 - 小窗口
         // 恢复自动高度
@@ -527,6 +564,7 @@
           </svg>
         `;
         toggleBtn.title = '展开';
+        ensureLayout();
       }
     }
 
@@ -700,6 +738,7 @@
     const mq = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)')) || null;
     function applyTheme(isDark) {
       try {
+        __lc_is_dark__ = isDark;
         if (isDark) {
           chatBox.style.background = '#1e293b';
           chatHeader.style.borderBottom = '1px solid rgba(71, 85, 105, 0.5)';
@@ -712,7 +751,13 @@
           contextPill.style.border = '1px solid rgba(71,85,105,0.5)';
           contextPill.style.color = '#e2e8f0';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#94a3b8;opacity:.8}`;
+          themeSheet.textContent = `
+            #chat-input::placeholder{color:#94a3b8;opacity:.8}
+            #chat-messages::-webkit-scrollbar{width:10px;height:10px}
+            #chat-messages::-webkit-scrollbar-thumb{background: rgba(148,163,184,0.5); border-radius:6px}
+            #chat-messages::-webkit-scrollbar-thumb:hover{background: rgba(148,163,184,0.7)}
+            #chat-messages::-webkit-scrollbar-track{background: rgba(15,23,42,0.6)}
+          `;
         } else {
           chatBox.style.background = '#f8fafc';
           chatHeader.style.borderBottom = '1px solid #e2e8f0';
@@ -725,8 +770,19 @@
           contextPill.style.border = '1px solid #cbd5e1';
           contextPill.style.color = '#0f172a';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#64748b;opacity:.9}`;
+          themeSheet.textContent = `
+            #chat-input::placeholder{color:#64748b;opacity:.9}
+            #chat-messages::-webkit-scrollbar{width:10px;height:10px}
+            #chat-messages::-webkit-scrollbar-thumb{background: rgba(100,116,139,0.35); border-radius:6px}
+            #chat-messages::-webkit-scrollbar-thumb:hover{background: rgba(100,116,139,0.55)}
+            #chat-messages::-webkit-scrollbar-track{background: rgba(226,232,240,0.8)}
+          `;
         }
+        // 更新已渲染的 AI 文本颜色
+        const aiNodes = chatBox.querySelectorAll('.lc-msg-ai');
+        aiNodes.forEach(n => {
+          n.style.color = isDark ? '#e2e8f0' : '#0f172a';
+        });
       } catch (_) {}
     }
     if (mq) {

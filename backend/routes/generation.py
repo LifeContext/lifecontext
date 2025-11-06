@@ -164,6 +164,29 @@ def create_todo():
             }
         )
         
+        # 存储到向量数据库（如果启用）
+        if config.ENABLE_VECTOR_STORAGE and config.EMBEDDING_API_KEY:
+            try:
+                from utils.vectorstore import add_todo_to_vectorstore
+                from utils.llm import generate_embeddings
+                
+                def embedding_function(texts):
+                    embeddings = generate_embeddings(texts)
+                    return embeddings if embeddings else None
+                
+                vector_success = add_todo_to_vectorstore(
+                    todo_id=todo_id,
+                    title=title.strip(),
+                    description=description.strip() if description else "",
+                    priority=priority,
+                    embedding_function=embedding_function
+                )
+                
+                if vector_success:
+                    logger.info(f"Added todo to vectorstore: todo_id={todo_id}")
+            except Exception as e:
+                logger.warning(f"Failed to add todo to vectorstore: {e}, continuing...")
+        
         return convert_resp(
             data={
                 "todo_id": todo_id,

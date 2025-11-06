@@ -11,9 +11,9 @@ from utils.helpers import (
     get_logger,
     estimate_tokens,
     truncate_web_data_by_tokens,
-    calculate_available_context_tokens
+    calculate_available_context_tokens,
+    parse_llm_json_response
 )
-from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_activities, insert_todo, get_todos
 from utils.llm import get_openai_client
 

@@ -11,7 +11,6 @@ from routes.upload import upload_bp
 from routes.generation import generation_bp
 from routes.agent import agent_bp
 from routes.events import events_bp
-from routes.settings import settings_bp
 
 logger = get_logger(__name__)
 
@@ -50,7 +49,6 @@ def create_app():
     app.register_blueprint(generation_bp)
     app.register_blueprint(agent_bp)
     app.register_blueprint(events_bp)
-    app.register_blueprint(settings_bp)
     
     # 健康检查端点
     @app.route('/health', methods=['GET'])
