@@ -269,10 +269,7 @@
         });
       } catch (_) {}
     }
-<<<<<<< HEAD
-=======
 
->>>>>>> bc42060 (chat box bug fixed)
     // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');
@@ -394,6 +391,26 @@
       try {
         const response = await new Promise((resolve, reject) => {
           try {
+            // 提取当前页面内容（如果需要）
+            let pageContent = null;
+            if (usePageContext) {
+              try {
+                // 克隆body以避免修改原始DOM
+                const bodyClone = document.body.cloneNode(true);
+                // 移除script和style标签
+                const scripts = bodyClone.querySelectorAll('script, style, noscript');
+                scripts.forEach(el => el.remove());
+                // 获取文本内容
+                pageContent = bodyClone.innerText || bodyClone.textContent || '';
+                // 限制长度（避免发送过大内容）
+                if (pageContent.length > 50000) {
+                  pageContent = pageContent.substring(0, 50000) + '...';
+                }
+              } catch (e) {
+                console.warn('提取页面内容失败:', e);
+              }
+            }
+            
             chrome.runtime.sendMessage({ 
               type: 'SEND_CHAT_MESSAGE', 
               payload: {
@@ -401,7 +418,11 @@
                 context: (function(){
                   const base = { session_id: sessionId, user_preferences: {} };
                   if (usePageContext) {
-                    base.page = { url: location.href, title: document.title || '' };
+                    base.page = { 
+                      url: location.href, 
+                      title: document.title || '',
+                      content: pageContent || ''  // 添加页面内容
+                    };
                   }
                   return base;
                 })(),
@@ -533,6 +554,7 @@
           </svg>
         `;
         toggleBtn.title = '收缩';
+
         ensureLayout();
         scrollToLatest();
       } else {
