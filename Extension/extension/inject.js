@@ -83,14 +83,18 @@
       padding: 16px;
       border-bottom: 1px solid rgba(71, 85, 105, 0.5);
     `;
+    const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+      ? chrome.runtime.getURL('Logo.png')
+      : '';
+    const logoFallbackUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+      ? chrome.runtime.getURL('icon.png')
+      : '';
     chatHeader.innerHTML = `
       <div style="display: flex; align-items: center; gap: 12px;">
-        <button id="home-btn" style="padding: 8px; border-radius: 50%; color: #94a3b8; background: transparent; border: none; cursor: pointer; transition: background-color 0.2s;" aria-label="Go to Home">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" fill="currentColor"/>
-          </svg>
+        <button id=\"home-btn\" style=\"display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;color:#94a3b8;background:transparent;border:none;cursor:pointer;transition:opacity .2s\" aria-label=\"Open LifeContext Home\"> 
+          <img src=\"${logoUrl}\" alt=\"LifeContext\" width=\"22\" height=\"22\" onerror=\"this.onerror=null;this.src='${logoFallbackUrl}'\" style=\"display:block;border-radius:6px\"/>
+          <span id=\"lc-app-name\" style=\"font-size:16px;font-weight:600;background:linear-gradient(135deg,#3b82f6,#14b8a6);-webkit-background-clip:text;background-clip:text;color:transparent\">LifeContext</span>
         </button>
-        <h2 style="font-size: 18px; font-weight: bold; color: #f1f5f9; margin: 0;">LifeContext</h2>
       </div>
       <div style="display: flex; align-items: center; gap: 8px;">
         <button id="toggle-chat" style="padding: 8px; border-radius: 50%; color: #94a3b8; background: transparent; border: none; cursor: pointer; transition: background-color 0.2s;" aria-label="Expand chat">
@@ -105,6 +109,10 @@
         </button>
       </div>
     `;
+
+    // 主题状态（供其他函数读取）
+    let __lc_is_dark__ = true;
+    function isDarkMode() { return __lc_is_dark__; }
 
     // 页面上下文展示 Pill（默认隐藏，打开聊天时显示）
     const contextPill = document.createElement('div');
@@ -148,7 +156,8 @@
     const chatMessages = document.createElement('div');
     chatMessages.id = 'chat-messages';
     chatMessages.style.cssText = `
-      flex: 1;
+      flex: 1 1 auto;
+      min-height: 0; /* 允许在flex容器内正确计算高度以滚动 */
       padding: 16px;
       overflow-y: auto;
       display: flex;
@@ -162,27 +171,12 @@
       display: flex;
       justify-content: flex-start;
     `;
-    const isDarkMode = () => {
-      try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (_) { return true; }
-    };
-    const wmBg = isDarkMode() ? '#1e293b' : '#e2e8f0';
-    const wmColor = isDarkMode() ? 'white' : '#0f172a';
+    const aiColor = isDarkMode() ? '#e2e8f0' : '#0f172a';
     welcomeMessage.innerHTML = `
-      <div style="
-        background: ${wmBg};
-        color: ${wmColor};
-        padding: 12px 16px;
-        border-radius: 18px;
-        max-width: 80%;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
-        display: flex;
-        align-items: flex-start;
-        gap: 12px;
-      ">
-        
-        <div>
-          <div style="font-size: 14px; line-height: 1.5;">您好！欢迎使用LifeContext，我是您的专属助手，有什么可以帮助您的吗？</div>
-          <div style="font-size: 11px; opacity: 0.7; margin-top: 4px;">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
+      <div style="display:flex; align-items:flex-start; gap:10px;"> 
+        <img src="${logoUrl}" onerror="this.onerror=null;this.src='${logoFallbackUrl}'" alt="LifeContext" width="32" height="32" style="flex-shrink:0;border-radius:8px;object-fit:cover;"/>
+        <div class="lc-msg-ai" style="background:transparent;color:${aiColor};max-width:560px;padding:2px 0;font-size:15px;line-height:1.7;white-space:pre-wrap;">您好！欢迎使用LifeContext，我是您的专属助手，有什么可以帮助您的吗？
+          <div style="font-size:11px;opacity:.6;margin-top:4px;">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
         </div>
       </div>
     `;
@@ -257,7 +251,20 @@
     let currentWorkflowId = '';
     let sessionId = `session_${Date.now()}`;
 
-    // 添加消息函数
+    // 保证布局与滚动正确的辅助函数
+    function ensureLayout() {
+      try {
+        chatMessages.style.flex = '1 1 auto';
+        chatMessages.style.minHeight = '0';
+        chatMessages.style.overflowY = 'auto';
+        // 延迟到下一帧滚动到最新
+        requestAnimationFrame(() => {
+          chatMessages.scrollTop = chatMessages.scrollHeight;
+        });
+      } catch (_) {}
+    }
+
+    // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');
       messageContainer.style.cssText = `
@@ -267,36 +274,58 @@
         ${sender === 'user' ? 'justify-content: flex-end;' : ''}
       `;
 
+      const darkNow = isDarkMode();
+
       if (sender !== 'user') {
-        const avatar = document.createElement('div');
+        const avatar = document.createElement('img');
+        avatar.src = logoUrl;
+        avatar.onerror = function(){ this.onerror=null; this.src = logoFallbackUrl; };
+        avatar.alt = 'LifeContext';
         avatar.style.cssText = `
           flex-shrink: 0;
           width: 32px;
           height: 32px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, #3b82f6 0%, #14b8a6 100%);
+          border-radius: 8px;
+          object-fit: cover;
+          margin-top: 2px;
+          background: transparent;
         `;
         messageContainer.appendChild(avatar);
       }
 
-      const darkNow = isDarkMode();
-      const bubbleBg = sender === 'user' ? '#2563eb' : (darkNow ? '#334155' : '#e2e8f0');
-      const bubbleFg = sender === 'user' ? 'white' : (darkNow ? '#e2e8f0' : '#0f172a');
-      const messageBubble = document.createElement('div');
-      messageBubble.style.cssText = `
-        max-width: 320px;
-        padding: 12px;
-        border-radius: 16px;
-        background: ${bubbleBg};
-        color: ${bubbleFg};
-        font-size: 14px;
-        line-height: 1.4;
-        word-wrap: break-word;
-        ${sender === 'user' ? 'border-bottom-right-radius: 0;' : 'border-bottom-left-radius: 0;'}
-      `;
+      if (sender === 'user') {
+        const bubble = document.createElement('div');
+        bubble.style.cssText = `
+          max-width: 420px;
+          padding: 12px;
+          border-radius: 16px;
+          background: #2563eb;
+          color: white;
+          font-size: 14px;
+          line-height: 1.5;
+          word-wrap: break-word;
+          border-bottom-right-radius: 0;
+        `;
+        bubble.textContent = text;
+        messageContainer.appendChild(bubble);
+      } else {
+        // AI 文本：不使用气泡，只显示纯文本块（ChatGPT 风格）
+        const textBlock = document.createElement('div');
+        textBlock.style.cssText = `
+          max-width: 560px;
+          padding: 2px 0;
+          background: transparent;
+          color: ${darkNow ? '#e2e8f0' : '#0f172a'};
+          font-size: 15px;
+          line-height: 1.7;
+          word-wrap: break-word;
+          white-space: pre-wrap;
+        `;
+        textBlock.textContent = text;
+        textBlock.classList.add('lc-msg-ai'); // Add class for styling
+        messageContainer.appendChild(textBlock);
+      }
 
-      messageBubble.textContent = text;
-      messageContainer.appendChild(messageBubble);
       chatMessages.appendChild(messageContainer);
       chatMessages.scrollTop = chatMessages.scrollHeight;
     }
@@ -475,6 +504,7 @@
         // 展示页面上下文 pill
         usePageContext = true;
         updateContextPill();
+        ensureLayout();
       } else {
         // 关闭聊天框时显示悬浮球
         ballElement.style.display = 'flex';
@@ -513,6 +543,7 @@
           </svg>
         `;
         toggleBtn.title = '收缩';
+        ensureLayout();
       } else {
         // 收缩状态 - 小窗口
         // 恢复自动高度
@@ -533,6 +564,7 @@
           </svg>
         `;
         toggleBtn.title = '展开';
+        ensureLayout();
       }
     }
 
@@ -543,10 +575,21 @@
     });
 
     // 主页面按钮事件
-    chatHeader.querySelector('#home-btn').addEventListener('click', () => {
-      // 跳转到主网页
-      window.open('http://192.168.22.24:3000/', '_blank');
-    });
+    // 根据扩展配置打开主页
+    async function openHome() {
+      try {
+        const defaults = { FRONTEND_HOST: 'localhost', FRONTEND_PORT: '3000' };
+        const cfg = await new Promise((resolve) => {
+          try { chrome.storage.sync.get(defaults, (res) => resolve(res || defaults)); }
+          catch(_) { resolve(defaults); }
+        });
+        const url = `http://${cfg.FRONTEND_HOST}:${cfg.FRONTEND_PORT}/`;
+        window.open(url, '_blank');
+      } catch (_) {
+        window.open('http://localhost:3000/', '_blank');
+      }
+    }
+    chatHeader.querySelector('#home-btn').addEventListener('click', openHome);
 
     // 关闭按钮事件
     chatHeader.querySelector('#close-chat').addEventListener('click', () => {
@@ -695,6 +738,7 @@
     const mq = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)')) || null;
     function applyTheme(isDark) {
       try {
+        __lc_is_dark__ = isDark;
         if (isDark) {
           chatBox.style.background = '#1e293b';
           chatHeader.style.borderBottom = '1px solid rgba(71, 85, 105, 0.5)';
@@ -707,7 +751,13 @@
           contextPill.style.border = '1px solid rgba(71,85,105,0.5)';
           contextPill.style.color = '#e2e8f0';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#94a3b8;opacity:.8}`;
+          themeSheet.textContent = `
+            #chat-input::placeholder{color:#94a3b8;opacity:.8}
+            #chat-messages::-webkit-scrollbar{width:10px;height:10px}
+            #chat-messages::-webkit-scrollbar-thumb{background: rgba(148,163,184,0.5); border-radius:6px}
+            #chat-messages::-webkit-scrollbar-thumb:hover{background: rgba(148,163,184,0.7)}
+            #chat-messages::-webkit-scrollbar-track{background: rgba(15,23,42,0.6)}
+          `;
         } else {
           chatBox.style.background = '#f8fafc';
           chatHeader.style.borderBottom = '1px solid #e2e8f0';
@@ -720,8 +770,19 @@
           contextPill.style.border = '1px solid #cbd5e1';
           contextPill.style.color = '#0f172a';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#64748b;opacity:.9}`;
+          themeSheet.textContent = `
+            #chat-input::placeholder{color:#64748b;opacity:.9}
+            #chat-messages::-webkit-scrollbar{width:10px;height:10px}
+            #chat-messages::-webkit-scrollbar-thumb{background: rgba(100,116,139,0.35); border-radius:6px}
+            #chat-messages::-webkit-scrollbar-thumb:hover{background: rgba(100,116,139,0.55)}
+            #chat-messages::-webkit-scrollbar-track{background: rgba(226,232,240,0.8)}
+          `;
         }
+        // 更新已渲染的 AI 文本颜色
+        const aiNodes = chatBox.querySelectorAll('.lc-msg-ai');
+        aiNodes.forEach(n => {
+          n.style.color = isDark ? '#e2e8f0' : '#0f172a';
+        });
       } catch (_) {}
     }
     if (mq) {
