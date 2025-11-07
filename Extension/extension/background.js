@@ -8,6 +8,53 @@ async function getApiUrl() {
     return `http://${config.API_HOST}:${config.API_PORT}/api`;
 }
 
+// ================= Prompt Language sync =================
+const PROMPT_LANG_ALARM = 'sendPromptLanguage';
+
+function getBrowserPromptLanguage() {
+  try {
+    const lang = (chrome && chrome.i18n && typeof chrome.i18n.getUILanguage === 'function')
+      ? chrome.i18n.getUILanguage()
+      : (navigator.language || 'en');
+    return (lang || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  } catch (_) {
+    return 'en';
+  }
+}
+
+async function trySendPromptLanguage() {
+  try {
+    const flags = await new Promise((resolve) => {
+      chrome.storage.sync.get({ promptLanguageSent: false }, (res) => resolve(res));
+    });
+    if (flags.promptLanguageSent) return true;
+    const apiUrl = await getApiUrl();
+    const payload = { prompt_language: getBrowserPromptLanguage() };
+    const resp = await fetch(`${apiUrl}/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (resp && resp.ok) {
+      await new Promise((resolve) => chrome.storage.sync.set({ promptLanguageSent: true }, resolve));
+      chrome.alarms.clear(PROMPT_LANG_ALARM);
+      return true;
+    }
+  } catch (_) {}
+  return false;
+}
+
+function ensurePromptLanguageAlarm() {
+  chrome.storage.sync.get({ promptLanguageSent: false }, (res) => {
+    if (!res.promptLanguageSent) {
+      // 立即尝试一次
+      trySendPromptLanguage();
+      // 1 分钟重试一次
+      chrome.alarms.create(PROMPT_LANG_ALARM, { delayInMinutes: 0.1, periodInMinutes: 1 });
+    }
+  });
+}
+
 // 打开前端主页并确保窗口被唤起
 async function openFrontendPage() {
   try {
@@ -151,13 +198,23 @@ chrome.runtime.onInstalled.addListener(() => {
     delayInMinutes: 0.5, // 30秒后开始
     periodInMinutes: 0.5 // 每30秒执行一次
   });
+
+  // 安装后同步 prompt_language（重试直到成功）
+  ensurePromptLanguageAlarm();
 });
 
 // 监听定时器事件
 chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === 'checkEvents') {
     checkEventsAndNotify();
+  } else if (alarm.name === PROMPT_LANG_ALARM) {
+    trySendPromptLanguage();
   }
+});
+
+// 浏览器启动时也确保重试存在
+chrome.runtime.onStartup.addListener(() => {
+  ensurePromptLanguageAlarm();
 });
 
 // 获取事件数据并显示通知

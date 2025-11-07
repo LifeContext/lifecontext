@@ -19,14 +19,14 @@ except ImportError:
 # ============================================================================
 
 # LLM API 配置（用于内容分析和智能对话）
-LLM_API_KEY = os.getenv("LLM_API_KEY", "")
-LLM_BASE_URL = os.getenv("LLM_BASE_URL")
-LLM_MODEL = os.getenv("LLM_MODEL")
+LLM_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
+LLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+LLM_MODEL = "doubao-seed-1-6-flash-250828"
 
 # 向量化 Embedding API 配置（用于向量数据库）
-EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
-EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL")
-EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
+EMBEDDING_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
+EMBEDDING_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
+EMBEDDING_MODEL = "doubao-embedding-large-text-250515"
 
 # ============================================================================
 # 📁 基础路径配置
@@ -69,7 +69,6 @@ ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'bmp', 'webp'}
 LLM_TEMPERATURE = 0.7
 LLM_MAX_TOKENS = 4096  # LLM 输出的最大 token 数
 LLM_MAX_INPUT_TOKENS = 8192  # LLM 输入的最大 token 数（包括 system prompt + user prompt）
-PROMPT_LANGUAGE = os.getenv("PROMPT_LANGUAGE", "en")
 
 # 各类提示词的预估 token 数（用于动态计算）
 # 这些数值是根据实际 prompt 长度估算的
@@ -141,8 +140,6 @@ if ENABLE_LLM_PROCESSING:
 else:
     print("❌ LLM 内容分析功能：未启用")
     print("   请在本地环境变量中配置 LLM_API_KEY")
-
-print(f"🌐 提示词语言：{PROMPT_LANGUAGE}")
 
 if ENABLE_VECTOR_STORAGE:
     print("✅ 向量数据库功能：已启用")
