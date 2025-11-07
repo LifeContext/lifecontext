@@ -84,11 +84,9 @@
       border-bottom: 1px solid rgba(71, 85, 105, 0.5);
     `;
     const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
-      ? chrome.runtime.getURL('Logo.png')
+      ? chrome.runtime.getURL('logo.png')
       : '';
-    const logoFallbackUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
-      ? chrome.runtime.getURL('icon.png')
-      : '';
+    const logoFallbackUrl = logoUrl;
     chatHeader.innerHTML = `
       <div style="display: flex; align-items: center; gap: 12px;">
         <button id=\"home-btn\" style=\"display:flex;align-items:center;gap:10px;padding:8px;border-radius:8px;color:#94a3b8;background:transparent;border:none;cursor:pointer;transition:opacity .2s\" aria-label=\"Open LifeContext Home\"> 
@@ -269,10 +267,6 @@
         });
       } catch (_) {}
     }
-<<<<<<< HEAD
-
-=======
->>>>>>> e4e4e1d (notification bug fixed)
     // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');

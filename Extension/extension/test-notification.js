@@ -11,7 +11,7 @@ chrome.notifications.getPermissionLevel((level) => {
     // 创建简单测试通知
     chrome.notifications.create('test_simple', {
       type: 'basic',
-      iconUrl: 'icon.png',
+      iconUrl: 'logo.png',
       title: '🔔 通知测试',
       message: '如果您看到这个通知，说明通知功能正常工作！'
     }, (notificationId) => {
