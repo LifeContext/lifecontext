@@ -245,7 +245,7 @@ async function showEventNotification(event) {
     const items = tipTitles.slice(0, 5).map((t, idx) => ({ title: `${idx + 1}.`, message: t }));
     notificationOptions = {
       type: 'list',
-      iconUrl: 'icon.png',
+      iconUrl: 'logo.png',
       title: title,
       message: t.listMessage(tipsCount),
       items: items,
@@ -263,7 +263,7 @@ async function showEventNotification(event) {
     }
     notificationOptions = {
       type: 'basic',
-      iconUrl: 'icon.png',
+      iconUrl: 'logo.png',
       title: title,
       message: message,
       contextMessage: `LifeContext | ${event.type} | ${new Date(event.datetime || Date.now()).toLocaleString(t.dateLocale)}`,
@@ -288,7 +288,7 @@ async function showEventNotification(event) {
     try {
       await chrome.notifications.create(`simple_${Date.now()}`, {
         type: 'basic',
-        iconUrl: 'icon.png',
+        iconUrl: 'logo.png',
 
         title: t.simpleTestTitle,
         message: t.simpleTestMessage,
@@ -346,9 +346,9 @@ chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) =
         if (!pluginOn || !notifOn) return;
         const locale = getLocale();
         const t = I18N[locale] || I18N.en;
-        chrome.notifications.create(`reminder_${Date.now()}`, {
+          chrome.notifications.create(`reminder_${Date.now()}`, {
           type: 'basic',
-          iconUrl: 'icon.png',
+            iconUrl: 'logo.png',
 
           title: t.reminderTitle,
           message: t.reminderMessage,
