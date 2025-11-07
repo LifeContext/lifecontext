@@ -58,6 +58,11 @@ const messages: Messages = {
       closeTitle: 'Collapse chat history',
       messageCount: '{count} messages',
     },
+    languageSwitcher: {
+      label: 'Language',
+      english: 'English',
+      chineseSimplified: '简体中文',
+    },
     todo: {
       title: 'Todo',
       loading: 'Loading tasks...',
@@ -210,6 +215,11 @@ const messages: Messages = {
       empty: '暂无聊天历史',
       closeTitle: '折叠聊天历史',
       messageCount: '{count} 条消息',
+    },
+    languageSwitcher: {
+      label: '语言',
+      english: '英语',
+      chineseSimplified: '简体中文',
     },
     todo: {
       title: '任务清单',
@@ -417,3 +427,6 @@ export const useI18n = (): I18nContext => {
 
 export const getCurrentLocale = (): Locale => currentLocale.value;
 export const setAppLocale = setLocale;
+export const initializeLocaleFromBrowser = (): void => {
+  setLocale(detectBrowserLocale());
+};
