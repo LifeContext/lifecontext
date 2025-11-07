@@ -269,7 +269,10 @@
         });
       } catch (_) {}
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> e4e4e1d (notification bug fixed)
     // 添加消息函数（用户=气泡，AI=无边框文本）
     function addMessage(text, sender, timestamp = null) {
       const messageContainer = document.createElement('div');

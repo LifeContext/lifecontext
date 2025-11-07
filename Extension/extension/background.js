@@ -8,6 +8,43 @@ async function getApiUrl() {
     return `http://${config.API_HOST}:${config.API_PORT}/api`;
 }
 
+// 打开前端主页并确保窗口被唤起
+async function openFrontendPage() {
+  try {
+    const cfg = await getConfig();
+    const frontendUrl = `http://${cfg.FRONTEND_HOST}:${cfg.FRONTEND_PORT}/`;
+
+    // 查询现有窗口
+    chrome.windows.getAll({ populate: false }, (wins) => {
+      const hasWindow = Array.isArray(wins) && wins.length > 0;
+      if (!hasWindow) {
+        // 没有任何窗口时创建新窗口
+        chrome.windows.create({ url: frontendUrl, focused: true, state: 'maximized' });
+        return;
+      }
+
+      // 使用最近聚焦的窗口
+      chrome.windows.getLastFocused((last) => {
+        const targetWindowId = last && last.id ? last.id : wins[0].id;
+        try {
+          chrome.tabs.create({ windowId: targetWindowId, url: frontendUrl, active: true }, () => {
+            // 唤起并聚焦窗口
+            chrome.windows.update(targetWindowId, { focused: true, state: 'normal' });
+          });
+        } catch (_) {
+          // 回退：直接创建新窗口
+          chrome.windows.create({ url: frontendUrl, focused: true, state: 'normal' });
+        }
+      });
+    });
+  } catch (e) {
+    // 兜底：使用默认地址
+    try {
+      chrome.windows.create({ url: 'http://localhost:3000/', focused: true, state: 'normal' });
+    } catch (_) {}
+  }
+}
+
 // 主总开关（Controls）- 使用 crawlEnabled 作为插件全局开关
 async function isPluginEnabled() {
   try {
@@ -272,8 +309,14 @@ chrome.notifications.onClicked.addListener((notificationId) => {
   // 关闭通知
   chrome.notifications.clear(notificationId);
   
-  // 可以在这里添加更多处理逻辑，比如打开特定页面
-  // chrome.tabs.create({ url: 'https://example.com' });
+  // 默认点击也跳转到主页并唤起浏览器
+  (async () => {
+    try {
+      await openFrontendPage();
+    } catch (e) {
+      console.error('处理通知点击跳转失败:', e);
+    }
+  })();
 });
 
 // 处理通知按钮点击事件
@@ -281,18 +324,13 @@ chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) =
   console.log('通知按钮被点击:', notificationId, '按钮索引:', buttonIndex);
   
   if (buttonIndex === 0) {
-
-    // 查看详情 - 跳转到主页面
+    // 查看详情 - 跳转到主页面并确保浏览器被唤起
     console.log('用户选择查看详情，跳转到主页面');
     (async () => {
       try {
-        const config = await getConfig();
-        const frontendUrl = `http://${config.FRONTEND_HOST}:${config.FRONTEND_PORT}/`;
-        chrome.tabs.create({ url: frontendUrl });
+        await openFrontendPage();
       } catch (error) {
         console.error('跳转到主页面失败:', error);
-        // 使用默认配置作为备选
-        chrome.tabs.create({ url: 'http://localhost:3000/' });
       }
     })();
   } else if (buttonIndex === 1) {
