@@ -5,6 +5,7 @@
 
 from flask import Blueprint, jsonify, request
 from utils.db import get_setting, set_setting, get_all_settings
+import config
 from utils.helpers import get_logger
 
 logger = get_logger(__name__)
@@ -23,7 +24,8 @@ def get_settings():
             'tips_interval_minutes': int(settings.get('tips_interval_minutes', {}).get('value', '60')),
             'todo_interval_minutes': int(settings.get('todo_interval_minutes', {}).get('value', '30')),
             'daily_report_hour': int(settings.get('daily_report_hour', {}).get('value', '8')),
-            'daily_report_minute': int(settings.get('daily_report_minute', {}).get('value', '0'))
+            'daily_report_minute': int(settings.get('daily_report_minute', {}).get('value', '0')),
+            'prompt_language': settings.get('prompt_language', {}).get('value', config.PROMPT_LANGUAGE)
         }
         
         return jsonify(result)
@@ -81,6 +83,20 @@ def update_settings():
                     'error': 'daily_report_minute 必须是0-59之间的整数'
                 }), 400
             set_setting('daily_report_minute', str(minute), 'Daily Report生成时间（分钟，0-59）')
+
+        # 验证并更新 prompt_language
+        if 'prompt_language' in data:
+            language = data['prompt_language']
+            if not isinstance(language, str):
+                return jsonify({
+                    'error': 'prompt_language 必须是字符串'
+                }), 400
+            normalized = language.lower()
+            if normalized not in {'zh', 'en'}:
+                return jsonify({
+                    'error': 'prompt_language 只支持 zh 或 en'
+                }), 400
+            set_setting('prompt_language', normalized, '提示词语言 (zh/en)')
         
         # 更新调度器（延迟导入避免循环依赖）
         try:
@@ -95,7 +111,8 @@ def update_settings():
             'tips_interval_minutes': int(settings.get('tips_interval_minutes', {}).get('value', '60')),
             'todo_interval_minutes': int(settings.get('todo_interval_minutes', {}).get('value', '30')),
             'daily_report_hour': int(settings.get('daily_report_hour', {}).get('value', '8')),
-            'daily_report_minute': int(settings.get('daily_report_minute', {}).get('value', '0'))
+            'daily_report_minute': int(settings.get('daily_report_minute', {}).get('value', '0')),
+            'prompt_language': settings.get('prompt_language', {}).get('value', config.PROMPT_LANGUAGE)
         }
         
         return jsonify(result)

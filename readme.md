@@ -7,9 +7,10 @@
 
 ## 🌍 What is Life Context
 
-* Transforms what you **see, hear, and do** into AI-readable context — enabling AI to truly understand you and act proactively.
-* A **Life Search Engine** that knows your complete history. It connects the dots of your past and can instantly retrieve info from any single moment.
-* Provides **open-source implementations** and standardized context APIs.
+Shaped by your life. Empower yourself. Interact with the world.
+* Born from your unique life context, shaping a digital twin that truly understands you.
+* Delivers life-scale long-term retrieval, low-cost multimodal storage, precise context alignment, and efficient real-time compression as the core of Context Memory.
+* Reimagines how you connect, opening endless possibilities for interaction, connection, and creation with the world.
 
 ## 🎯 Core Features
 
