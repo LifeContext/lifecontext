@@ -6,6 +6,8 @@
 import json
 from datetime import datetime
 from typing import Dict, Any, List, Optional
+from string import Template
+import asyncio
 import config
 from utils.helpers import (
     get_logger,
@@ -13,10 +15,17 @@ from utils.helpers import (
     truncate_web_data_by_tokens,
     calculate_available_context_tokens
 )
-from utils.db import get_web_data, get_tips, get_todos, insert_report
+from utils.json_utils import parse_llm_json_response
+from utils.db import get_web_data, get_reports, insert_report
 from utils.llm import get_openai_client
+from utils.vectorstore import search_similar_content
+from utils.prompt_config import get_prompt_set
 
 logger = get_logger(__name__)
+
+_llm = None
+
+PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 # 全局LLM客户端
 _client_cache = None
@@ -283,100 +292,22 @@ async def _ask_llm_for_report(data_dict: Dict[str, Any], start_ts: int, end_ts: 
         }
         
         data_json = json.dumps(report_data, ensure_ascii=False, indent=2)
-        
-        sys_msg = """你是一位顶级的个人智能分析师与首席策略师 (Principal Personal Intelligence Analyst & Chief Strategist)。你擅长融合多源数据，提炼核心洞察，并以清晰、客观的结构化报告形式呈现。
-
-## 任务目标 (Task Goal)
-
-你的核心目标是整合用户在特定时间段内的所有活动数据、智能提醒和待办事项，生成一份精准、深刻、价值导向的洞察报告。这份报告不仅要总结用户的活动，更要提炼出关键成就、学习成长，并为用户接下来的行动提供具体建议。
-
-## 输入数据说明 (Input Data Description)
-
-你将收到一个名为`context_data`的单一JSON对象，它包含以下三个关键字段：
-
-1. **`activities`**: 一个JSON数组，记录了用户一段时间内的活动记录。
-2. **`tips`**: 一个JSON数组，包含已生成的信息洞察。
-3. **`todos`**: 一个JSON数组，包含用户已有的、所有未完成的待办事项列表。
-
-## 执行步骤 (Execution Steps)
-
-你必须严格遵循以下八个步骤，以中立、客观的视角撰写报告：
-
-1. **数据全局理解**: 首先，通读所有三个输入数据源，对用户在此期间的活动焦点、知识缺口和任务压力形成一个整体印象。
-2. **撰写「概览」**: 结合`web_analysis_reports`的主题和`generated_tips`的关键洞察，用2-3句话高度概括该用户的核心焦点与节奏。
-3. **推断「核心成就」**: **这是最具挑战性的一步。** 严格只分析`web_analysis_reports`，从中寻找问题被解决、项目被推进、知识被应用的**证据**，并将其提炼为具体的成就。严禁使用`task_list`中的已完成项来杜撰成就。
-4. **整合「学习与成长」**: 融合`web_analysis_reports`中体现的学习探索行为（例如，浏览教程、文档）和`generated_tips`中提供的启发性知识，总结出具体的新知识或技能收获。
-5. **构建「待办与计划」**: 整合两个来源：`task_list`中所有**未完成**的任务，以及从`web_analysis_reports`中新发现的、明确提及的未来计划。
-6. **生成「优化建议」**: 基于对**所有数据**的整体分析，识别出模式、挑战或机会，提出1-2条原创的、可执行的优化建议。
-7. **罗列「详细足迹」**: 按时间顺序，简单、客观地罗列`web_analysis_reports`中的关键活动记录。
-8. **最终组装**: 将以上所有部分，严格按照`## 输出要求`中定义的Markdown格式和**中立的第三人称视角**，组装成最终报告。
-
-## 输出要求 (Output Requirements)
-
-你必须严格遵循以下Markdown结构输出报告。叙述方式应保持**客观、中立，避免使用第一人称代词（如“我”）**。
-
-### Markdown报告结构:
-
-```markdown
-# 用户洞察报告：{YYYY-MM-DD}
-
-## 概览 (Overview)
-* *用2-3句话，结合用户的主要活动和收到的关键提醒(tips)，高度概括这段时间的核心焦点与节奏。*
-
-## 核心成就 (Key Achievements)
-* *任务是**从 `web_analysis_reports` 的活动描述中主动识别并提炼出**重要的成果、完成的阶段性工作或解决的关键问题。例如："完成了XX项目原型设计"、"解决了一个困扰已久的Bug"、"输出了一份深度的市场分析报告"等。*
-* **[成就1]**: 完成了...（描述一项从上下文中分析出的关键成果）
-* **[成就2]**: 解决了...
-
-## 学习与成长 (Learning & Growth)
-* *整合 `web_analysis_reports` 中的学习探索行为和 `tips` 中获得的启发性知识。*
-* **[新知识/技能1]**: 学习了...（记录通过研究、实践或提醒获得的新知识点或技能）
-* **[新知识/技能2]**: 掌握了...
-
-## 待办与计划 (Action Items & Plans)
-* *综合以下两个来源，生成待办列表：1. `task_list` 中所有未完成的任务。2. `web_analysis_reports` 中明确提及的未来计划或下一步行动。*
-* **[任务1]**: 计划...（清晰列出识别出的、计划在未来进行的任务）
-* **[任务2]**: 需要...
-
-## 优化建议 (Suggestions for Improvement)
-* *基于对当天所有活动的整体分析，提出1-2条具体、可行的建议，旨在提高效率、规避风险或开拓思路。*
-* **[建议1]**: 例如：“鉴于在调试XX上花费了较多时间，未来可以考虑引入自动化测试框架来提高效率。”
-
-## 详细足迹 (Detailed Timeline)
-* *按时间顺序，仅整合 `web_analysis_reports` 中的具体活动记录。*
-* **[HH:MM]**: 浏览了...（描述一项具体的活动，附上关键细节）
-* **[HH:MM]**: 研究了...
-```
-
-"""
+         
+        sys_msg = PROMPTS["report"]["main_system"]
         
         # 准备数据集JSON
         web_data_json = json.dumps(report_data.get('web_data', []), ensure_ascii=False, indent=2)
         tips_json = json.dumps(report_data.get('tips', []), ensure_ascii=False, indent=2)
         todos_json = json.dumps(report_data.get('todos', []), ensure_ascii=False, indent=2)
         
-        user_msg = f"""作为个人智能分析师与首席策略师，请严格按照你的角色、目标和要求，整合分析以下数据集，并生成一份中立、客观的用户洞察报告。
-
-**报告时间范围**: {dt_start.strftime('%Y-%m-%d %H:%M:%S')} 至 {dt_end.strftime('%Y-%m-%d %H:%M:%S')}
-
-**数据集 (DATASET):**
-
-- **网页分析报告集合 (web_analysis_reports)**:
-```json
-{web_data_json}
-```
-
-- **生成的智能提醒 (generated_tips)**:
-```json
-{tips_json}
-```
-
-- **待办事项列表 (task_list)**:
-```json
-{todos_json}
-```
-
-请开始生成报告。"""
+        user_template = Template(PROMPTS["report"]["main_user_template"])
+        user_msg = user_template.safe_substitute(
+            start_time=dt_start.strftime('%Y-%m-%d %H:%M:%S'),
+            end_time=dt_end.strftime('%Y-%m-%d %H:%M:%S'),
+            web_data_json=web_data_json,
+            tips_json=tips_json,
+            todos_json=todos_json
+        )
         
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
@@ -408,26 +339,14 @@ async def _make_segment_summary(data_list: List[Dict], start_ts: int, end_ts: in
         dt_start = datetime.fromtimestamp(start_ts)
         dt_end = datetime.fromtimestamp(end_ts)
         
-        system_msg = """你是一位专业的活动分析师，擅长从数据中提炼关键信息。
+        system_msg = PROMPTS["report"]["segment_system"]
 
-你的任务是为一个时段的用户活动生成简洁的摘要（不超过100字）。
-
-**输出要求**:
-- 使用客观、中立的第三人称视角
-- 提炼核心活动和成果，而非简单罗列
-- 突出重点和关键进展
-- 保持简洁明了"""
-        
-        user_msg = f"""请为以下时段生成活动摘要。
-
-**时段**: {dt_start.strftime('%H:%M')} - {dt_end.strftime('%H:%M')}
-
-**网页活动数据 (web_data)**:
-```json
-{data_json}
-```
-
-请生成摘要。"""
+        user_template = Template(PROMPTS["report"]["segment_user_template"])
+        user_msg = user_template.safe_substitute(
+            start_time=dt_start.strftime('%H:%M'),
+            end_time=dt_end.strftime('%H:%M'),
+            data_json=data_json
+        )
         
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
@@ -462,58 +381,14 @@ async def _combine_summaries(summaries: List[Dict], start_ts: int, end_ts: int) 
         dt_start = datetime.fromtimestamp(start_ts)
         dt_end = datetime.fromtimestamp(end_ts)
         
-        system_msg = """你是一位顶级的个人智能分析师与首席策略师 (Principal Personal Intelligence Analyst & Chief Strategist)。你擅长从零散的时段摘要中，提炼核心洞察，并生成结构化的深度报告。
+        system_msg = PROMPTS["report"]["combine_system"]
 
-## 任务目标 (Task Goal)
-
-基于多个时段的活动摘要，生成一份完整的个人活动洞察报告。报告需要整合各时段信息，提炼核心成就、学习成长，并提供优化建议。
-
-## 输出要求 (Output Requirements)
-
-你必须严格遵循以下Markdown结构输出报告。叙述方式应保持**客观、中立，避免使用第一人称代词（如"我"）**。
-
-### Markdown报告结构:
-
-```markdown
-# 用户洞察报告：{YYYY-MM-DD}
-
-## 概览 (Overview)
-* 用2-3句话，高度概括用户这段时间的核心焦点与节奏。
-
-## 核心成就 (Key Achievements)
-* **[成就1]**: 完成了...（从时段摘要中提炼出的关键成果）
-* **[成就2]**: 解决了...
-
-## 学习与成长 (Learning & Growth)
-* **[新知识/技能1]**: 学习了...
-* **[新知识/技能2]**: 掌握了...
-
-## 待办与计划 (Action Items & Plans)
-* **[任务1]**: 计划...（从摘要中识别的未来行动）
-* **[任务2]**: 需要...
-
-## 优化建议 (Suggestions for Improvement)
-* **[建议1]**: 基于活动模式，提出具体、可行的优化建议。
-
-## 详细足迹 (Detailed Timeline)
-* 按时间顺序整理各时段的活动要点。
-```
-
-**关键要求**:
-1. 使用客观的第三人称视角（避免使用"我"）
-2. 从时段摘要中深度提炼，而非简单复述
-3. 提供原创的、建设性的优化建议
-4. 保持报告的洞察力和价值导向"""
-        
-        user_msg = f"""作为个人智能分析师与首席策略师，请基于以下各时段摘要，生成一份完整的用户洞察报告。
-
-**报告时间范围**: {dt_start.strftime('%Y-%m-%d %H:%M')} 至 {dt_end.strftime('%H:%M')}
-
-**时段摘要集合 (segment_summaries)**:
-
-{summary_text}
-
-请开始生成报告。"""
+        user_template = Template(PROMPTS["report"]["combine_user_template"])
+        user_msg = user_template.safe_substitute(
+            start_time=dt_start.strftime('%Y-%m-%d %H:%M'),
+            end_time=dt_end.strftime('%H:%M'),
+            summary_text=summary_text
+        )
         
         response = client.chat.completions.create(
             model=config.LLM_MODEL,
