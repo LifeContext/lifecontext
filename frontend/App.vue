@@ -12,10 +12,10 @@
           <div class="h-14 flex items-end justify-between">
             <div>
               <h1 class="text-3xl font-bold bg-gradient-to-r from-blue-500 to-teal-400 bg-clip-text text-transparent tracking-tight">
-                LifeContext
+                {{ t('app.title') }}
               </h1>
               <p class="text-base font-light text-slate-500 dark:text-slate-400 tracking-wide">
-                Your Proactive Life Search Engine
+                {{ t('app.subtitle') }}
               </p>
             </div>
             <div class="flex items-end gap-2 pb-0.5">
@@ -132,6 +132,9 @@ import { reportService } from './src/api/reportService'; // 导入Report API服�
 import { tipService } from './src/api/tipService'; // 导入Tip API服务
 import { eventService } from './src/api/eventService'; // 导入事件服务
 import { dataRefreshManager } from './src/utils/dataRefreshManager'; // 导入数据刷新管理器
+import { useI18n } from './src/i18n';
+
+const { t, locale } = useI18n();
 
 const REPORT_DETAIL_ICONS = {
   chevronLeft: 'M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z',
@@ -177,7 +180,8 @@ const currentDate = ref(new Date());
 
 // Computed
 const today = computed(() => {
-  return currentDate.value.toLocaleString('en-US', {
+  const activeLocale = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
+  return currentDate.value.toLocaleString(activeLocale, {
     year: 'numeric',
     month: 'long',
     day: 'numeric',
@@ -199,7 +203,7 @@ const loadReports = async () => {
     }
   } catch (error) {
     console.error('Failed to load reports:', error);
-    errorLoadingReports.value = 'Failed to load reports. Please try again later.';
+    errorLoadingReports.value = t('errors.loadReports');
     // 使用备用数据
     reports.value = dailyReports;
     selectedDashboardReport.value = dailyReports[0];
@@ -217,7 +221,7 @@ const loadTodos = async () => {
     todos.value = todosData.data.todos;
   } catch (error) {
     console.error('Failed to load todos:', error);
-    errorLoadingTodos.value = 'Failed to load tasks. Please try again later.';
+    errorLoadingTodos.value = t('errors.loadTodos');
   } finally {
     isLoadingTodos.value = false;
   }
@@ -232,7 +236,7 @@ const loadTips = async () => {
     tips.value = tipsData.data.tips;
   } catch (error) {
     console.error('Failed to load tips:', error);
-    errorLoadingTips.value = 'Failed to load tips. Please try again later.';
+    errorLoadingTips.value = t('errors.loadTips');
   } finally {
     isLoadingTips.value = false;
   }

@@ -2,24 +2,24 @@
   <nav class="h-screen w-20 flex flex-col items-center justify-between p-2 z-20 flex-shrink-0">
     <div class="w-full flex flex-col items-center gap-4">
       <div class="h-14 flex items-center justify-center">
-        <img src="../../Logo.png" alt="LifeContext" class="h-11 w-11" />
+        <img src="../../Logo.png" :alt="t('header.logoAlt')" class="h-11 w-11" />
       </div>
       <div class="w-full space-y-2">
         <NavButton 
           :icon="ICONS.home"
-          label="Home"
+          :label="t('header.nav.home')"
           :is-active="activeView === 'dashboard'"
           :on-click="() => onNavigate('dashboard')"
         />
         <NavButton 
           :icon="ICONS.chat"
-          label="Chat"
+          :label="t('header.nav.chat')"
           :is-active="activeView === 'chat'"
           :on-click="() => onNavigate('chat')"
         />
         <NavButton 
           :icon="ICONS.timeline"
-          label="Timeline"
+          :label="t('header.nav.timeline')"
           :is-active="activeView === 'timeline'"
           :on-click="() => onNavigate('timeline')"
         />
@@ -28,7 +28,7 @@
     <div class="w-full flex flex-col items-center gap-2 pb-2">
       <NavButton
         :icon="ICONS.settings"
-        label="Settings"
+        :label="t('header.nav.settings')"
         :is-active="false"
         :on-click="onSettingsClick"
       />
@@ -40,6 +40,7 @@
 <script setup lang="ts">
 import UserAvatar from './UserAvatar.vue';
 import NavButton from './NavButton.vue';
+import { useI18n } from '../i18n';
 
 interface Props {
   onSettingsClick: () => void;
@@ -48,6 +49,8 @@ interface Props {
 }
 
 defineProps<Props>();
+
+const { t } = useI18n();
 
 const ICONS = {
   home: 'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z',

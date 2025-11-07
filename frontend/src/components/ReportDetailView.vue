@@ -8,7 +8,7 @@
             @click="() => onNavigate('prev')" 
             :disabled="!canGoPrev"
             class="p-1 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Previous report"
+            :aria-label="t('report.detail.aria.prev')"
           >
             <Icon path="M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z" class="h-5 w-5" />
           </button>
@@ -17,7 +17,7 @@
             @click="() => onNavigate('next')" 
             :disabled="!canGoNext"
             class="p-1 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="Next report"
+            :aria-label="t('report.detail.aria.next')"
           >
             <Icon path="M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z" class="h-5 w-5" />
           </button>
@@ -26,7 +26,7 @@
       <button 
         @click="onClose" 
         class="absolute top-4 right-4 p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700"
-        aria-label="Close report"
+        :aria-label="t('report.detail.aria.close')"
       >
         <Icon path="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" class="h-6 w-6" />
       </button>
@@ -38,7 +38,7 @@
         <section>
           <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-3">
             <Icon path="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z" class="h-5 w-5 text-teal-500 dark:text-teal-400" />
-            Daily Summary
+            {{ t('report.detail.dailySummary') }}
           </h2>
           <div class="rounded-xl p-6">
             <div class="markdown-content" v-html="renderedContent"></div>
@@ -51,7 +51,7 @@
         v-show="showScrollToTop"
         @click="scrollToTop"
         class="scroll-to-top-btn fixed bottom-6 right-6 z-50"
-        aria-label="Scroll to top"
+        :aria-label="t('report.detail.aria.scrollTop')"
       >
         <div class="scroll-to-top-inner">
           <Icon path="M5 15l7-7 7 7" class="h-5 w-5" />
@@ -66,6 +66,7 @@ import { computed, ref, onMounted, onUnmounted } from 'vue';
 import { marked } from 'marked';
 import Icon from './Icon.vue';
 import type { DailyReport } from '../../types';
+import { useI18n } from '../i18n';
 
 const formatDateTime = (dateTime: string): string => {
   if (!dateTime) return '';
@@ -94,6 +95,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const { t } = useI18n();
 
 const currentIndex = computed(() => 
   props.selectedReport ? props.reports.findIndex(r => r.id === props.selectedReport!.id) : -1

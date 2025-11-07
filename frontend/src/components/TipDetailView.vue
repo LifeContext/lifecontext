@@ -1,7 +1,7 @@
 <template>
   <div class="flex h-full w-full gap-4 p-4">
     <aside class="w-72 flex-shrink-0 bg-slate-200 dark:bg-slate-800 rounded-2xl p-4 flex flex-col shadow-lg">
-      <h1 class="text-lg font-bold text-slate-900 dark:text-slate-100 px-2 my-2">All Tips</h1>
+      <h1 class="text-lg font-bold text-slate-900 dark:text-slate-100 px-2 my-2">{{ t('tips.all') }}</h1>
       <nav class="flex-1 overflow-y-auto pr-1">
         <ul>
           <li v-for="tip in props.tips" :key="tip.id">
@@ -25,7 +25,7 @@
       <button 
         @click="props.onClose" 
         class="absolute top-6 right-6 p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 z-10"
-        aria-label="Close tips view"
+        :aria-label="t('tips.detail.closeAria')"
       >
         <Icon path="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z" class="h-6 w-6" />
       </button>
@@ -42,7 +42,7 @@
           <section class="h-full">
             <h2 class="text-2xl font-bold text-slate-900 dark:text-slate-100 mb-6 flex items-center gap-3">
               <Icon path="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1zm3-19C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z" class="h-6 w-6 text-yellow-400" />
-              <span>Tip Content</span>
+              <span>{{ t('tips.detail.content') }}</span>
             </h2>
             <div class="markdown-content max-w-7xl mx-auto text-slate-700 dark:text-slate-300 h-full">
               <div ref="markdownContainer" v-html="renderedContent"></div>
@@ -51,7 +51,7 @@
               <div v-if="props.selectedTip.source_urls && props.selectedTip.source_urls.length > 0" class="mt-8 pt-6 border-t border-slate-200 dark:border-slate-600">
                 <h3 class="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-4 flex items-center gap-2">
                   <Icon path="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" class="h-5 w-5 text-blue-500" />
-                  <span>关联网址</span>
+                  <span>{{ t('tips.detail.relatedLinks') }}</span>
                 </h3>
                 <ul class="space-y-2">
                   <li v-for="(url, index) in props.selectedTip.source_urls" :key="index" class="flex items-start gap-2">
@@ -81,6 +81,7 @@ import { marked } from 'marked';
 import mermaid from 'mermaid';
 import Icon from './Icon.vue';
 import type { Tip, TipCategory } from '../../types';
+import { useI18n } from '../i18n';
 
 interface Props {
   tips: Tip[];
@@ -90,6 +91,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const { t, locale } = useI18n();
 
 // Mermaid 容器引用
 const markdownContainer = ref<HTMLElement | null>(null);
@@ -107,7 +110,7 @@ mermaid.initialize({
 const fixSplitWordsInHTML = () => {
   if (!markdownContainer.value) return;
   
-  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'Dockerfile', 'bash'];
+  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'Dockerfile', 'bash', 'sql'];
   
   const walker = document.createTreeWalker(markdownContainer.value, NodeFilter.SHOW_TEXT, null);
   const textNodes: Text[] = [];
@@ -179,7 +182,7 @@ const normalizeMarkdown = (raw: string): string => {
   if (!raw) return '';
   
   let text = raw;
-  const commonLanguages = ['mermaid', 'javascript', 'typescript', 'python', 'bash', 'sh', 'sql', 'json', 'html', 'css', 'java', 'cpp', 'c', 'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'yaml', 'xml', 'markdown', 'dockerfile', 'makefile', 'ini', 'toml', 'diff', 'plaintext', 'text'];
+  const commonLanguages = ['mermaid', 'javascript', 'typescript', 'python', 'bash', 'sh', 'json', 'html', 'css', 'java', 'cpp', 'c', 'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'yaml', 'xml', 'markdown', 'dockerfile', 'makefile', 'ini', 'toml', 'diff', 'plaintext', 'text', 'sql'];
   
   // 修复被分割的语言标识（在转义处理之前处理转义序列格式）
   text = text.replace(/```(\w+)\\n\s*([a-z])\\n/g, (match, p1, p2) => {
@@ -210,7 +213,7 @@ const normalizeMarkdown = (raw: string): string => {
   text = text.replace(/\\\\/g, '\\');
   
   // 修复被分割的常见单词（在代码块格式处理之前）
-  const commonWords = ['notion', 'bash', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify'];
+  const commonWords = ['notion', 'bash', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'sql'];
   
   // 修复被分割单词的通用函数
   const fixSplitWords = (inputText: string): string => {
@@ -381,18 +384,19 @@ const formatTimeAgo = (dateString: string): string => {
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
   
   if (diffInSeconds < 60) {
-    return '刚刚';
+    return t('time.justNow');
   } else if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60);
-    return `${minutes} 分钟前`;
+    return t('time.minutesAgo', { count: minutes });
   } else if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600);
-    return `${hours} 小时前`;
+    return t('time.hoursAgo', { count: hours });
   } else if (diffInSeconds < 2592000) {
     const days = Math.floor(diffInSeconds / 86400);
-    return `${days} 天前`;
+    return t('time.daysAgo', { count: days });
   } else {
-    return date.toLocaleDateString();
+    const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
+    return date.toLocaleDateString(lang);
   }
 };
 </script>

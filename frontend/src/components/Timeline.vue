@@ -37,7 +37,7 @@
           class="flex items-center space-x-2 text-slate-600 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200 transition-colors"
         >
           <Icon path="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" class="w-4 h-4" />
-          <span class="text-sm font-medium">Clear History</span>
+          <span class="text-sm font-medium">{{ t('timeline.clearHistory') }}</span>
         </button>
         
         <!-- Clear History Dropdown -->
@@ -49,13 +49,13 @@
             @click="clearHistory('24h')"
             class="px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-slate-700 dark:text-slate-300"
           >
-            Clear last 24 hours
+            {{ t('timeline.clearLast24h') }}
           </div>
           <div 
             @click="clearHistory('all')"
             class="px-4 py-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors text-red-600 dark:text-red-400"
           >
-            Clear all history
+            {{ t('timeline.clearAll') }}
           </div>
         </div>
       </div>
@@ -68,7 +68,7 @@
         <div class="relative">
           <div class="w-12 h-12 border-4 border-blue-200 border-t-blue-600 dark:border-blue-800 dark:border-t-blue-500 rounded-full animate-spin"></div>
         </div>
-        <p class="mt-4 text-slate-600 dark:text-slate-400 text-lg">Analyzing activity...</p>
+        <p class="mt-4 text-slate-600 dark:text-slate-400 text-lg">{{ t('timeline.analyzing') }}</p>
       </div>
       
       <!-- No Activity State -->
@@ -76,7 +76,7 @@
         <div class="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
           <Icon path="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" class="w-8 h-8 text-slate-400 dark:text-slate-500" />
         </div>
-        <p class="text-slate-500 dark:text-slate-400 text-lg">No activity recorded for this day.</p>
+        <p class="text-slate-500 dark:text-slate-400 text-lg">{{ t('timeline.noActivity') }}</p>
       </div>
       
       <!-- Timeline Content -->
@@ -145,10 +145,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import Icon from './Icon.vue';
 import { timelineService } from '../api/timelineService';
 import type { TimelineItem, TimelineSegment } from '../../types';
+import { useI18n } from '../i18n';
 
 // State
 const selectedDate = ref('today');
@@ -159,6 +160,8 @@ const hasActivity = ref(true);
 const timelineSegments = ref<TimelineSegment[]>([]);
 const allSegments = ref<TimelineSegment[]>([]);
 const dateOptions = ref<{ label: string; value: string }[]>([]);
+
+const { t, locale } = useI18n();
 
 // Computed
 const selectedDateText = computed(() => {
@@ -241,6 +244,7 @@ const buildDateOptions = (segments: TimelineSegment[]) => {
   const set = new Set<string>();
   const now = new Date();
   const opts: { label: string; value: string }[] = [];
+  const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
   for (const s of segments) {
     const d = new Date(s.start_time);
     const key = d.toISOString().slice(0, 10);
@@ -249,22 +253,22 @@ const buildDateOptions = (segments: TimelineSegment[]) => {
       const isToday = d.toDateString() === now.toDateString();
       const y = new Date(now.getTime() - 24*60*60*1000);
       const isYesterday = d.toDateString() === y.toDateString();
-      let label = d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+      let label = d.toLocaleDateString(lang, { weekday: 'short', month: 'short', day: 'numeric' });
       let value = key;
-      if (isToday) { label = 'Today'; value = 'today'; }
-      else if (isYesterday) { label = 'Yesterday'; value = 'yesterday'; }
+      if (isToday) { label = t('timeline.dateOption.today'); value = 'today'; }
+      else if (isYesterday) { label = t('timeline.dateOption.yesterday'); value = 'yesterday'; }
       opts.push({ label, value });
     }
   }
   // 按时间倒序排序：Today > Yesterday > 其他日期（最新的在前）
   dateOptions.value = opts.sort((a, b) => {
     // Today 始终在最前面
-    if (a.label === 'Today') return -1;
-    if (b.label === 'Today') return 1;
+    if (a.value === 'today') return -1;
+    if (b.value === 'today') return 1;
     
     // Yesterday 在 Today 之后，但在所有其他日期之前
-    if (a.label === 'Yesterday') return -1;
-    if (b.label === 'Yesterday') return 1;
+    if (a.value === 'yesterday') return -1;
+    if (b.value === 'yesterday') return 1;
     
     // 其他日期按时间倒序（最新的在前）
     return a.value > b.value ? -1 : a.value < b.value ? 1 : 0;
@@ -402,6 +406,11 @@ onUnmounted(() => {
   
   // 移除时间线数据更新事件监听器
   window.removeEventListener('timeline-data-updated', handleTimelineDataUpdated);
+});
+
+watch(() => locale.value, () => {
+  buildDateOptions(allSegments.value);
+  applyDateFilter(selectedDate.value);
 });
 </script>
 

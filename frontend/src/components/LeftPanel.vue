@@ -2,7 +2,7 @@
   <div class="bg-slate-100 dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-600 p-4 flex flex-col transition-all duration-300 ease-in-out h-full max-h-screen overflow-hidden">
     <!-- 头部区域 - 只在展开状态下显示 -->
     <div v-if="!isCollapsed" class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">Daily</h2>
+      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ t('dashboard.sectionTitle') }}</h2>
       <button 
         @click="onToggle"
         class="p-2 rounded-lg transition-all duration-200 hover:scale-105 flex-shrink-0 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -27,7 +27,7 @@
       <div v-if="isLoading" class="py-8 flex items-center justify-center">
         <div class="text-center">
           <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto mb-2"></div>
-          <p class="text-sm text-slate-500 dark:text-slate-400">加载报告中...</p>
+          <p class="text-sm text-slate-500 dark:text-slate-400">{{ t('dashboard.loading') }}</p>
         </div>
       </div>
       
@@ -43,7 +43,7 @@
             @click="onRefresh"
             class="px-3 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded transition-colors duration-200"
           >
-            重试
+            {{ t('common.retry') }}
           </button>
         </div>
       </div>
@@ -80,7 +80,7 @@
               </div>
               <!-- 月份缩写 -->
               <div class="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-medium leading-none">
-                {{ new Date(report.create_time).toLocaleDateString('en', { month: 'short' }) }}
+                {{ formatMonthShort(new Date(report.create_time)) }}
               </div>
             </div>
           </div>
@@ -88,7 +88,7 @@
           <!-- 显示更多报告的提示 -->
           <div v-if="reports.length > 10" class="text-center pt-2">
             <span class="text-xs text-slate-400 dark:text-slate-500">
-              +{{ reports.length - 13 }} 更多报告
+              {{ t('dashboard.moreReports', { count: Math.max(0, reports.length - 13) }) }}
             </span>
           </div>
         </div>
@@ -100,8 +100,8 @@
           <div class="text-slate-300 dark:text-slate-600 mb-2">
             <Icon path="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" class="h-6 w-6 mx-auto" />
           </div>
-          <p class="text-sm text-slate-400 dark:text-slate-500">No daily report yet</p>
-          <p class="text-xs text-slate-300 dark:text-slate-500 mt-1">Waiting for generation</p>
+          <p class="text-sm text-slate-400 dark:text-slate-500">{{ t('dashboard.emptyTitle') }}</p>
+          <p class="text-xs text-slate-300 dark:text-slate-500 mt-1">{{ t('dashboard.waiting') }}</p>
         </div>
       </div>
       
@@ -127,6 +127,9 @@
 <script setup lang="ts">
 import Icon from './Icon.vue';
 import type { DailyReport } from '../../types';
+import { useI18n } from '../i18n';
+
+const { t, locale } = useI18n();
 
 const formatDateTime = (dateTime: string): string => {
   if (!dateTime) return '';
@@ -137,6 +140,11 @@ const formatDateTime = (dateTime: string): string => {
   }
   
   return dateTime;
+};
+
+const formatMonthShort = (date: Date): string => {
+  const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
+  return date.toLocaleDateString(lang, { month: 'short' });
 };
 
 interface Props {

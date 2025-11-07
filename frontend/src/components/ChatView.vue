@@ -13,14 +13,14 @@
           </div>
           
           <!-- Main Title -->
-          <h1 class="main-title text-4xl font-bold mb-4 text-center">Chat with your life</h1>
+          <h1 class="main-title text-4xl font-bold mb-4 text-center">{{ t('chat.welcomeTitle') }}</h1>
           
           <!-- 输入区域（仅在无消息时显示在欢迎界面中） -->
           <div class="w-full mt-4">
             <div class="relative">
               <input 
                 type="text" 
-                placeholder="Ask, search, or make anything..."
+                :placeholder="t('chat.placeholder')"
                 class="chat-input w-full rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 v-model="inputMessage"
                 @keypress.enter="handleSend"
@@ -29,9 +29,9 @@
               <button 
                 @click="handleSend"
                 :disabled="isLoading || !inputMessage.trim()"
-                class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors"
+                class="send-button"
               >
-                <Icon path="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" class="w-5 h-5" />
+                <Icon :path="SEND_ICON_PATH" class="send-icon" />
               </button>
             </div>
           </div>
@@ -64,7 +64,7 @@
             <div class="loading-message mr-12 px-4 py-3 rounded-lg">
               <div class="flex items-center space-x-3">
                 <div class="flex space-x-1">
-                  <div class="animate-bounce">Searching browser memories</div>
+                  <div class="animate-bounce">{{ t('chat.loading') }}</div>
                 </div>
               </div>
             </div>
@@ -79,7 +79,7 @@
         <div class="relative">
           <input 
             type="text" 
-            placeholder="Ask, search, or make anything..."
+            :placeholder="t('chat.placeholder')"
             class="chat-input w-full rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             v-model="inputMessage"
             @keypress.enter="handleSend"
@@ -88,9 +88,9 @@
           <button 
             @click="handleSend"
             :disabled="isLoading || !inputMessage.trim()"
-            class="absolute right-2 top-1/2 transform -translate-y-1/2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-600 disabled:cursor-not-allowed text-white rounded-full p-3 transition-colors"
+            class="send-button"
           >
-            <Icon path="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" class="w-5 h-5" />
+            <Icon :path="SEND_ICON_PATH" class="send-icon" />
           </button>
         </div>
       </div>
@@ -104,6 +104,7 @@ import Icon from './Icon.vue';
 import { chatService } from '../api/chatService';
 import { chatHistoryService } from '../api/chatHistoryService';
 import type { ChatMessage, ChatSession } from '../../types';
+import { useI18n } from '../i18n';
 
 const inputMessage = ref('');
 const messages = ref<ChatMessage[]>([]);
@@ -111,6 +112,10 @@ const isLoading = ref(false);
 const messagesContainer = ref<HTMLElement>();
 const currentWorkflowId = ref<string>('');
 const hasUnsavedMessages = ref(false);
+
+const { t } = useI18n();
+
+const SEND_ICON_PATH = 'M12 5a.75.75 0 01.53.22l5.25 5.25a.75.75 0 11-1.06 1.06L12.75 8.56V18a.75.75 0 01-1.5 0V8.56l-3.97 3.97a.75.75 0 11-1.06-1.06L11.47 5.22A.75.75 0 0112 5z';
 
 // 滚动到底部
 const scrollToBottom = async () => {
@@ -215,7 +220,7 @@ const handleSend = async () => {
     // 添加错误消息
     const errorMsg: ChatMessage = {
       workflow_id: '',
-      content: '抱歉，发送消息时出现错误。请稍后再试。',
+      content: t('chat.error'),
       sender: 'ai',
       timestamp: new Date().toISOString()
     };
@@ -259,6 +264,63 @@ const handleSend = async () => {
 
 .loading-message {
   color: white;
+}
+
+.send-button {
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 9999px;
+  background: linear-gradient(135deg, #2563eb, #1d4ed8);
+  color: #ffffff;
+  border: none;
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.35);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+  cursor: pointer;
+}
+
+.send-button:hover:not(:disabled) {
+  transform: translateY(-50%) scale(1.05);
+  box-shadow: 0 16px 28px rgba(59, 130, 246, 0.45);
+}
+
+.send-button:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.send-button:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.6);
+  outline-offset: 4px;
+}
+
+.send-button:disabled {
+  background: linear-gradient(135deg, #475569, #334155);
+  box-shadow: none;
+  color: #cbd5f5;
+  cursor: not-allowed;
+}
+
+.send-icon {
+  width: 30px;
+  height: 30px;
+  color: #e2eeff;
+  filter: drop-shadow(0 0 8px rgba(96, 165, 250, 0.75));
+  transition: transform 0.18s ease, filter 0.18s ease;
+}
+
+.send-button:hover:not(:disabled) .send-icon {
+  transform: translateY(-1px) translateX(1px) scale(1.05);
+  filter: drop-shadow(0 0 12px rgba(147, 197, 253, 0.9));
+}
+
+.send-button:active:not(:disabled) .send-icon {
+  transform: translateY(1px) translateX(-1px) scale(0.95);
 }
 
 .chat-input {

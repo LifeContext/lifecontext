@@ -1,10 +1,10 @@
 <template>
   <div class="bg-slate-100 dark:bg-slate-900 rounded-2xl shadow-lg p-4 h-full border border-slate-200 dark:border-slate-600">
-    <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">Tips</h2>
+    <h2 class="text-lg font-bold text-slate-900 dark:text-slate-100 mb-4">{{ t('tips.title') }}</h2>
     
     <!-- 加载状态 -->
     <div v-if="props.isLoading" class="flex items-center justify-center h-full min-h-[200px]">
-      <div class="text-slate-500 dark:text-slate-400">加载中...</div>
+      <div class="text-slate-500 dark:text-slate-400">{{ t('tips.loading') }}</div>
     </div>
     
     <!-- 错误状态 -->
@@ -15,7 +15,7 @@
           @click="props.refreshTips?.()" 
           class="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
         >
-          重试
+          {{ t('tips.retry') }}
         </button>
       </div>
     </div>
@@ -28,8 +28,8 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path>
           </svg>
         </div>
-        <p class="text-sm text-slate-400 dark:text-slate-500">No tips yet</p>
-        <p class="text-xs text-slate-300 dark:text-slate-500 mt-1">Waiting for generation</p>
+        <p class="text-sm text-slate-400 dark:text-slate-500">{{ t('tips.emptyTitle') }}</p>
+        <p class="text-xs text-slate-300 dark:text-slate-500 mt-1">{{ t('tips.emptySubtitle') }}</p>
       </div>
     </div>
     
@@ -74,6 +74,7 @@
 import { ref, onMounted, onUnmounted, defineProps, nextTick, watch } from 'vue';
 import { marked } from 'marked';
 import type { Tip, TipCategory } from '../../types';
+import { useI18n } from '../i18n';
 
 interface Props {
   onSelectTip: (tip: Tip) => void;
@@ -84,6 +85,8 @@ interface Props {
 }
 
 const props = defineProps<Props>();
+
+const { t, locale } = useI18n();
 
 // 响应式数据
 const selectedTipId = ref<number | null>(null);
@@ -150,18 +153,19 @@ const formatTimeAgo = (dateString: string): string => {
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
   
   if (diffInSeconds < 60) {
-    return '刚刚';
+    return t('time.justNow');
   } else if (diffInSeconds < 3600) {
     const minutes = Math.floor(diffInSeconds / 60);
-    return `${minutes} 分钟前`;
+    return t('time.minutesAgo', { count: minutes });
   } else if (diffInSeconds < 86400) {
     const hours = Math.floor(diffInSeconds / 3600);
-    return `${hours} 小时前`;
+    return t('time.hoursAgo', { count: hours });
   } else if (diffInSeconds < 2592000) {
     const days = Math.floor(diffInSeconds / 86400);
-    return `${days} 天前`;
+    return t('time.daysAgo', { count: days });
   } else {
-    return date.toLocaleDateString();
+    const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
+    return date.toLocaleDateString(lang);
   }
 };
 
