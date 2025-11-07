@@ -108,6 +108,15 @@
       </div>
     `;
 
+    // 主题检测函数（供后续使用）
+    function isDarkMode() {
+      try {
+        return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      } catch (_) {
+        return true;
+      }
+    }
+
     // 页面上下文展示 Pill（默认隐藏，打开聊天时显示）
     const contextPill = document.createElement('div');
     contextPill.id = 'page-context-pill';
@@ -158,25 +167,7 @@
       gap: 16px;
     `;
     
-    // 添加欢迎消息
-    const welcomeMessage = document.createElement('div');
-    welcomeMessage.style.cssText = `
-      display: flex;
-      justify-content: flex-start;
-    `;
-    const isDarkMode = () => {
-      try { return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; } catch (_) { return true; }
-    };
-    const aiColor = isDarkMode() ? '#e2e8f0' : '#0f172a';
-    welcomeMessage.innerHTML = `
-      <div style=\"display:flex; align-items:flex-start; gap:10px;\"> 
-        <img src=\"${logoUrl}\" onerror=\"this.onerror=null;this.src='${logoFallbackUrl}'\" alt=\"LifeContext\" width=\"32\" height=\"32\" style=\"flex-shrink:0;border-radius:8px;object-fit:cover;\"/>
-        <div style=\"background:transparent;color:${aiColor};max-width:560px;padding:2px 0;font-size:15px;line-height:1.7;white-space:pre-wrap;\">您好！欢迎使用LifeContext，我是您的专属助手，有什么可以帮助您的吗？
-          <div style=\"font-size:11px;opacity:.6;margin-top:4px;\">${new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })}</div>
-        </div>
-      </div>
-    `;
-    chatMessages.appendChild(welcomeMessage);
+    // 不显示初始欢迎消息
 
     // 创建输入区域
     const chatInput = document.createElement('div');
