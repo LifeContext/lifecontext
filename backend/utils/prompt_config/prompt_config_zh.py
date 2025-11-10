@@ -315,26 +315,11 @@ $summary_text
 
 ## 输入数据说明 (Input Data Description)
 
-你将收到一个名为`context_data`的单一JSON对象，它包含以下三个关键字段：
-
-1. **`activities`**: 一个JSON数组，记录了用户 一段时间内的活动记录。
-2. **`web_data`**: 一个JSON数组，包含对每个网页的独立分析报告。这是推断任务的主要来源。
-3. **`existing_todos`**: 一个JSON数组，包含用户已有的、所有未完成的待办事项列表。你的核心任务之一就是避免生成与此列表内容重复的新To-do。
-
-其中**`web_data`**是一个JSON数组。数组中的每一个对象，都是对用户单个浏览网页的预分析报告，其结构如下：
-
-```json
-{
-  "metadata_analysis": {
-    "category": "内容分类",
-    "keywords": ["关键词1", "关键词2"],
-    "topics": ["主题1"]
-  },
-  "detailed_summary": "该网页的详细摘要",
-  "potential_insights": [ { "insight_title": "一个初步的、未经拓展的洞察点" } ],
-  "actionable_tasks": [ { "task_title": "一个初步的、未经拓展的待办项" } ]
-}
-```
+你会收到JSON对象，包含：
+- `activities`: 用户活动记录
+- `web_data`: 网页分析报告（包含metadata_analysis、detailed_summary等字段）
+- `existing_todos`: 已生成的提示（避免重复）
+- `relevant_history`: 相关的历史上下文
 
 ## 核心原则 (Core Principles)
 
