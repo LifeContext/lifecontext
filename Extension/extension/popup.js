@@ -385,6 +385,45 @@ async function getConfig() {
   });
 }
 
+// ====== i18n ======
+function getUILang() {
+  try {
+    const lang = chrome.i18n && chrome.i18n.getUILanguage ? chrome.i18n.getUILanguage() : (navigator.language || 'en');
+    return (lang || '').toLowerCase().startsWith('zh') ? 'zh' : 'en';
+  } catch (_) { return 'en'; }
+}
+const TEXT = {
+  zh: {
+    recording: '录制',
+    notifications: '通知',
+    domain: '域名',
+    blockedHint: '已阻止：该域名下的网页将不被爬取',
+    toggleRecordingTitle: '录制开关',
+    toggleNotificationsTitle: '通知开关'
+  },
+  en: {
+    recording: 'Recording',
+    notifications: 'Notifications',
+    domain: 'Domain',
+    blockedHint: 'Blocked: this domain will not be crawled',
+    toggleRecordingTitle: 'Toggle Recording',
+    toggleNotificationsTitle: 'Toggle Notifications'
+  }
+};
+function localizeUI() {
+  const t = TEXT[getUILang()] || TEXT.en;
+  const elR = document.getElementById('label-recording');
+  const elN = document.getElementById('label-notifications');
+  const elD = document.getElementById('label-domain');
+  if (elR) elR.textContent = t.recording;
+  if (elN) elN.textContent = t.notifications;
+  if (elD) elD.textContent = t.domain;
+  const recBtn = document.getElementById('crawl-toggle-btn');
+  const notifBtn = document.getElementById('notif-btn');
+  if (recBtn) { recBtn.title = t.toggleRecordingTitle; recBtn.setAttribute('aria-label', t.toggleRecordingTitle); }
+  if (notifBtn) { notifBtn.title = t.toggleNotificationsTitle; notifBtn.setAttribute('aria-label', t.toggleNotificationsTitle); }
+}
+
 // 页面初始化
 document.addEventListener('DOMContentLoaded', async () => {
   // 获取爬取开关状态（会自动设置初始状态显示）
@@ -395,6 +434,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   // 获取通知开关状态
   await loadNotificationsState();
+
+  // 本地化标签
+  try { localizeUI(); } catch (_) {}
   
   // 添加按钮事件监听 - logo和文字都可以点击打开主页
   const logoSection = document.getElementById('logo-section');
@@ -424,4 +466,71 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (notifBtn) {
     notifBtn.addEventListener('click', toggleNotifications);
   }
+
+  // 初始化域名 chip
+  try { await initDomainChip(); } catch (_) {}
 });
+
+// ====== Domain chip ======
+async function getActiveHostname() {
+  const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+  try {
+    const url = new URL(tab.url);
+    return (url.hostname || '').toLowerCase();
+  } catch (_) {
+    return '';
+  }
+}
+
+async function initDomainChip() {
+  const chip = document.getElementById('domain-chip');
+  const chipIcon = document.getElementById('domain-chip-icon');
+  const chipText = document.getElementById('domain-chip-text');
+  const hint = document.getElementById('domain-hint');
+  if (!chip || !chipIcon || !chipText) return;
+
+  const host = await getActiveHostname();
+  chipText.textContent = host || 'unknown';
+
+  const { blockedDomains = [] } = await new Promise((resolve) => {
+    chrome.storage.sync.get({ blockedDomains: [] }, (res) => resolve(res || { blockedDomains: [] }));
+  });
+  const isBlocked = Array.isArray(blockedDomains) && blockedDomains.map(d=>String(d||'').toLowerCase()).includes(host);
+  applyDomainChipUI(!isBlocked);
+
+  chip.onclick = async () => {
+    const { blockedDomains: bds = [] } = await new Promise((resolve) => {
+      chrome.storage.sync.get({ blockedDomains: [] }, (res) => resolve(res || { blockedDomains: [] }));
+    });
+    const list = Array.isArray(bds) ? [...bds] : [];
+    const idx = list.map(d=>String(d||'').toLowerCase()).indexOf(host);
+    if (idx >= 0) {
+      // 目前为阻止 -> 允许（移除）
+      list.splice(idx, 1);
+      applyDomainChipUI(true);
+    } else {
+      // 目前为允许 -> 阻止（加入）
+      if (host) list.push(host);
+      applyDomainChipUI(false);
+    }
+    await new Promise((resolve) => chrome.storage.sync.set({ blockedDomains: list }, resolve));
+    // 通知当前标签刷新爬取策略
+    try {
+      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+      await chrome.tabs.sendMessage(tab.id, { type: 'REFRESH_CRAWL_POLICY' });
+    } catch (_) {}
+  };
+
+  function applyDomainChipUI(allowed) {
+    if (allowed) {
+      chipIcon.textContent = '✔';
+      chip.style.opacity = '1';
+      if (hint) hint.style.display = 'none';
+    } else {
+      chipIcon.textContent = '✖';
+      chip.style.opacity = '0.5';
+      if (hint) hint.style.display = 'block';
+      hint.textContent = TEXT[getUILang()]?.blockedHint || 'Blocked: this domain will not be crawled';
+    }
+  }
+}

@@ -289,6 +289,26 @@
       }
     }
     
+    /* ----- Domain chip theme-aware colors ----- */
+    #domain-chip {
+      /* dark theme default: text light */
+      color: #e2e8f0;
+    }
+    #domain-hint {
+      color: #94a3b8;
+    }
+
+    @media (prefers-color-scheme: light) {
+      #domain-chip {
+        color: #0f172a !important;
+        border-color: #cbd5e1 !important;
+        background: #ffffff !important;
+      }
+      #domain-hint {
+        color: #64748b !important;
+      }
+    }
+    
   </style>
 </head>
 <body>
@@ -312,7 +332,7 @@
     <!-- Recording 按钮区域 -->
     <div class="footer-section">
       <div class="footer-row">
-        <span class="footer-label">Recording</span>
+        <span class="footer-label" id="label-recording">Recording</span>
         <button id="crawl-toggle-btn" class="crawl-toggle-btn enabled" aria-label="Toggle Recording" title="Recording">
           <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
           <circle class="record-ring" cx="12" cy="12" r="8" fill="none" stroke-width="2" />
@@ -325,7 +345,7 @@
     <!-- Notifications 按钮区域 -->
     <div class="footer-section">
       <div class="footer-row">
-        <span class="footer-label">Notifications</span>
+        <span class="footer-label" id="label-notifications">Notifications</span>
         <button id="notif-btn" class="notif-btn on" aria-label="Toggle Notifications" title="Toggle Notifications">
           <!-- 开启：响铃 -->
           <svg class="bell-on" width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -342,6 +362,18 @@
           </svg>
         </button>
       </div>
+    </div>
+
+    <!-- Domain allow/deny section -->
+    <div class="footer-section" id="domain-section">
+      <div class="footer-row" style="margin-bottom:6px;">
+        <span class="footer-label" id="label-domain">Domain</span>
+      </div>
+      <button id="domain-chip" style="width:100%; display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:10px; border:1px solid rgba(148,163,184,0.4); background:transparent; color:#e2e8f0; cursor:pointer;">
+        <span id="domain-chip-icon" style="font-size:16px;">✔</span>
+        <span id="domain-chip-text" style="font-size:14px; opacity:0.9;">current-domain</span>
+      </button>
+      <div id="domain-hint" style="margin-top:6px; font-size:12px; color:#94a3b8; display:none;">Blocked: this domain will not be crawled</div>
     </div>
   </div>
 

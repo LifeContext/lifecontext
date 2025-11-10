@@ -501,6 +501,25 @@ async function evaluateSkipCrawlForThisPage() {
       window.__LC_SKIP_CRAWL__ = true;
       console.log(`🚫 当前为主网页(${expectedHost}:${expectedPort})，将跳过所有爬取与监听`);
     }
+
+    // 基于域名的爬取策略：若域名在阻止列表中，则禁用爬取
+    try {
+      const { blockedDomains = [] } = await new Promise((resolve) => {
+        chrome.storage.sync.get({ blockedDomains: [] }, (res) => resolve(res || { blockedDomains: [] }));
+      });
+      const hostname = (location.hostname || '').toLowerCase();
+      const isBlocked = Array.isArray(blockedDomains) && blockedDomains.map(d => String(d || '').toLowerCase()).includes(hostname);
+      if (isBlocked) {
+        window.__LC_CRAWL_ENABLED__ = false;
+        console.log(`🚫 已阻止域名 ${hostname} 的爬取，当前页面将不爬取`);
+        // 停止观察器（若已开启）
+        if (domCrawler && domCrawler.isObserving) {
+          domCrawler.stop();
+        }
+      }
+    } catch (err) {
+      // 忽略存储读取异常
+    }
   } catch (_) {
     // 忽略异常，保持默认 false
   }
@@ -740,6 +759,12 @@ if (isChromeRuntimeAvailable()) {
     } else if (message.type === 'UPDATE_DOM_CONFIG') {
       domCrawler.updateConfig(message.config);
       sendResponse({ success: true });
+  } else if (message.type === 'REFRESH_CRAWL_POLICY') {
+    (async () => {
+      await evaluateSkipCrawlForThisPage();
+      sendResponse({ success: true });
+    })();
+    return true;
     } else if (message.type === 'GET_DOM_STATUS') {
       sendResponse({
         isObserving: domCrawler.isObserving,
