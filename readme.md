@@ -184,7 +184,13 @@ If you don't want to record any browser activity, you can disable the extension.
 
 ![img](src/product08.png)
 
-## 🤖 Development Progress
+## 🤖 Development Plan
+
+LifeContext’s evolution roadmap unfolds across three dimensions:
+
+1. **Breadth of context**: We begin with the browser and will gradually incorporate your PC, mobile devices, application data, and eventually smart hardware to build a seamless, end-to-end life context.
+2. **Depth of AI capabilities**: We will deliver life-scale long-horizon retrieval, low-cost multi-modal context storage, precise context alignment, and efficient real-time compression across the Context Memory stack.
+3. **Height of connection**: Ultimately, we aim to empower a digital twin that serves as your trusted agent, interacting with the world—under your authorization—to unlock boundless opportunities for engagement, connection, and creation.
 
 ### 🧰 Context Source Expansion Roadmap 
 

@@ -23,6 +23,7 @@ from utils.db import (
 )
 from utils.llm import get_openai_client
 from utils.prompt_config import get_prompt_set
+from utils.vectorstore import search_similar_content
 
 logger = get_logger(__name__)
 
@@ -99,6 +100,7 @@ def _gather_context(start_dt: datetime, end_dt: datetime) -> Dict[str, Any]:
             "activities": [],
             "web_items": [],
             "existing_todos": [],
+            "relevant_history": [],
             "time_span": {
                 "begin": start_dt.isoformat(),
                 "finish": end_dt.isoformat()
@@ -168,6 +170,16 @@ def _gather_context(start_dt: datetime, end_dt: datetime) -> Dict[str, Any]:
                 
         except Exception as e:
             logger.warning(f"Todo fetch error: {e}")
+ 
+        # 语义搜索相关历史
+        try:
+            relevant_contexts = _retrieve_relevant_history(context)
+            context["relevant_history"] = relevant_contexts
+            if relevant_contexts:
+                logger.info(f"Retrieved {len(relevant_contexts)} relevant historical contexts")
+                context["has_content"] = True
+        except Exception as e:
+            logger.warning(f"Failed to retrieve relevant history: {e}")
         
         logger.info(f"Context has_content: {context['has_content']}")
         return context
@@ -188,11 +200,13 @@ async def _create_tasks_from_context(context: Dict, lookback_mins: int) -> List[
         # 准备上下文数据，包含已有todos
         existing_todos = context.get("existing_todos", [])
         activities = context.get("activities", [])
+        relevant_history = context.get("relevant_history", [])[:8]
         
         # 估算其他数据的 token
         other_data_json = json.dumps({
             "activities": activities,
-            "existing_todos": existing_todos
+            "existing_todos": existing_todos,
+            "relevant_history": relevant_history
         }, ensure_ascii=False)
         other_data_tokens = estimate_tokens(other_data_json)
         
@@ -209,7 +223,8 @@ async def _create_tasks_from_context(context: Dict, lookback_mins: int) -> List[
         context_data = {
             "activities": activities,
             "web_data": web_data_trimmed,
-            "existing_todos": existing_todos
+            "existing_todos": existing_todos,
+            "relevant_history": relevant_history
         }
         
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
@@ -270,6 +285,123 @@ async def _create_tasks_from_context(context: Dict, lookback_mins: int) -> List[
     except Exception as e:
         logger.exception(f"LLM task creation error: {e}")
         return []
+
+
+# 语义搜索相关辅助函数
+def _retrieve_relevant_history(context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """通过语义搜索检索与当前待办推断相关的历史上下文"""
+    if not config.ENABLE_VECTOR_STORAGE:
+        logger.info("Vector storage disabled, skip semantic retrieval for todos")
+        return []
+
+    try:
+        query_texts = _build_query_texts(context)
+        if not query_texts:
+            return []
+
+        all_results: List[Dict[str, Any]] = []
+        for query_text in query_texts:
+            try:
+                results = search_similar_content(query=query_text, limit=5)
+                for item in results:
+                    item['query_source'] = query_text[:50] + "..." if len(query_text) > 50 else query_text
+                    all_results.append(item)
+            except Exception as exc:
+                logger.warning(f"Semantic search failed for todo query '{query_text[:50]}...': {exc}")
+
+        unique = _deduplicate_results(all_results)
+        return _format_historical_contexts(unique[:10])
+    except Exception as exc:
+        logger.exception(f"Todo semantic retrieval error: {exc}")
+        return []
+
+
+def _build_query_texts(context: Dict[str, Any]) -> List[str]:
+    """根据当前上下文构建语义检索用的查询文本"""
+    query_texts: List[str] = []
+    try:
+        web_items = context.get("web_items", [])
+        if web_items:
+            web_topics = []
+            for item in web_items[:5]:
+                title = item.get('title') or ''
+                url = item.get('url') or ''
+                if title and len(title) > 10:
+                    web_topics.append(title)
+                elif url:
+                    web_topics.append(url)
+            if web_topics:
+                combined = " ".join(web_topics[:3])
+                if combined:
+                    query_texts.append(combined)
+
+        activities = context.get("activities", [])
+        if activities:
+            activity_parts = []
+            for act in activities[:3]:
+                window_title = act.get('window_title') or ''
+                app_name = act.get('app_name') or ''
+                if window_title and len(window_title) > 5:
+                    activity_parts.append(window_title)
+                elif app_name:
+                    activity_parts.append(app_name)
+            if activity_parts:
+                query = " ".join(activity_parts[:2])
+                if query and query not in query_texts:
+                    query_texts.append(query)
+
+        existing_todos = context.get("existing_todos", [])
+        if existing_todos and len(query_texts) < 2:
+            todo_parts = []
+            for todo in existing_todos[:2]:
+                title = todo.get('title') or ''
+                description = todo.get('description') or ''
+                content = title if len(title) > 10 else description
+                if content:
+                    todo_parts.append(content)
+            if todo_parts:
+                query_texts.append(" ".join(todo_parts))
+
+        return query_texts
+    except Exception as exc:
+        logger.exception(f"Todo query text build error: {exc}")
+        return []
+
+
+def _deduplicate_results(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """根据 web_data_id 去重搜索结果"""
+    seen = set()
+    unique: List[Dict[str, Any]] = []
+    for item in results:
+        metadata = item.get('metadata', {})
+        web_id = metadata.get('web_data_id')
+        if web_id:
+            if web_id in seen:
+                continue
+            seen.add(web_id)
+        unique.append(item)
+
+    unique.sort(key=lambda x: x.get('distance', 1.0))
+    return unique
+
+
+def _format_historical_contexts(results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """格式化语义搜索结果，供待办提示使用"""
+    formatted: List[Dict[str, Any]] = []
+    for idx, item in enumerate(results):
+        metadata = item.get('metadata', {})
+        content = item.get('content', '')
+        similarity = 1.0 - item.get('distance', 1.0)
+        formatted.append({
+            'index': idx + 1,
+            'title': metadata.get('title', 'Unknown Title'),
+            'url': metadata.get('url', ''),
+            'source': metadata.get('source', 'web_crawler'),
+            'content_preview': content[:300] + "..." if len(content) > 300 else content,
+            'similarity_score': round(similarity, 3),
+            'tags': metadata.get('tags', [])
+        })
+    return formatted
 
 
 # 移除旧的 _parse_task_json 函数，改用统一的 parse_llm_json_response

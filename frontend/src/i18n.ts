@@ -183,7 +183,7 @@ const messages: Messages = {
   'zh-CN': {
     app: {
       title: 'LifeContext',
-      subtitle: '你的主动式生活搜索引擎',
+      subtitle: '你的主动式人生搜索引擎',
     },
     header: {
       logoAlt: 'LifeContext',
@@ -215,7 +215,7 @@ const messages: Messages = {
       },
     },
     chat: {
-      welcomeTitle: '和你的生活对话',
+      welcomeTitle: '和你的人生对话',
       placeholder: '提问、搜索或创建任何内容...',
       loading: '正在检索浏览器记忆',
       error: '抱歉，发送消息时出现错误，请稍后再试。',
