@@ -394,18 +394,18 @@ function getUILang() {
 }
 const TEXT = {
   zh: {
-    recording: '录制',
+    recording: '记录',
     notifications: '通知',
-    domain: '域名',
-    blockedHint: '已阻止：该域名下的网页将不被爬取',
-    toggleRecordingTitle: '录制开关',
+    domainAllowed: '✔',
+    domainBlocked: '✖',
+    toggleRecordingTitle: '记录开关',
     toggleNotificationsTitle: '通知开关'
   },
   en: {
-    recording: 'Recording',
+    recording: 'Record',
     notifications: 'Notifications',
-    domain: 'Domain',
-    blockedHint: 'Blocked: this domain will not be crawled',
+    domainAllowed: '✔',
+    domainBlocked: '✖',
     toggleRecordingTitle: 'Toggle Recording',
     toggleNotificationsTitle: 'Toggle Notifications'
   }
@@ -414,10 +414,8 @@ function localizeUI() {
   const t = TEXT[getUILang()] || TEXT.en;
   const elR = document.getElementById('label-recording');
   const elN = document.getElementById('label-notifications');
-  const elD = document.getElementById('label-domain');
   if (elR) elR.textContent = t.recording;
   if (elN) elN.textContent = t.notifications;
-  if (elD) elD.textContent = t.domain;
   const recBtn = document.getElementById('crawl-toggle-btn');
   const notifBtn = document.getElementById('notif-btn');
   if (recBtn) { recBtn.title = t.toggleRecordingTitle; recBtn.setAttribute('aria-label', t.toggleRecordingTitle); }
@@ -486,7 +484,6 @@ async function initDomainChip() {
   const chip = document.getElementById('domain-chip');
   const chipIcon = document.getElementById('domain-chip-icon');
   const chipText = document.getElementById('domain-chip-text');
-  const hint = document.getElementById('domain-hint');
   if (!chip || !chipIcon || !chipText) return;
 
   const host = await getActiveHostname();
@@ -497,6 +494,7 @@ async function initDomainChip() {
   });
   const isBlocked = Array.isArray(blockedDomains) && blockedDomains.map(d=>String(d||'').toLowerCase()).includes(host);
   applyDomainChipUI(!isBlocked);
+  chip.disabled = true;
 
   chip.onclick = async () => {
     const { blockedDomains: bds = [] } = await new Promise((resolve) => {
@@ -507,30 +505,18 @@ async function initDomainChip() {
     if (idx >= 0) {
       // 目前为阻止 -> 允许（移除）
       list.splice(idx, 1);
-      applyDomainChipUI(true);
-    } else {
-      // 目前为允许 -> 阻止（加入）
-      if (host) list.push(host);
-      applyDomainChipUI(false);
+      await new Promise((resolve) => chrome.storage.sync.set({ blockedDomains: list }, resolve));
+      // 通知当前标签刷新爬取策略
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        await chrome.tabs.sendMessage(tab.id, { type: 'REFRESH_CRAWL_POLICY' });
+      } catch (_) {}
     }
-    await new Promise((resolve) => chrome.storage.sync.set({ blockedDomains: list }, resolve));
-    // 通知当前标签刷新爬取策略
-    try {
-      const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-      await chrome.tabs.sendMessage(tab.id, { type: 'REFRESH_CRAWL_POLICY' });
-    } catch (_) {}
   };
 
   function applyDomainChipUI(allowed) {
-    if (allowed) {
-      chipIcon.textContent = '✔';
-      chip.style.opacity = '1';
-      if (hint) hint.style.display = 'none';
-    } else {
-      chipIcon.textContent = '✖';
-      chip.style.opacity = '0.5';
-      if (hint) hint.style.display = 'block';
-      hint.textContent = TEXT[getUILang()]?.blockedHint || 'Blocked: this domain will not be crawled';
-    }
+    const t = TEXT[getUILang()] || TEXT.en;
+    chipIcon.textContent = allowed ? t.domainAllowed : t.domainBlocked;
+    chip.style.opacity = allowed ? '1' : '0.5';
   }
 }
