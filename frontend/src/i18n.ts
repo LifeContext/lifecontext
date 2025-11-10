@@ -125,6 +125,7 @@ const messages: Messages = {
       loading: 'Loading settings...',
       retry: 'Retry',
       fields: {
+        language: 'Language',
         tipsInterval: 'Tips Generation Interval (minutes)',
         todoInterval: 'Todo Generation Interval (minutes)',
         dailyReportTime: 'Daily Report Generation Time',
@@ -146,6 +147,7 @@ const messages: Messages = {
         minuteRange: 'Minute must be between 0-59',
         load: 'Failed to load settings',
         save: 'Failed to save settings',
+        languageUpdate: 'Failed to update language preference',
       },
       buttons: {
         cancel: 'Cancel',
@@ -283,6 +285,7 @@ const messages: Messages = {
       loading: '正在加载设置...',
       retry: '重试',
       fields: {
+        language: '语言',
         tipsInterval: '提示生成间隔（分钟）',
         todoInterval: '任务生成间隔（分钟）',
         dailyReportTime: '日报生成时间',
@@ -304,6 +307,7 @@ const messages: Messages = {
         minuteRange: '分钟必须在 0-59 之间',
         load: '加载设置失败',
         save: '保存设置失败',
+        languageUpdate: '更新语言偏好失败',
       },
       buttons: {
         cancel: '取消',

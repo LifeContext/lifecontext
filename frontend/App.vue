@@ -23,18 +23,6 @@
               <span class="text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 {{ today }}
               </span>
-              <label class="flex items-center gap-2">
-                <span class="text-xs uppercase tracking-wide text-slate-400 dark:text-slate-500">
-                  {{ t('languageSwitcher.label') }}
-                </span>
-                <select
-                  v-model="selectedLanguage"
-                  class="text-sm rounded-full border border-slate-200 dark:border-slate-600 bg-white/90 dark:bg-slate-800/80 text-slate-600 dark:text-slate-200 px-3 py-1 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                >
-                  <option value="en">{{ t('languageSwitcher.english') }}</option>
-                  <option value="zh-CN">{{ t('languageSwitcher.chineseSimplified') }}</option>
-                </select>
-              </label>
             </div>
           </div>
           <!-- Content Row -->
@@ -145,9 +133,8 @@ import { tipService } from './src/api/tipService'; // 导入Tip API服务
 import { eventService } from './src/api/eventService'; // 导入事件服务
 import { dataRefreshManager } from './src/utils/dataRefreshManager'; // 导入数据刷新管理器
 import { useI18n } from './src/i18n';
-import { updateLanguagePreference } from './src/api/preferencesService';
 
-const { t, locale, setLocale } = useI18n();
+const { t, locale } = useI18n();
 
 const REPORT_DETAIL_ICONS = {
   chevronLeft: 'M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z',
@@ -201,14 +188,6 @@ const today = computed(() => {
     hour: 'numeric',
     minute: '2-digit',
   });
-});
-
-const selectedLanguage = computed({
-  get: () => locale.value,
-  set: (value: 'en' | 'zh-CN') => {
-    setLocale(value);
-    updateLanguagePreference(value);
-  },
 });
 
 // 加载Reports数据的方法

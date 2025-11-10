@@ -37,91 +37,99 @@
 
         <div v-else class="space-y-4">
           <!-- Tips Generation Interval Setting -->
-          <div class="space-y-1.5">
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              {{ t('settings.fields.tipsInterval') }}
-            </label>
-            <div class="flex items-center gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-6">
+              <label class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-1">
+                {{ t('settings.fields.tipsInterval') }}
+              </label>
               <input
                 v-model.number="localSettings.tips_interval_minutes"
                 type="number"
                 min="1"
                 step="1"
-                class="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                class="w-16 px-2 py-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-center"
                 :placeholder="t('settings.placeholders.minutes')"
               />
-              <span class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                {{ t('settings.labels.minutes') }}
-              </span>
             </div>
-            <p v-if="localSettings.tips_interval_minutes < 1" class="text-xs text-red-500 mt-0.5">
+            <p v-if="localSettings.tips_interval_minutes < 1" class="text-xs text-red-500 text-right">
               {{ t('settings.errors.intervalPositive') }}
             </p>
           </div>
 
           <!-- Todo Generation Interval Setting -->
-          <div class="space-y-1.5">
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              {{ t('settings.fields.todoInterval') }}
-            </label>
-            <div class="flex items-center gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-6">
+              <label class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-1">
+                {{ t('settings.fields.todoInterval') }}
+              </label>
               <input
                 v-model.number="localSettings.todo_interval_minutes"
                 type="number"
                 min="1"
                 step="1"
-                class="flex-1 px-3 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                class="w-16 px-2 py-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-center"
                 :placeholder="t('settings.placeholders.minutes')"
               />
-              <span class="text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                {{ t('settings.labels.minutes') }}
-              </span>
             </div>
-            <p v-if="localSettings.todo_interval_minutes < 1" class="text-xs text-red-500 mt-0.5">
+            <p v-if="localSettings.todo_interval_minutes < 1" class="text-xs text-red-500 text-right">
               {{ t('settings.errors.intervalPositive') }}
             </p>
           </div>
 
           <!-- Daily Report Generation Time Setting -->
-          <div class="space-y-1.5">
-            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">
-              {{ t('settings.fields.dailyReportTime') }}
-            </label>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mb-1.5">
-              {{ t('settings.fields.dailyReportHint') }}
-            </p>
-            <div class="flex items-center gap-3">
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-6">
+              <label class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-1">
+                {{ t('settings.fields.dailyReportTime') }}
+              </label>
               <div class="flex items-center gap-2">
-                <label class="text-xs text-slate-600 dark:text-slate-400">{{ t('settings.labels.hour') }}</label>
                 <input
                   v-model.number="localSettings.daily_report_hour"
                   type="number"
                   min="0"
                   max="23"
                   step="1"
-                  class="w-16 px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  class="w-16 px-2 py-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-center"
                   :placeholder="t('settings.placeholders.hour')"
                 />
-              </div>
-              <span class="text-slate-500 dark:text-slate-400">:</span>
-              <div class="flex items-center gap-2">
-                <label class="text-xs text-slate-600 dark:text-slate-400">{{ t('settings.labels.minute') }}</label>
+                <span class="text-slate-500 dark:text-slate-400">:</span>
                 <input
                   v-model.number="localSettings.daily_report_minute"
                   type="number"
                   min="0"
                   max="59"
                   step="1"
-                  class="w-16 px-2.5 py-1.5 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  class="w-16 px-2 py-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none text-center"
                   :placeholder="t('settings.placeholders.minute')"
                 />
               </div>
             </div>
-            <p v-if="localSettings.daily_report_hour < 0 || localSettings.daily_report_hour > 23" class="text-xs text-red-500 mt-0.5">
+            <p v-if="localSettings.daily_report_hour < 0 || localSettings.daily_report_hour > 23" class="text-xs text-red-500 text-right">
               {{ t('settings.errors.hourRange') }}
             </p>
-            <p v-if="localSettings.daily_report_minute < 0 || localSettings.daily_report_minute > 59" class="text-xs text-red-500 mt-0.5">
+            <p v-if="localSettings.daily_report_minute < 0 || localSettings.daily_report_minute > 59" class="text-xs text-red-500 text-right">
               {{ t('settings.errors.minuteRange') }}
+            </p>
+          </div>
+
+          <!-- Language Setting -->
+          <div class="space-y-1">
+            <div class="flex items-center justify-between gap-6">
+              <label class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-1">
+                {{ t('settings.fields.language') }}
+              </label>
+              <select
+                :value="selectedLanguage"
+                @change="handleLanguageChange"
+                :disabled="isUpdatingLanguage"
+                class="w-32 px-2.5 py-1 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="en">{{ t('languageSwitcher.english') }}</option>
+                <option value="zh-CN">{{ t('languageSwitcher.chineseSimplified') }}</option>
+              </select>
+            </div>
+            <p v-if="languageError" class="text-xs text-red-500 text-right">
+              {{ languageError }}
             </p>
           </div>
         </div>
@@ -149,9 +157,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import Icon from './Icon.vue';
 import { settingsService, type Settings } from '../api/settingsService';
+import { updateLanguagePreference } from '../api/preferencesService';
 import { useI18n } from '../i18n';
 
 interface Props {
@@ -162,6 +171,7 @@ const props = defineProps<Props>();
 
 const isLoading = ref(true);
 const isSaving = ref(false);
+const isUpdatingLanguage = ref(false);
 const error = ref<string | null>(null);
 const localSettings = ref<Settings>({
   tips_interval_minutes: 60,
@@ -170,7 +180,13 @@ const localSettings = ref<Settings>({
   daily_report_minute: 0
 });
 
-const { t } = useI18n();
+const languageError = ref<string | null>(null);
+const { t, locale, setLocale } = useI18n();
+const selectedLanguage = ref<'en' | 'zh-CN'>(locale.value);
+
+watch(locale, (newLocale) => {
+  selectedLanguage.value = newLocale;
+});
 
 const isValid = computed(() => {
   return (
@@ -218,6 +234,37 @@ const saveSettings = async () => {
     console.error('Failed to save settings:', err);
   } finally {
     isSaving.value = false;
+  }
+};
+
+const handleLanguageChange = async (event: Event) => {
+  const target = event.target as HTMLSelectElement | null;
+  if (!target) {
+    return;
+  }
+
+  const nextLanguage = target.value as 'en' | 'zh-CN';
+  const previousLanguage = locale.value;
+
+  if (nextLanguage === previousLanguage || isUpdatingLanguage.value) {
+    selectedLanguage.value = previousLanguage;
+    return;
+  }
+
+  languageError.value = null;
+  selectedLanguage.value = nextLanguage;
+  setLocale(nextLanguage);
+  isUpdatingLanguage.value = true;
+
+  try {
+    await updateLanguagePreference(nextLanguage);
+  } catch (err) {
+    console.error('Failed to update language preference:', err);
+    languageError.value = t('settings.errors.languageUpdate');
+    setLocale(previousLanguage);
+    selectedLanguage.value = previousLanguage;
+  } finally {
+    isUpdatingLanguage.value = false;
   }
 };
 
