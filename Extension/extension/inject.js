@@ -233,6 +233,8 @@
     let isChatExpanded = false; // 初始为收缩状态，匹配小窗样式
     let isDragging = false;
     let dragOffset = { x: 0, y: 0 };
+    let dragStart = { x: 0, y: 0 };
+    let hasDragged = false;
     let messages = [];
     let isLoading = false;
     let currentWorkflowId = '';
@@ -572,6 +574,10 @@
 
     // 悬浮球点击事件
     ballElement.addEventListener('click', (e) => {
+      if (hasDragged) {
+        hasDragged = false;
+        return;
+      }
       e.stopPropagation();
       toggleChat();
     });
@@ -713,9 +719,12 @@
     ballElement.addEventListener('mousedown', (e) => {
       e.preventDefault();
       isDragging = true;
+      hasDragged = false;
       const rect = ballElement.getBoundingClientRect();
       dragOffset.x = e.clientX - rect.left;
       dragOffset.y = e.clientY - rect.top;
+      dragStart.x = e.clientX;
+      dragStart.y = e.clientY;
       
       ballElement.style.cursor = 'grabbing';
       ballElement.style.transform = 'scale(0.95)';
@@ -724,6 +733,12 @@
     document.addEventListener('mousemove', (e) => {
       if (!isDragging) return;
       
+      const moveX = e.clientX - dragStart.x;
+      const moveY = e.clientY - dragStart.y;
+      if (!hasDragged && Math.hypot(moveX, moveY) > 6) {
+        hasDragged = true;
+      }
+
       const newX = e.clientX - dragOffset.x;
       const newY = e.clientY - dragOffset.y;
       
