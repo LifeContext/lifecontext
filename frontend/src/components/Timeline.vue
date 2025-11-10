@@ -202,6 +202,13 @@ const formatTime = (timeString: string): string => {
   }
 };
 
+const formatDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // 从 segment 取得 url 列表
 const getUrls = (segment: any): string[] => {
   return segment.urls as string[];
@@ -247,7 +254,7 @@ const buildDateOptions = (segments: TimelineSegment[]) => {
   const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
   for (const s of segments) {
     const d = new Date(s.start_time);
-    const key = d.toISOString().slice(0, 10);
+    const key = formatDateKey(d);
     if (!set.has(key)) {
       set.add(key);
       const isToday = d.toDateString() === now.toDateString();

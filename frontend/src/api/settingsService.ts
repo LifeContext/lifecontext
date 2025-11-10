@@ -5,6 +5,7 @@ export interface Settings {
   todo_interval_minutes: number;
   daily_report_hour: number;
   daily_report_minute: number;
+  excluded_domains: string[];
 }
 
 // Settings API服务类

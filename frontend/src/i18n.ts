@@ -130,6 +130,11 @@ const messages: Messages = {
         todoInterval: 'Todo Generation Interval (minutes)',
         dailyReportTime: 'Daily Report Generation Time',
         dailyReportHint: 'Set the time for generating daily reports',
+        excludedDomains: 'Websites to Skip Crawling',
+      },
+      hints: {
+        excludedDomains: 'Enter one domain per line; matching links will be ignored during crawling.',
+        noExcludedDomains: 'No excluded domains configured.',
       },
       labels: {
         minutes: 'minutes',
@@ -140,6 +145,7 @@ const messages: Messages = {
         minutes: 'Enter minutes',
         hour: 'HH',
         minute: 'MM',
+        excludedDomains: 'example.com',
       },
       errors: {
         intervalPositive: 'Interval must be greater than 0',
@@ -148,6 +154,8 @@ const messages: Messages = {
         load: 'Failed to load settings',
         save: 'Failed to save settings',
         languageUpdate: 'Failed to update language preference',
+        invalidDomain: 'Please enter a valid domain.',
+        duplicateDomain: 'This domain is already in the list.',
       },
       buttons: {
         cancel: 'Cancel',
@@ -290,6 +298,11 @@ const messages: Messages = {
         todoInterval: '任务生成间隔（分钟）',
         dailyReportTime: '日报生成时间',
         dailyReportHint: '设置每日生成日报的时间',
+        excludedDomains: '不爬取的网站列表',
+      },
+      hints: {
+        excludedDomains: '每行填写一个域名，系统将跳过这些网址的抓取。',
+        noExcludedDomains: '暂未配置需要跳过的网站。',
       },
       labels: {
         minutes: '分钟',
@@ -300,6 +313,7 @@ const messages: Messages = {
         minutes: '输入分钟数',
         hour: 'HH',
         minute: 'MM',
+        excludedDomains: '例如 example.com',
       },
       errors: {
         intervalPositive: '间隔必须大于 0',
@@ -308,6 +322,8 @@ const messages: Messages = {
         load: '加载设置失败',
         save: '保存设置失败',
         languageUpdate: '更新语言偏好失败',
+        invalidDomain: '请输入有效的域名。',
+        duplicateDomain: '该域名已存在于列表中。',
       },
       buttons: {
         cancel: '取消',

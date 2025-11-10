@@ -112,6 +112,54 @@
             </p>
           </div>
 
+          <!-- Excluded Domains Setting -->
+          <div class="space-y-2">
+            <label class="text-sm font-medium text-slate-700 dark:text-slate-300 flex-1">
+              {{ t('settings.fields.excludedDomains') }}
+            </label>
+            <div class="flex gap-2">
+              <input
+                v-model="newExcludedDomain"
+                type="text"
+                class="flex-1 px-3 py-2 text-sm rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                :placeholder="t('settings.placeholders.excludedDomains')"
+                @keydown.enter.prevent="addExcludedDomain"
+              />
+              <button
+                type="button"
+                class="px-3 py-2 text-sm rounded-lg bg-blue-500 hover:bg-blue-600 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                @click="addExcludedDomain"
+              >
+                {{ t('common.add') }}
+              </button>
+            </div>
+            <p v-if="excludedDomainError" class="text-xs text-red-500 dark:text-red-400">
+              {{ excludedDomainError }}
+            </p>
+            <p v-else class="text-xs text-slate-500 dark:text-slate-400">
+              {{ t('settings.hints.excludedDomains') }}
+            </p>
+            <ul v-if="localSettings.excluded_domains.length" class="space-y-2 max-h-40 overflow-y-auto">
+              <li
+                v-for="domain in localSettings.excluded_domains"
+                :key="domain"
+                class="flex items-center justify-between px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/40"
+              >
+                <span class="text-sm text-slate-700 dark:text-slate-200 break-all">{{ domain }}</span>
+                <button
+                  type="button"
+                  class="text-xs text-red-500 hover:text-red-600 dark:text-red-400 dark:hover:text-red-300 transition-colors"
+                  @click="removeExcludedDomain(domain)"
+                >
+                  {{ t('common.delete') }}
+                </button>
+              </li>
+            </ul>
+            <p v-else class="text-xs text-slate-400 dark:text-slate-500">
+              {{ t('settings.hints.noExcludedDomains') }}
+            </p>
+          </div>
+
           <!-- Language Setting -->
           <div class="space-y-1">
             <div class="flex items-center justify-between gap-6">
@@ -177,7 +225,8 @@ const localSettings = ref<Settings>({
   tips_interval_minutes: 60,
   todo_interval_minutes: 30,
   daily_report_hour: 8,
-  daily_report_minute: 0
+  daily_report_minute: 0,
+  excluded_domains: []
 });
 
 const languageError = ref<string | null>(null);
@@ -199,8 +248,38 @@ const isValid = computed(() => {
   );
 });
 
-const formatTime = (hour: number, minute: number): string => {
-  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+const newExcludedDomain = ref('');
+const excludedDomainError = ref<string | null>(null);
+
+const normalizeDomain = (domain: string): string => {
+  const trimmed = domain.trim();
+  if (!trimmed) {
+    return '';
+  }
+  const withoutProtocol = trimmed.replace(/^\w+:\/\//, '');
+  const withoutPath = withoutProtocol.replace(/\/.*$/, '');
+  return withoutPath.toLowerCase();
+};
+
+const addExcludedDomain = () => {
+  const normalized = normalizeDomain(newExcludedDomain.value);
+  if (!normalized) {
+    excludedDomainError.value = t('settings.errors.invalidDomain');
+    return;
+  }
+  if (localSettings.value.excluded_domains.includes(normalized)) {
+    excludedDomainError.value = t('settings.errors.duplicateDomain');
+    return;
+  }
+  localSettings.value.excluded_domains = [...localSettings.value.excluded_domains, normalized];
+  newExcludedDomain.value = '';
+  excludedDomainError.value = null;
+};
+
+const removeExcludedDomain = (domain: string) => {
+  localSettings.value.excluded_domains = localSettings.value.excluded_domains.filter(
+    (item) => item !== domain
+  );
 };
 
 const loadSettings = async () => {
@@ -209,7 +288,13 @@ const loadSettings = async () => {
   
   try {
     const settings = await settingsService.getSettings();
-    localSettings.value = settings;
+    localSettings.value = {
+      tips_interval_minutes: settings.tips_interval_minutes ?? 60,
+      todo_interval_minutes: settings.todo_interval_minutes ?? 30,
+      daily_report_hour: settings.daily_report_hour ?? 8,
+      daily_report_minute: settings.daily_report_minute ?? 0,
+      excluded_domains: Array.isArray(settings.excluded_domains) ? settings.excluded_domains : []
+    };
   } catch (err) {
     error.value = err instanceof Error ? err.message : t('settings.errors.load');
     console.error('Failed to load settings:', err);

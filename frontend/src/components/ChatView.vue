@@ -63,9 +63,7 @@
           <div v-if="isLoading" class="flex justify-start">
             <div class="loading-message mr-12 px-4 py-3 rounded-lg">
               <div class="flex items-center space-x-3">
-                <div class="flex space-x-1">
-                  <div class="animate-bounce">{{ t('chat.loading') }}</div>
-                </div>
+              <span class="loading-text">{{ t('chat.loading') }}</span>
               </div>
             </div>
           </div>
@@ -262,8 +260,25 @@ const handleSend = async () => {
   background-color: #475569;
 }
 
-.loading-message {
-  color: white;
+.loading-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: transparent;
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.92) 0%, rgba(226, 232, 240, 0.95) 40%, rgba(255, 255, 255, 0.88) 75%, rgba(226, 232, 240, 0.95) 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: loading-gradient 2.4s linear infinite;
+}
+
+@keyframes loading-gradient {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: -200% 50%;
+  }
 }
 
 .send-button {
@@ -384,8 +399,8 @@ const handleSend = async () => {
     background-color: #9ca3af;
   }
 
-  .loading-message {
-    color: #111827;
+  .loading-text {
+    background-image: linear-gradient(90deg, rgba(17, 24, 39, 0.95) 0%, rgba(55, 65, 81, 0.9) 45%, rgba(31, 41, 55, 0.92) 75%, rgba(17, 24, 39, 0.95) 100%);
   }
 
   .chat-input {
