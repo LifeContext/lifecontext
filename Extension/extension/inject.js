@@ -244,6 +244,38 @@
     let activePort = null;
     const workflowIdToElement = Object.create(null);
     const mdBufferByWorkflowId = Object.create(null);
+    // 发送按钮原始内容，用于恢复
+    let cachedOriginalBtnHTML = null;
+
+    // 切换发送按钮“生成中...”状态
+    function setGeneratingState(on) {
+      try {
+        if (!cachedOriginalBtnHTML) cachedOriginalBtnHTML = sendBtn.innerHTML;
+        if (on) {
+          sendBtn.disabled = true;
+          sendBtn.style.opacity = '0.7';
+          sendBtn.style.cursor = 'not-allowed';
+          sendBtn.style.borderRadius = '20px';
+          sendBtn.style.padding = '8px 12px';
+          sendBtn.style.minWidth = '108px';
+          sendBtn.innerHTML = `
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;color:white;animation:lc-spin 1s linear infinite">
+                <path d="M12 2a10 10 0 1 0 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/>
+              </svg>
+              <span>生成中...</span>
+            </span>`;
+        } else {
+          sendBtn.disabled = false;
+          sendBtn.style.opacity = '1';
+          sendBtn.style.cursor = 'pointer';
+          sendBtn.style.borderRadius = '50%';
+          sendBtn.style.padding = '10px';
+          sendBtn.style.minWidth = '';
+          sendBtn.innerHTML = cachedOriginalBtnHTML || sendBtn.innerHTML;
+        }
+      } catch (_) {}
+    }
 
     // Markdown 渲染（基础版）：安全转义 + 标题/加粗/斜体/代码块/行内代码/链接/无序列表
     function escapeHtml(s) {
@@ -403,12 +435,12 @@
           max-width: 560px;
           padding: 2px 0;
           background: transparent;
-          color: ${darkNow ? '#e2e8f0' : '#0f172a'};
           font-size: 15px;
           line-height: 1.7;
           word-wrap: break-word;
           white-space: normal;
         `;
+        textBlock.classList.add('ai-text');
         textBlock.innerHTML = renderMarkdown(text);
         messageContainer.appendChild(textBlock);
       }
@@ -476,6 +508,7 @@
         activePort.onDisconnect.addListener(() => {
           activePort = null;
           hasActiveStream = false;
+          try { setGeneratingState(false); } catch(_) {}
         });
         activePort.onMessage.addListener((msg) => {
           if (!msg || msg.type !== 'STREAM_CHUNK') return;
@@ -494,8 +527,10 @@
             avatar.style.cssText = `flex-shrink:0;width:32px;height:32px;border-radius:8px;object-fit:cover;margin-top:2px;background:transparent;`;
             messageContainer.appendChild(avatar);
             const textBlock = document.createElement('div');
-            textBlock.style.cssText = `max-width:560px;padding:2px 0;background:transparent;color:${isDarkMode()? '#e2e8f0':'#0f172a'};font-size:15px;line-height:1.7;white-space:normal;word-wrap:break-word;`;
-            textBlock.innerHTML = '';
+             textBlock.style.cssText = `max-width:560px;padding:2px 0;background:transparent;font-size:15px;line-height:1.7;white-space:normal;word-wrap:break-word;`;
+             textBlock.classList.add('ai-text');
+            textBlock.setAttribute('data-has-content', '0');
+            textBlock.innerHTML = `<span style="opacity:.7;font-style:italic;">AI 正在思考...</span>`;
             messageContainer.appendChild(textBlock);
             chatMessages.appendChild(messageContainer);
             workflowIdToElement[key] = textBlock;
@@ -506,16 +541,25 @@
           } else if (t === 'content') {
             const el = workflowIdToElement[key];
             if (el) {
+              if (el.getAttribute('data-has-content') !== '1') {
+                el.setAttribute('data-has-content', '1');
+                el.innerHTML = '';
+              }
               mdBufferByWorkflowId[key] = (mdBufferByWorkflowId[key] || '') + String(data.content || '');
               el.innerHTML = renderMarkdown(mdBufferByWorkflowId[key]);
               requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
             }
           } else if (t === 'done') {
             hasActiveStream = false;
+            try { setGeneratingState(false); } catch(_) {}
             try { updateSendButton(); } catch(_) {}
           } else if (t === 'error') {
             const el = workflowIdToElement[key];
             if (el) {
+              if (el.getAttribute('data-has-content') !== '1') {
+                el.setAttribute('data-has-content', '1');
+                el.innerHTML = '';
+              }
               const prev = mdBufferByWorkflowId[key] || '';
               mdBufferByWorkflowId[key] = prev + `\n\n**[Error]** ${String(data.content || '')}`;
               el.innerHTML = renderMarkdown(mdBufferByWorkflowId[key]);
@@ -523,6 +567,7 @@
               addMessage(`**[Error]** ${data.content || ''}`, 'ai');
             }
             hasActiveStream = false;
+            try { setGeneratingState(false); } catch(_) {}
             try { updateSendButton(); } catch(_) {}
           }
         });
@@ -571,6 +616,7 @@
         user_id: 'user_123'
         };
         hasActiveStream = true;
+        try { setGeneratingState(true); } catch(_) {}
         const port = ensureStreamPort();
         if (port) {
           port.postMessage({ action: 'start', payload });
@@ -580,6 +626,7 @@
       } catch (error) {
         hideLoading();
         hasActiveStream = false;
+        try { setGeneratingState(false); } catch(_) {}
         addMessage('抱歉，发送消息时出现错误。请检查网络连接或稍后再试。', 'ai');
         console.error('聊天错误:', error);
         try { updateSendButton(); } catch(_) {}
@@ -764,9 +811,10 @@
     // 禁用发送按钮当输入为空或正在加载时
     function updateSendButton() {
       const hasText = inputField.value.trim().length > 0;
-      sendBtn.disabled = !hasText || isLoading;
-      sendBtn.style.opacity = (!hasText || isLoading) ? '0.5' : '1';
-      sendBtn.style.cursor = (!hasText || isLoading) ? 'not-allowed' : 'pointer';
+      const disabled = !hasText || isLoading || hasActiveStream;
+      sendBtn.disabled = disabled;
+      sendBtn.style.opacity = disabled ? '0.5' : '1';
+      sendBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
     }
     
     // 监听输入变化
@@ -877,10 +925,12 @@
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
           themeSheet.textContent = `
 #chat-input::placeholder{color:#94a3b8;opacity:.8}
+#chat-messages .ai-text{color:#e2e8f0;}
 #chat-messages pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto;border:1px solid rgba(71,85,105,0.5);}
 #chat-messages code{background:#0b1220;color:#e2e8f0;padding:2px 6px;border-radius:6px;}
 #chat-messages h1,#chat-messages h2,#chat-messages h3{margin:10px 0;color:#e2e8f0;}
 #chat-messages a{color:#60a5fa;text-decoration:underline;}
+@keyframes lc-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
           `;
         } else {
           chatBox.style.background = '#f8fafc';
@@ -896,10 +946,12 @@
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
           themeSheet.textContent = `
 #chat-input::placeholder{color:#64748b;opacity:.9}
+#chat-messages .ai-text{color:#0f172a;}
 #chat-messages pre{background:#e2e8f0;color:#0f172a;padding:12px;border-radius:8px;overflow:auto;border:1px solid #cbd5e1;}
 #chat-messages code{background:#e2e8f0;color:#0f172a;padding:2px 6px;border-radius:6px;}
 #chat-messages h1,#chat-messages h2,#chat-messages h3{margin:10px 0;color:#0f172a;}
 #chat-messages a{color:#2563eb;text-decoration:underline;}
+@keyframes lc-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
           `;
         }
       } catch (_) {}
