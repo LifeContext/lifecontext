@@ -147,6 +147,34 @@ VITE v6.x.x  ready in 500 ms
 
 🎉 Open the browser and visit the address above to start using the app.
 
+### ⚙️ All-in-One Scripts (Optional)
+
+After configuring the backend, frontend, and browser extension, you can start or stop all services with a single script.
+
+#### Windows
+Activate your Conda environment, then run:
+```
+deploy.bat
+```
+To stop all services, double-click or execute:
+```
+stop.bat
+```
+
+#### Linux / macOS
+Grant execute permissions the first time:
+```
+chmod +x deploy.sh stop.sh
+```
+Start all services:
+```
+./deploy.sh
+```
+Stop all services:
+```
+./stop.sh
+```
+
 ## 🌄 Scenario Introduction
 
 1. LifeContext automatically and seamlessly records the information you browse on web pages.
