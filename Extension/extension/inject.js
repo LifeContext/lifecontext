@@ -243,6 +243,94 @@
     let hasActiveStream = false;
     let activePort = null;
     const workflowIdToElement = Object.create(null);
+    const mdBufferByWorkflowId = Object.create(null);
+
+    // Markdown 渲染（基础版）：安全转义 + 标题/加粗/斜体/代码块/行内代码/链接/无序列表
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+    function renderMarkdown(src) {
+      try {
+        if (!src) return '';
+        let text = String(src).replace(/\r\n/g, '\n');
+        // 转义
+        text = escapeHtml(text);
+        // 代码块 ```lang\n...\n```
+        const blocks = [];
+        text = text.replace(/```([\w+-]*)\n([\s\S]*?)```/g, function(_, lang, code) {
+          const i = blocks.length;
+          blocks.push({ lang: (lang || '').toLowerCase(), code });
+          return `@@MD_CODE_${i}@@`;
+        });
+        // 标题
+        text = text.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
+        text = text.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
+        text = text.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
+        // 无序列表
+        const lines = text.split('\n');
+        let outLines = [];
+        let inList = false;
+        for (const ln of lines) {
+          const m = ln.match(/^\s*[-*]\s+(.*)$/);
+          if (m) {
+            if (!inList) { inList = true; outLines.push('<ul>'); }
+            outLines.push('<li>' + m[1] + '</li>');
+          } else {
+            if (inList) { inList = false; outLines.push('</ul>'); }
+            outLines.push(ln);
+          }
+        }
+        if (inList) outLines.push('</ul>');
+        text = outLines.join('\n');
+        // 行内代码
+        text = text.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+        // 加粗/斜体
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        text = text.replace(/(?<!\*)\*(?!\s)(.+?)(?<!\s)\*(?!\*)/g, '<em>$1</em>');
+        text = text.replace(/(?<!_)_(?!\s)(.+?)(?<!\s)_(?!_)/g, '<em>$1</em>');
+        // 链接
+        text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(_, label, href) {
+          const safe = href.replace(/"/g, '&quot;');
+          return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        });
+        // 段落
+        const tmp = text.split('\n');
+        const out = [];
+        let buf = [];
+        const flush = () => {
+          if (buf.length) {
+            const c = buf.join(' ').trim();
+            if (c) out.push('<p>' + c + '</p>');
+            buf = [];
+          }
+        };
+        for (const ln of tmp) {
+          if (/^\s*$/.test(ln)) { flush(); continue; }
+          if (/^\s*<(h1|h2|h3|ul|li|\/ul|pre|blockquote)/.test(ln)) {
+            flush(); out.push(ln);
+          } else {
+            buf.push(ln);
+          }
+        }
+        flush();
+        let html = out.join('\n');
+        // 还原代码块
+        html = html.replace(/@@MD_CODE_(\d+)@@/g, function(_, idxStr) {
+          const idx = Number(idxStr);
+          const blk = blocks[idx] || { lang: '', code: '' };
+          const codeHtml = escapeHtml(blk.code);
+          const langClass = blk.lang ? ` class="language-${blk.lang}"` : '';
+          return `<pre><code${langClass}>${codeHtml}</code></pre>`;
+        });
+        return html;
+      } catch (e) {
+        return '<pre><code>' + escapeHtml(String(src)) + '</code></pre>';
+      }
+    }
 
     // 保证布局与滚动正确的辅助函数
     function ensureLayout() {
@@ -319,9 +407,9 @@
           font-size: 15px;
           line-height: 1.7;
           word-wrap: break-word;
-          white-space: pre-wrap;
+          white-space: normal;
         `;
-        textBlock.textContent = text;
+        textBlock.innerHTML = renderMarkdown(text);
         messageContainer.appendChild(textBlock);
       }
 
@@ -406,18 +494,20 @@
             avatar.style.cssText = `flex-shrink:0;width:32px;height:32px;border-radius:8px;object-fit:cover;margin-top:2px;background:transparent;`;
             messageContainer.appendChild(avatar);
             const textBlock = document.createElement('div');
-            textBlock.style.cssText = `max-width:560px;padding:2px 0;background:transparent;color:${isDarkMode()? '#e2e8f0':'#0f172a'};font-size:15px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;`;
-            textBlock.textContent = '';
+            textBlock.style.cssText = `max-width:560px;padding:2px 0;background:transparent;color:${isDarkMode()? '#e2e8f0':'#0f172a'};font-size:15px;line-height:1.7;white-space:normal;word-wrap:break-word;`;
+            textBlock.innerHTML = '';
             messageContainer.appendChild(textBlock);
             chatMessages.appendChild(messageContainer);
             workflowIdToElement[key] = textBlock;
+            mdBufferByWorkflowId[key] = '';
             hasActiveStream = true;
             requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
             try { updateSendButton(); } catch(_) {}
           } else if (t === 'content') {
             const el = workflowIdToElement[key];
             if (el) {
-              el.textContent += String(data.content || '');
+              mdBufferByWorkflowId[key] = (mdBufferByWorkflowId[key] || '') + String(data.content || '');
+              el.innerHTML = renderMarkdown(mdBufferByWorkflowId[key]);
               requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
             }
           } else if (t === 'done') {
@@ -426,9 +516,11 @@
           } else if (t === 'error') {
             const el = workflowIdToElement[key];
             if (el) {
-              el.textContent += `\n[Error] ${data.content || ''}`;
+              const prev = mdBufferByWorkflowId[key] || '';
+              mdBufferByWorkflowId[key] = prev + `\n\n**[Error]** ${String(data.content || '')}`;
+              el.innerHTML = renderMarkdown(mdBufferByWorkflowId[key]);
             } else {
-              addMessage(`[Error] ${data.content || ''}`, 'ai');
+              addMessage(`**[Error]** ${data.content || ''}`, 'ai');
             }
             hasActiveStream = false;
             try { updateSendButton(); } catch(_) {}
@@ -783,7 +875,13 @@
           contextPill.style.border = '1px solid rgba(71,85,105,0.5)';
           contextPill.style.color = '#e2e8f0';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#94a3b8;opacity:.8}`;
+          themeSheet.textContent = `
+#chat-input::placeholder{color:#94a3b8;opacity:.8}
+#chat-messages pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto;border:1px solid rgba(71,85,105,0.5);}
+#chat-messages code{background:#0b1220;color:#e2e8f0;padding:2px 6px;border-radius:6px;}
+#chat-messages h1,#chat-messages h2,#chat-messages h3{margin:10px 0;color:#e2e8f0;}
+#chat-messages a{color:#60a5fa;text-decoration:underline;}
+          `;
         } else {
           chatBox.style.background = '#f8fafc';
           chatHeader.style.borderBottom = '1px solid #e2e8f0';
@@ -796,7 +894,13 @@
           contextPill.style.border = '1px solid #cbd5e1';
           contextPill.style.color = '#0f172a';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#64748b;opacity:.9}`;
+          themeSheet.textContent = `
+#chat-input::placeholder{color:#64748b;opacity:.9}
+#chat-messages pre{background:#e2e8f0;color:#0f172a;padding:12px;border-radius:8px;overflow:auto;border:1px solid #cbd5e1;}
+#chat-messages code{background:#e2e8f0;color:#0f172a;padding:2px 6px;border-radius:6px;}
+#chat-messages h1,#chat-messages h2,#chat-messages h3{margin:10px 0;color:#0f172a;}
+#chat-messages a{color:#2563eb;text-decoration:underline;}
+          `;
         }
       } catch (_) {}
     }
