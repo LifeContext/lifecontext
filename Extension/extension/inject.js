@@ -239,6 +239,10 @@
     let isLoading = false;
     let currentWorkflowId = '';
     let sessionId = `session_${Date.now()}`;
+    // 流式状态
+    let hasActiveStream = false;
+    let activePort = null;
+    const workflowIdToElement = Object.create(null);
 
     // 保证布局与滚动正确的辅助函数
     function ensureLayout() {
@@ -376,118 +380,117 @@
       isLoading = false;
     }
     
-    // 发送消息到后端API（通过后台脚本代理）
-    async function sendMessageToAPI(message) {
+    // 建立/复用 Port 长连接并处理流式消息
+    function ensureStreamPort() {
       try {
-        const response = await new Promise((resolve, reject) => {
-          try {
-            // 提取当前页面内容（如果需要）
-            let pageContent = null;
-            if (usePageContext) {
-              try {
-                // 克隆body以避免修改原始DOM
-                const bodyClone = document.body.cloneNode(true);
-                // 移除script和style标签
-                const scripts = bodyClone.querySelectorAll('script, style, noscript');
-                scripts.forEach(el => el.remove());
-                // 获取文本内容
-                pageContent = bodyClone.innerText || bodyClone.textContent || '';
-                // 限制长度（避免发送过大内容）
-                if (pageContent.length > 50000) {
-                  pageContent = pageContent.substring(0, 50000) + '...';
-                }
-              } catch (e) {
-                console.warn('提取页面内容失败:', e);
-              }
+        if (activePort) return activePort;
+        activePort = chrome.runtime.connect({ name: 'STREAM_CHAT' });
+        activePort.onDisconnect.addListener(() => {
+          activePort = null;
+          hasActiveStream = false;
+        });
+        activePort.onMessage.addListener((msg) => {
+          if (!msg || msg.type !== 'STREAM_CHUNK') return;
+          const data = msg.data || {};
+          const t = String(data.type || '');
+          const key = data.workflow_id || 'default';
+          if (t === 'start') {
+            // 隐藏加载，创建 AI 文本块
+            hideLoading();
+            const messageContainer = document.createElement('div');
+            messageContainer.style.cssText = `display:flex;align-items:flex-start;gap:10px;`;
+            const avatar = document.createElement('img');
+            avatar.src = logoUrl;
+            avatar.onerror = function(){ this.onerror=null; this.src = logoFallbackUrl; };
+            avatar.alt = 'LifeContext';
+            avatar.style.cssText = `flex-shrink:0;width:32px;height:32px;border-radius:8px;object-fit:cover;margin-top:2px;background:transparent;`;
+            messageContainer.appendChild(avatar);
+            const textBlock = document.createElement('div');
+            textBlock.style.cssText = `max-width:560px;padding:2px 0;background:transparent;color:${isDarkMode()? '#e2e8f0':'#0f172a'};font-size:15px;line-height:1.7;white-space:pre-wrap;word-wrap:break-word;`;
+            textBlock.textContent = '';
+            messageContainer.appendChild(textBlock);
+            chatMessages.appendChild(messageContainer);
+            workflowIdToElement[key] = textBlock;
+            hasActiveStream = true;
+            requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
+            try { updateSendButton(); } catch(_) {}
+          } else if (t === 'content') {
+            const el = workflowIdToElement[key];
+            if (el) {
+              el.textContent += String(data.content || '');
+              requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
             }
-            
-            chrome.runtime.sendMessage({ 
-              type: 'SEND_CHAT_MESSAGE', 
-              payload: {
-                query: message,
-                context: (function(){
-                  const base = { session_id: sessionId, user_preferences: {} };
-                  if (usePageContext) {
-                    base.page = { 
-                      url: location.href, 
-                      title: document.title || '',
-                      content: pageContent || ''  // 添加页面内容
-                    };
-                  }
-                  return base;
-                })(),
-                session_id: sessionId,
-                user_id: 'user_123'
-              }
-            }, (resp) => {
-              if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message));
-              } else {
-                resolve(resp);
-              }
-            });
-          } catch (e) {
-            reject(e);
+          } else if (t === 'done') {
+            hasActiveStream = false;
+            try { updateSendButton(); } catch(_) {}
+          } else if (t === 'error') {
+            const el = workflowIdToElement[key];
+            if (el) {
+              el.textContent += `\n[Error] ${data.content || ''}`;
+            } else {
+              addMessage(`[Error] ${data.content || ''}`, 'ai');
+            }
+            hasActiveStream = false;
+            try { updateSendButton(); } catch(_) {}
           }
         });
-        
-        if (!response || !response.ok) {
-          throw new Error(response?.error || '发送消息失败');
-        }
-        
-        return response.data;
-      } catch (error) {
-        console.error('发送消息失败:', error);
-        throw error;
+        return activePort;
+      } catch (_) {
+        return null;
       }
     }
     
-    // 发送消息函数
+    // 发送消息函数（流式）
     async function sendMessage() {
       const message = inputField.value.trim();
-      if (!message || isLoading) return;
+      if (!message || isLoading || hasActiveStream) return;
 
       // 添加用户消息
       addMessage(message, 'user');
       inputField.value = '';
       
-      // 显示加载状态
+      // 显示加载状态，等待 start 后隐藏
       showLoading();
       
       try {
-        // 发送到后端API
-        const response = await sendMessageToAPI(message);
-        
-        // 隐藏加载状态
-        hideLoading();
-        
-        // 处理API响应 - 适配新的数据格式
-        if (response && response.data && response.data.success) {
-          // 更新workflow_id
-          if (response.data.workflow_id) {
-            currentWorkflowId = response.data.workflow_id;
+        // 提取页面内容（可选）
+        let pageContent = null;
+        if (usePageContext) {
+          try {
+            const bodyClone = document.body.cloneNode(true);
+            const scripts = bodyClone.querySelectorAll('script, style, noscript');
+            scripts.forEach(el => el.remove());
+            pageContent = bodyClone.innerText || bodyClone.textContent || '';
+            if (pageContent.length > 50000) pageContent = pageContent.substring(0, 50000) + '...';
+          } catch (e) {
+            console.warn('提取页面内容失败:', e);
           }
-          
-          // 显示AI回复 - 新格式直接使用 response 字段
-          let aiResponse = '抱歉，我无法理解您的问题。请稍后再试。';
-          
-          if (response.data.response) {
-            aiResponse = response.data.response;
-          } else if (response.data.message) {
-            aiResponse = response.data.message;
-          }
-          
-          addMessage(aiResponse, 'ai');
+        }
+        const payload = {
+          query: message,
+          context: (function(){
+            const base = { session_id: sessionId, user_preferences: {} };
+            if (usePageContext) {
+              base.page = { url: location.href, title: document.title || '', content: pageContent || '' };
+            }
+            return base;
+          })(),
+        session_id: sessionId,
+        user_id: 'user_123'
+        };
+        hasActiveStream = true;
+        const port = ensureStreamPort();
+        if (port) {
+          port.postMessage({ action: 'start', payload });
         } else {
-          addMessage('抱歉，我无法理解您的问题。请稍后再试。', 'ai');
+          throw new Error('无法建立流式端口');
         }
       } catch (error) {
-        // 隐藏加载状态
         hideLoading();
-        
-        // 添加错误消息
+        hasActiveStream = false;
         addMessage('抱歉，发送消息时出现错误。请检查网络连接或稍后再试。', 'ai');
         console.error('聊天错误:', error);
+        try { updateSendButton(); } catch(_) {}
       }
     }
 
