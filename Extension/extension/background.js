@@ -505,77 +505,84 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// 代理流式聊天消息请求
+// ✅ 兼容旧消息调用
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'SEND_STREAM_CHAT_MESSAGE') {
-    (async () => {
-      const apiUrl = await getApiUrl();
-      const url = `${apiUrl}/agent/chat/stream`;
+    try { sendResponse({ ok: true, usePort: true }); } catch (_) {}
+    return;
+  }
+});
+
+// ✅ Port 持久通道：支持流式聊天
+chrome.runtime.onConnect.addListener((port) => {
+  if (port.name !== 'STREAM_CHAT') return;
+
+  let disconnected = false;
+  port.onDisconnect.addListener(() => { disconnected = true; });
+
+  port.onMessage.addListener(async (msg) => {
+    if (!msg || msg.action !== 'start' || disconnected) return;
+    const payload = msg.payload || {};
+    const apiUrl = await getApiUrl();
+    const url = `${apiUrl}/agent/chat/stream`;
+
+    try {
+      const resp = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Accept': 'text/event-stream' },
+        body: JSON.stringify(payload)
+      });
+      if (!resp.ok) throw new Error(`HTTP error! status: ${resp.status}`);
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
       try {
-        const resp = await fetch(url, {
-          method: 'POST',
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'text/event-stream'
-          },
-          body: JSON.stringify(message.payload)
-        });
-        
-        if (!resp.ok) {
-          throw new Error(`HTTP error! status: ${resp.status}`);
-        }
-        
-        // 处理流式响应
-        const reader = resp.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = '';
-        
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split('\n');
-            buffer = lines.pop(); // 保留最后一个不完整的行
-            
-            for (const line of lines) {
-              if (line.startsWith('data: ')) {
-                try {
-                  const data = JSON.parse(line.slice(6));
-                  // 发送流式数据到内容脚本
-                  chrome.tabs.sendMessage(sender.tab.id, {
-                    type: 'STREAM_CHUNK',
-                    data: data
-                  });
-                } catch (e) {
-                  // 忽略解析错误
-                }
-              }
+        while (true) {
+          if (disconnected || !port.sender) break;
+          const { done, value } = await reader.read();
+          if (done) break;
+          console.log('🔹 Read chunk', value?.length, new TextDecoder().decode(value || new Uint8Array()));
+
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || '';
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (!trimmed.startsWith('data:')) continue;
+
+            try {
+              const jsonText = trimmed.replace(/^data:\s*/, '').trim();
+              if (!jsonText || jsonText === '[DONE]') continue;
+              const data = JSON.parse(jsonText);
+              port.postMessage({ type: 'STREAM_CHUNK', data });
+            } catch (e) {
+              console.debug('Stream parse skipped:', trimmed);
             }
           }
-        } finally {
-          reader.releaseLock();
         }
-        
-        sendResponse({ ok: true, data: null, status: resp.status, corsFallback: false });
-      } catch (err) {
-        // 如果流式请求失败，回退到普通请求
-        try {
-          const fallbackUrl = `${apiUrl}/agent/chat`;
-          const resp = await fetch(fallbackUrl, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(message.payload)
-          });
-          const data = await resp.json().catch(() => null);
-          // 适配新的数据格式
-          sendResponse({ ok: true, data: data, status: resp.status, corsFallback: false });
-        } catch (e2) {
-          sendResponse({ ok: false, error: String(e2) });
-        }
+      } finally {
+        try { reader.releaseLock(); } catch (_) {}
       }
-    })();
-    return true; // 异步响应
-  }
+    } catch (err) {
+      // ⚙️ 回退：普通模式
+      try {
+        const fallbackUrl = `${apiUrl}/agent/chat`;
+        const resp = await fetch(fallbackUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => null);
+        const txt = data?.data?.response || data?.data?.message || '';
+        port.postMessage({ type: 'STREAM_CHUNK', data: { type: 'start', workflow_id: data?.data?.workflow_id || '' } });
+        if (txt) port.postMessage({ type: 'STREAM_CHUNK', data: { type: 'content', content: txt } });
+        port.postMessage({ type: 'STREAM_CHUNK', data: { type: 'done', full_response: txt } });
+      } catch (e2) {
+        port.postMessage({ type: 'STREAM_CHUNK', data: { type: 'error', content: String(e2) } });
+      }
+    }
+  });
 });

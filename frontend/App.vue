@@ -18,8 +18,7 @@
                 {{ t('app.subtitle') }}
               </p>
             </div>
-            <div class="flex items-end gap-4 pb-0.5">
-              <Icon :path="CALENDAR_ICON" class="h-5 w-5 text-slate-400" />
+            <div class="flex items-end pb-0.5">
               <span class="text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 {{ today }}
               </span>
@@ -118,7 +117,6 @@ import { ref, computed, onMounted, onUnmounted } from 'vue';
 import Header from './src/components/Header.vue';
 import LeftPanel from './src/components/LeftPanel.vue';
 import CenterPanel from './src/components/CenterPanel.vue';
-import Icon from './src/components/Icon.vue';
 import SettingsModal from './src/components/SettingsModal.vue';
 import Timeline from './src/components/Timeline.vue';
 import ChatView from './src/components/ChatView.vue';
@@ -146,7 +144,6 @@ const REPORT_DETAIL_ICONS = {
   close: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
 };
 
-const CALENDAR_ICON = 'M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z';
 
 type ActiveView = 'dashboard' | 'timeline' | 'chat' | 'tipDetail' | 'reportDetail';
 

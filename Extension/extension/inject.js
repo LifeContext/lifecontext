@@ -239,6 +239,130 @@
     let isLoading = false;
     let currentWorkflowId = '';
     let sessionId = `session_${Date.now()}`;
+    // 流式状态
+    let hasActiveStream = false;
+    let activePort = null;
+    const workflowIdToElement = Object.create(null);
+    const mdBufferByWorkflowId = Object.create(null);
+    // 发送按钮原始内容，用于恢复
+    let cachedOriginalBtnHTML = null;
+
+    // 切换发送按钮“生成中...”状态
+    function setGeneratingState(on) {
+      try {
+        if (!cachedOriginalBtnHTML) cachedOriginalBtnHTML = sendBtn.innerHTML;
+        if (on) {
+          sendBtn.disabled = true;
+          sendBtn.style.opacity = '0.7';
+          sendBtn.style.cursor = 'not-allowed';
+          sendBtn.style.borderRadius = '20px';
+          sendBtn.style.padding = '8px 12px';
+          sendBtn.style.minWidth = '108px';
+          sendBtn.innerHTML = `
+            <span style="display:inline-flex;align-items:center;gap:8px;">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;color:white;animation:lc-spin 1s linear infinite">
+                <path d="M12 2a10 10 0 1 0 10 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/>
+              </svg>
+              <span>生成中...</span>
+            </span>`;
+        } else {
+          sendBtn.disabled = false;
+          sendBtn.style.opacity = '1';
+          sendBtn.style.cursor = 'pointer';
+          sendBtn.style.borderRadius = '50%';
+          sendBtn.style.padding = '10px';
+          sendBtn.style.minWidth = '';
+          sendBtn.innerHTML = cachedOriginalBtnHTML || sendBtn.innerHTML;
+        }
+      } catch (_) {}
+    }
+
+    // Markdown 渲染（基础版）：安全转义 + 标题/加粗/斜体/代码块/行内代码/链接/无序列表
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+    }
+    function renderMarkdown(src) {
+      try {
+        if (!src) return '';
+        let text = String(src).replace(/\r\n/g, '\n');
+        // 转义
+        text = escapeHtml(text);
+        // 代码块 ```lang\n...\n```
+        const blocks = [];
+        text = text.replace(/```([\w+-]*)\n([\s\S]*?)```/g, function(_, lang, code) {
+          const i = blocks.length;
+          blocks.push({ lang: (lang || '').toLowerCase(), code });
+          return `@@MD_CODE_${i}@@`;
+        });
+        // 标题
+        text = text.replace(/^###\s+(.*)$/gm, '<h3>$1</h3>');
+        text = text.replace(/^##\s+(.*)$/gm, '<h2>$1</h2>');
+        text = text.replace(/^#\s+(.*)$/gm, '<h1>$1</h1>');
+        // 无序列表
+        const lines = text.split('\n');
+        let outLines = [];
+        let inList = false;
+        for (const ln of lines) {
+          const m = ln.match(/^\s*[-*]\s+(.*)$/);
+          if (m) {
+            if (!inList) { inList = true; outLines.push('<ul>'); }
+            outLines.push('<li>' + m[1] + '</li>');
+          } else {
+            if (inList) { inList = false; outLines.push('</ul>'); }
+            outLines.push(ln);
+          }
+        }
+        if (inList) outLines.push('</ul>');
+        text = outLines.join('\n');
+        // 行内代码
+        text = text.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+        // 加粗/斜体
+        text = text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+        text = text.replace(/__(.+?)__/g, '<strong>$1</strong>');
+        text = text.replace(/(?<!\*)\*(?!\s)(.+?)(?<!\s)\*(?!\*)/g, '<em>$1</em>');
+        text = text.replace(/(?<!_)_(?!\s)(.+?)(?<!\s)_(?!_)/g, '<em>$1</em>');
+        // 链接
+        text = text.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, function(_, label, href) {
+          const safe = href.replace(/"/g, '&quot;');
+          return `<a href="${safe}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+        });
+        // 段落
+        const tmp = text.split('\n');
+        const out = [];
+        let buf = [];
+        const flush = () => {
+          if (buf.length) {
+            const c = buf.join(' ').trim();
+            if (c) out.push('<p>' + c + '</p>');
+            buf = [];
+          }
+        };
+        for (const ln of tmp) {
+          if (/^\s*$/.test(ln)) { flush(); continue; }
+          if (/^\s*<(h1|h2|h3|ul|li|\/ul|pre|blockquote)/.test(ln)) {
+            flush(); out.push(ln);
+          } else {
+            buf.push(ln);
+          }
+        }
+        flush();
+        let html = out.join('\n');
+        // 还原代码块
+        html = html.replace(/@@MD_CODE_(\d+)@@/g, function(_, idxStr) {
+          const idx = Number(idxStr);
+          const blk = blocks[idx] || { lang: '', code: '' };
+          const codeHtml = escapeHtml(blk.code);
+          const langClass = blk.lang ? ` class="language-${blk.lang}"` : '';
+          return `<pre><code${langClass}>${codeHtml}</code></pre>`;
+        });
+        return html;
+      } catch (e) {
+        return '<pre><code>' + escapeHtml(String(src)) + '</code></pre>';
+      }
+    }
 
     // 保证布局与滚动正确的辅助函数
     function ensureLayout() {
@@ -311,13 +435,13 @@
           max-width: 560px;
           padding: 2px 0;
           background: transparent;
-          color: ${darkNow ? '#e2e8f0' : '#0f172a'};
           font-size: 15px;
           line-height: 1.7;
           word-wrap: break-word;
-          white-space: pre-wrap;
+          white-space: normal;
         `;
-        textBlock.textContent = text;
+        textBlock.classList.add('ai-text');
+        textBlock.innerHTML = renderMarkdown(text);
         messageContainer.appendChild(textBlock);
       }
 
@@ -376,118 +500,136 @@
       isLoading = false;
     }
     
-    // 发送消息到后端API（通过后台脚本代理）
-    async function sendMessageToAPI(message) {
+    // 建立/复用 Port 长连接并处理流式消息
+    function ensureStreamPort() {
       try {
-        const response = await new Promise((resolve, reject) => {
-          try {
-            // 提取当前页面内容（如果需要）
-            let pageContent = null;
-            if (usePageContext) {
-              try {
-                // 克隆body以避免修改原始DOM
-                const bodyClone = document.body.cloneNode(true);
-                // 移除script和style标签
-                const scripts = bodyClone.querySelectorAll('script, style, noscript');
-                scripts.forEach(el => el.remove());
-                // 获取文本内容
-                pageContent = bodyClone.innerText || bodyClone.textContent || '';
-                // 限制长度（避免发送过大内容）
-                if (pageContent.length > 50000) {
-                  pageContent = pageContent.substring(0, 50000) + '...';
-                }
-              } catch (e) {
-                console.warn('提取页面内容失败:', e);
+        if (activePort) return activePort;
+        activePort = chrome.runtime.connect({ name: 'STREAM_CHAT' });
+        activePort.onDisconnect.addListener(() => {
+          activePort = null;
+          hasActiveStream = false;
+          try { setGeneratingState(false); } catch(_) {}
+        });
+        activePort.onMessage.addListener((msg) => {
+          if (!msg || msg.type !== 'STREAM_CHUNK') return;
+          const data = msg.data || {};
+          const t = String(data.type || '');
+          const key = data.workflow_id || 'default';
+          if (t === 'start') {
+            // 隐藏加载，创建 AI 文本块
+            hideLoading();
+            const messageContainer = document.createElement('div');
+            messageContainer.style.cssText = `display:flex;align-items:flex-start;gap:10px;`;
+            const avatar = document.createElement('img');
+            avatar.src = logoUrl;
+            avatar.onerror = function(){ this.onerror=null; this.src = logoFallbackUrl; };
+            avatar.alt = 'LifeContext';
+            avatar.style.cssText = `flex-shrink:0;width:32px;height:32px;border-radius:8px;object-fit:cover;margin-top:2px;background:transparent;`;
+            messageContainer.appendChild(avatar);
+            const textBlock = document.createElement('div');
+             textBlock.style.cssText = `max-width:560px;padding:2px 0;background:transparent;font-size:15px;line-height:1.7;white-space:normal;word-wrap:break-word;`;
+             textBlock.classList.add('ai-text');
+            textBlock.setAttribute('data-has-content', '0');
+            textBlock.innerHTML = `<span style="opacity:.7;font-style:italic;">AI 正在思考...</span>`;
+            messageContainer.appendChild(textBlock);
+            chatMessages.appendChild(messageContainer);
+            workflowIdToElement[key] = textBlock;
+            mdBufferByWorkflowId[key] = '';
+            hasActiveStream = true;
+            requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
+            try { updateSendButton(); } catch(_) {}
+          } else if (t === 'content') {
+            const el = workflowIdToElement[key];
+            if (el) {
+              if (el.getAttribute('data-has-content') !== '1') {
+                el.setAttribute('data-has-content', '1');
+                el.innerHTML = '';
               }
+              mdBufferByWorkflowId[key] = (mdBufferByWorkflowId[key] || '') + String(data.content || '');
+              el.innerHTML = renderMarkdown(mdBufferByWorkflowId[key]);
+              requestAnimationFrame(() => { chatMessages.scrollTop = chatMessages.scrollHeight; });
             }
-            
-            chrome.runtime.sendMessage({ 
-              type: 'SEND_CHAT_MESSAGE', 
-              payload: {
-                query: message,
-                context: (function(){
-                  const base = { session_id: sessionId, user_preferences: {} };
-                  if (usePageContext) {
-                    base.page = { 
-                      url: location.href, 
-                      title: document.title || '',
-                      content: pageContent || ''  // 添加页面内容
-                    };
-                  }
-                  return base;
-                })(),
-                session_id: sessionId,
-                user_id: 'user_123'
+          } else if (t === 'done') {
+            hasActiveStream = false;
+            try { setGeneratingState(false); } catch(_) {}
+            try { updateSendButton(); } catch(_) {}
+          } else if (t === 'error') {
+            const el = workflowIdToElement[key];
+            if (el) {
+              if (el.getAttribute('data-has-content') !== '1') {
+                el.setAttribute('data-has-content', '1');
+                el.innerHTML = '';
               }
-            }, (resp) => {
-              if (chrome.runtime.lastError) {
-                reject(new Error(chrome.runtime.lastError.message));
-              } else {
-                resolve(resp);
-              }
-            });
-          } catch (e) {
-            reject(e);
+              const prev = mdBufferByWorkflowId[key] || '';
+              mdBufferByWorkflowId[key] = prev + `\n\n**[Error]** ${String(data.content || '')}`;
+              el.innerHTML = renderMarkdown(mdBufferByWorkflowId[key]);
+            } else {
+              addMessage(`**[Error]** ${data.content || ''}`, 'ai');
+            }
+            hasActiveStream = false;
+            try { setGeneratingState(false); } catch(_) {}
+            try { updateSendButton(); } catch(_) {}
           }
         });
-        
-        if (!response || !response.ok) {
-          throw new Error(response?.error || '发送消息失败');
-        }
-        
-        return response.data;
-      } catch (error) {
-        console.error('发送消息失败:', error);
-        throw error;
+        return activePort;
+      } catch (_) {
+        return null;
       }
     }
     
-    // 发送消息函数
+    // 发送消息函数（流式）
     async function sendMessage() {
       const message = inputField.value.trim();
-      if (!message || isLoading) return;
+      if (!message || isLoading || hasActiveStream) return;
 
       // 添加用户消息
       addMessage(message, 'user');
       inputField.value = '';
       
-      // 显示加载状态
+      // 显示加载状态，等待 start 后隐藏
       showLoading();
       
       try {
-        // 发送到后端API
-        const response = await sendMessageToAPI(message);
-        
-        // 隐藏加载状态
-        hideLoading();
-        
-        // 处理API响应 - 适配新的数据格式
-        if (response && response.data && response.data.success) {
-          // 更新workflow_id
-          if (response.data.workflow_id) {
-            currentWorkflowId = response.data.workflow_id;
+        // 提取页面内容（可选）
+        let pageContent = null;
+        if (usePageContext) {
+          try {
+            const bodyClone = document.body.cloneNode(true);
+            const scripts = bodyClone.querySelectorAll('script, style, noscript');
+            scripts.forEach(el => el.remove());
+            pageContent = bodyClone.innerText || bodyClone.textContent || '';
+            if (pageContent.length > 50000) pageContent = pageContent.substring(0, 50000) + '...';
+          } catch (e) {
+            console.warn('提取页面内容失败:', e);
           }
-          
-          // 显示AI回复 - 新格式直接使用 response 字段
-          let aiResponse = '抱歉，我无法理解您的问题。请稍后再试。';
-          
-          if (response.data.response) {
-            aiResponse = response.data.response;
-          } else if (response.data.message) {
-            aiResponse = response.data.message;
-          }
-          
-          addMessage(aiResponse, 'ai');
+        }
+        const payload = {
+          query: message,
+          context: (function(){
+            const base = { session_id: sessionId, user_preferences: {} };
+            if (usePageContext) {
+              base.page = { url: location.href, title: document.title || '', content: pageContent || '' };
+            }
+            return base;
+          })(),
+        session_id: sessionId,
+        user_id: 'user_123'
+        };
+        hasActiveStream = true;
+        try { setGeneratingState(true); } catch(_) {}
+        const port = ensureStreamPort();
+        if (port) {
+          port.postMessage({ action: 'start', payload });
         } else {
-          addMessage('抱歉，我无法理解您的问题。请稍后再试。', 'ai');
+          throw new Error('无法建立流式端口');
         }
       } catch (error) {
-        // 隐藏加载状态
         hideLoading();
-        
-        // 添加错误消息
+        hasActiveStream = false;
+        try { setGeneratingState(false); } catch(_) {}
         addMessage('抱歉，发送消息时出现错误。请检查网络连接或稍后再试。', 'ai');
         console.error('聊天错误:', error);
+        try { updateSendButton(); } catch(_) {}
       }
     }
 
@@ -669,9 +811,10 @@
     // 禁用发送按钮当输入为空或正在加载时
     function updateSendButton() {
       const hasText = inputField.value.trim().length > 0;
-      sendBtn.disabled = !hasText || isLoading;
-      sendBtn.style.opacity = (!hasText || isLoading) ? '0.5' : '1';
-      sendBtn.style.cursor = (!hasText || isLoading) ? 'not-allowed' : 'pointer';
+      const disabled = !hasText || isLoading || hasActiveStream;
+      sendBtn.disabled = disabled;
+      sendBtn.style.opacity = disabled ? '0.5' : '1';
+      sendBtn.style.cursor = disabled ? 'not-allowed' : 'pointer';
     }
     
     // 监听输入变化
@@ -780,7 +923,15 @@
           contextPill.style.border = '1px solid rgba(71,85,105,0.5)';
           contextPill.style.color = '#e2e8f0';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.3)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#94a3b8;opacity:.8}`;
+          themeSheet.textContent = `
+#chat-input::placeholder{color:#94a3b8;opacity:.8}
+#chat-messages .ai-text{color:#e2e8f0;}
+#chat-messages pre{background:#0f172a;color:#e2e8f0;padding:12px;border-radius:8px;overflow:auto;border:1px solid rgba(71,85,105,0.5);}
+#chat-messages code{background:#0b1220;color:#e2e8f0;padding:2px 6px;border-radius:6px;}
+#chat-messages h1,#chat-messages h2,#chat-messages h3{margin:10px 0;color:#e2e8f0;}
+#chat-messages a{color:#60a5fa;text-decoration:underline;}
+@keyframes lc-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+          `;
         } else {
           chatBox.style.background = '#f8fafc';
           chatHeader.style.borderBottom = '1px solid #e2e8f0';
@@ -793,7 +944,15 @@
           contextPill.style.border = '1px solid #cbd5e1';
           contextPill.style.color = '#0f172a';
           ballElement.style.boxShadow = '0 10px 25px rgba(0,0,0,0.12)';
-          themeSheet.textContent = `#chat-input::placeholder{color:#64748b;opacity:.9}`;
+          themeSheet.textContent = `
+#chat-input::placeholder{color:#64748b;opacity:.9}
+#chat-messages .ai-text{color:#0f172a;}
+#chat-messages pre{background:#e2e8f0;color:#0f172a;padding:12px;border-radius:8px;overflow:auto;border:1px solid #cbd5e1;}
+#chat-messages code{background:#e2e8f0;color:#0f172a;padding:2px 6px;border-radius:6px;}
+#chat-messages h1,#chat-messages h2,#chat-messages h3{margin:10px 0;color:#0f172a;}
+#chat-messages a{color:#2563eb;text-decoration:underline;}
+@keyframes lc-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+          `;
         }
       } catch (_) {}
     }
