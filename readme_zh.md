@@ -28,13 +28,23 @@ Shaped by your life. Empower yourself. Interact with the world.
 - 全自动地对您浏览的网页进行分析，生成您的数字人生上下文。
 - 不打扰您的心流状态，主动提供及时、可行动的洞察与建议。
 
+
 ## 🚀 快速开始
-### 🛠️ 后端（Backend）配置
+### 📋 前置准备
+
+#### 1️⃣ **Python 环境**
+   - 安装 [Miniconda](https://docs.conda.io/en/latest/miniconda.html) 或 [Anaconda](https://www.anaconda.com/)
+   - 确保 `conda` 命令可用
+
+#### 2️⃣ **Node.js 环境**
+   - 安装 [Node.js](https://nodejs.org/) (推荐 v18 或更高版本)
+   - 确保 `node` 和 `npm` 命令可用
+### 🛠️ 前后端配置与启动
 
 #### 1️⃣ 配置大模型与向量服务
 📦 进入 backend 目录，复制 `.env.example`文件并命名为`.env`：
 ```bash
-cd ./backend
+cd backend
 cp .env.example .env
 ```
 
@@ -52,28 +62,50 @@ EMBEDDING_MODEL = "text-embedding-3-small"
 
 ```
 
-#### 2️⃣ 配置 Python 环境
-📦 在 backend 目录下，根据 `environment.yml` 创建环境并启动：
+#### 2️⃣ 创建conda环境（仅首次运行需要）
+📦 在 conda 环境 backend 目录下，根据 `environment.yml` 创建环境：
 ```bash
+cd backend
 conda env create -f environment.yml
-conda activate lifecontext
 ```
 
-#### 3️⃣ 启动后端服务
-📦 运行命令启动后端端口：
+#### 3️⃣ 启动服务
+#### Windows 系统
+
+启动所有服务
+
+在conda环境中执行：
+
+```cmd
+deploy.bat
+```
+
+停止所有服务
+
+在conda环境中执行：
+
+```cmd
+stop.bat
+```
+
+#### Linux / macOS 系统
+
+首次使用：添加执行权限
+
 ```bash
-python app.py
+chmod +x deploy.sh stop.sh
 ```
-✅ 启动成功后，终端会显示服务运行的端口信息如下
+
+启动所有服务
+
+```bash
+./deploy.sh
 ```
-============================================================
-LifeContext API 配置状态
-============================================================
-✅ LLM 内容分析功能：已启用
-   模型：gpt-4o-mini
-✅ 向量数据库功能：已启用
-   模型：text-embedding-3-small
-============================================================
+
+停止所有服务
+
+```bash
+./stop.sh
 ```
 
 
@@ -88,74 +120,9 @@ LifeContext API 配置状态
 4. 加载完成后，即可在浏览器工具栏中看到插件图标。
 5. 插件功能启用后，可关闭开发者模式以提升安全性。
 
-#### 2️⃣ 启动插件
-📦 编译器中建立新终端，进入 Extension 目录并安装依赖：
-```bash
-cd ./Extension
-npm install
-node server.js
-```
+🎉打开浏览器访问 http://localhost:3000/ 
 
-### 💻 前端（Frontend）配置
-
-#### 1️⃣ 安装依赖
-📦 建立新终端并进入 frontend 目录：
-
-```bash
-# Windows 用户
-cd ./frontend
-npm install
-```
-
-```bash
-# macOS 用户
-cd ./frontend
-npm install
-chmod +x node_modules/.bin/vite   # 赋予执行权限（防止 Vite 权限报错）
-```
-
-#### 2️⃣ 启动前端开发服务器
-📦 运行以下命令启动前端：
-```bash
-npm run dev
-```
-✅ 启动成功后终端会显示：
-```
-VITE v6.x.x  ready in 500 ms
-
-➜  Local:   http://localhost:3000/
-➜  Network: http://192.168.xx.xx:3000/
-```
-🎉打开浏览器访问上述地址即可使用 
-
-
-### ⚙️ 一体化脚本（可选）
-
-配置好前后端与浏览器插件后，也可以通过脚本一键启动或停止全部服务。
-
-#### Windows
-启动 Conda 环境后，在同一终端中运行：
-```
-deploy.bat
-```
-需要停止服务时，可双击或在命令行执行：
-```
-stop.bat
-```
-
-#### Linux / macOS
-首次使用先赋予脚本执行权限：
-```
-chmod +x deploy.sh stop.sh
-```
-启动全部服务：
-```
-./deploy.sh
-```
-停止全部服务：
-```
-./stop.sh
-```
+如果部署还有问题，请参考 deploy_guide_zh.md
 
 ## 🌄 场景介绍
 

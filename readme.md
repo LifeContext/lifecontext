@@ -34,12 +34,22 @@ Shaped by your life. Empower yourself. Interact with the world.
 
 ## 🚀 Quick Start
 
-### 🛠️ Backend Configuration
+### 📋 Prerequisites
+
+#### 1️⃣ **Python Environment**
+- Install [Miniconda](https://docs.conda.io/en/latest/miniconda.html) or [Anaconda](https://www.anaconda.com/)
+- Make sure the `conda` command is available
+
+#### 2️⃣ **Node.js Environment**
+- Install [Node.js](https://nodejs.org/) (version 18 or higher recommended)
+- Ensure both `node` and `npm` commands are available
+
+### 🛠️ Backend & Frontend Setup
 
 #### 1️⃣ Configure the LLM and Vector Services
 📦 Navigate to the `backend` directory and copy the `.env.example` file as `.env`:
 ```bash
-cd ./backend
+cd backend
 cp .env.example .env
 ```
 
@@ -57,35 +67,42 @@ EMBEDDING_BASE_URL = "https://api.openai.com/v1"
 EMBEDDING_MODEL = "text-embedding-3-small"
 ```
 
-#### 2️⃣ Set Up the Python Environment
-
-📦 In the `backend` directory, create a virtual environment, and install all dependencies automatically using `environment.yml`.
-
+#### 2️⃣ Create the Conda Environment (first run only)
+📦 Inside the `backend` directory, create the environment from `environment.yml`:
 ```bash
+cd backend
 conda env create -f environment.yml
-conda activate lifecontext
 ```
 
-#### 3️⃣ Start the Backend Service
+#### 3️⃣ Start All Services
 
-📦 Run the following command to start the backend service:
+##### Windows
+Run the scripts inside your activated Conda environment:
+```cmd
+deploy.bat
+```
+To stop all services:
+```cmd
+stop.bat
+```
 
+##### Linux / macOS
+Grant execute permissions on first use:
 ```bash
-python app.py
+chmod +x deploy.sh stop.sh
+```
+Start all services:
+```bash
+./deploy.sh
+```
+Stop all services:
+```bash
+./stop.sh
 ```
 
-✅ Once successfully launched, the terminal will display port information as follows:
+🎉 Open your browser and visit [http://localhost:3000/](http://localhost:3000/).
 
-```
-============================================================
-LifeContext API Configuration Status
-============================================================
-✅ LLM Content Analysis: Enabled
-   Model: gpt-4o-mini
-✅ Vector Database: Enabled
-   Model: text-embedding-3-small
-============================================================
-```
+Having issues? Check out `deploy_guide.md` for a step-by-step walkthrough.
 
 ### 🧩 Browser Extension Configuration
 
@@ -99,81 +116,9 @@ LifeContext API Configuration Status
 4. Once loaded, the extension icon will appear in your browser toolbar.
 5. After enabling the extension, you may disable Developer Mode for better security.
 
-#### 2️⃣ Launch the Extension
+🎉 Open the browser and visit [http://localhost:3000/](http://localhost:3000/)  
 
-📦 Open a new terminal in your editor, navigate to the Extension directory, and install dependencies:
-
-```bash
-cd ./Extension
-npm install
-node server.js
-```
-
-### 💻 Frontend Configuration
-
-#### 1️⃣ Install Dependencies
-
-📦 Open a new terminal and navigate to the frontend directory.
-
-```bash
-# For Windows users
-cd ./frontend
-npm install
-```
-
-```bash
-# For macOS users
-cd ./frontend
-npm install
-chmod +x node_modules/.bin/vite   # Grant execution permission (to prevent Vite permission errors)
-```
-
-#### 2️⃣ Start the Frontend Development Server
-
-📦 Run the following command to start the frontend:
-
-```bash
-npm run dev
-```
-
-✅ Once started successfully, the terminal will display:
-
-```
-VITE v6.x.x  ready in 500 ms
-
-➜  Local:   http://localhost:3000/
-➜  Network: http://192.168.xx.xx:3000/
-```
-
-🎉 Open the browser and visit the address above to start using the app.
-
-### ⚙️ All-in-One Scripts (Optional)
-
-After configuring the backend, frontend, and browser extension, you can start or stop all services with a single script.
-
-#### Windows
-Activate your Conda environment, then run:
-```
-deploy.bat
-```
-To stop all services, double-click or execute:
-```
-stop.bat
-```
-
-#### Linux / macOS
-Grant execute permissions the first time:
-```
-chmod +x deploy.sh stop.sh
-```
-Start all services:
-```
-./deploy.sh
-```
-Stop all services:
-```
-./stop.sh
-```
+If you still run into issues, refer to `deploy_guide.md`.
 
 ## 🌄 Scenario Introduction
 
