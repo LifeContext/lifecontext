@@ -12,6 +12,7 @@ from routes.generation import generation_bp
 from routes.agent import agent_bp
 from routes.events import events_bp
 from routes.settings import settings_bp
+from routes.url_blacklist import url_blacklist_bp
 
 logger = get_logger(__name__)
 
@@ -51,6 +52,7 @@ def create_app():
     app.register_blueprint(agent_bp)
     app.register_blueprint(events_bp)
     app.register_blueprint(settings_bp)
+    app.register_blueprint(url_blacklist_bp)
     
     # 健康检查端点
     @app.route('/health', methods=['GET'])
@@ -122,6 +124,11 @@ def create_app():
                     "GET /api/events/fetch",
                     "GET /api/events/status",
                     "POST /api/events/publish"
+                ],
+                "url_blacklist": [
+                    "GET /api/url-blacklist",
+                    "POST /api/url-blacklist",
+                    "DELETE /api/url-blacklist/{id}"
                 ]
             }
         })

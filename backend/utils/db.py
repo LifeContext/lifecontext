@@ -134,6 +134,15 @@ def init_db():
             VALUES (?, ?, ?)
         """, (key, value, description))
     
+    # 创建 URL 黑名单表
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS url_blacklist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            url TEXT NOT NULL UNIQUE,
+            create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     conn.commit()
     conn.close()
     logger.info("Database initialized successfully")
@@ -620,6 +629,60 @@ def get_screenshots(start_time=None, end_time=None, limit=10, offset=0):
     screenshots = [dict(row) for row in cursor.fetchall()]
     conn.close()
     return screenshots
+
+
+# URL 黑名单相关操作
+def get_url_blacklist(limit=1000, offset=0):
+    """获取 URL 黑名单列表"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute(
+        "SELECT id, url, create_time FROM url_blacklist ORDER BY create_time DESC LIMIT ? OFFSET ?",
+        (limit, offset)
+    )
+    
+    rows = [dict(row) for row in cursor.fetchall()]
+    conn.close()
+    return rows
+
+
+def add_url_to_blacklist(url: str):
+    """添加 URL 到黑名单"""
+    if not url or not isinstance(url, str):
+        raise ValueError("url 必须是非空字符串")
+    
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    create_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    
+    try:
+        cursor.execute(
+            "INSERT INTO url_blacklist (url, create_time) VALUES (?, ?)",
+            (url.strip(), create_time)
+        )
+        conn.commit()
+        new_id = cursor.lastrowid
+        return new_id
+    except sqlite3.IntegrityError as e:
+        conn.rollback()
+        raise ValueError("该 URL 已存在于黑名单中") from e
+    finally:
+        conn.close()
+
+
+def delete_url_from_blacklist(entry_id: int):
+    """从黑名单中删除指定记录"""
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM url_blacklist WHERE id = ?", (entry_id,))
+    affected_rows = cursor.rowcount
+    
+    conn.commit()
+    conn.close()
+    return affected_rows > 0
 
 
 # 设置相关操作
