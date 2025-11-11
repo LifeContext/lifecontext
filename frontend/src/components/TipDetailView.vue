@@ -110,7 +110,7 @@ mermaid.initialize({
 const fixSplitWordsInHTML = () => {
   if (!markdownContainer.value) return;
   
-  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'Dockerfile', 'bash', 'sql', 'json', 'vue', 'http'];
+  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'Dockerfile', 'bash', 'sql', 'json', 'vue', 'http', 'yaml'];
   
   const walker = document.createTreeWalker(markdownContainer.value, NodeFilter.SHOW_TEXT, null);
   const textNodes: Text[] = [];
@@ -182,7 +182,7 @@ const normalizeMarkdown = (raw: string): string => {
   if (!raw) return '';
   
   let text = raw;
-  const commonLanguages = ['mermaid', 'javascript', 'typescript', 'python', 'bash', 'sh', 'json', 'html', 'css', 'java', 'cpp', 'c', 'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'yaml', 'xml', 'markdown', 'dockerfile', 'makefile', 'ini', 'toml', 'diff', 'plaintext', 'text'];
+  const commonLanguages = ['javascript', 'typescript', 'python', 'bash', 'sh', 'json', 'html', 'css', 'java', 'cpp', 'c', 'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'xml', 'markdown', 'dockerfile', 'makefile', 'ini', 'toml', 'diff', 'plaintext', 'text'];
   
   // 修复被分割的语言标识（在转义处理之前处理转义序列格式）
   text = text.replace(/```(\w+)\\n\s*([a-z])\\n/g, (match, p1, p2) => {

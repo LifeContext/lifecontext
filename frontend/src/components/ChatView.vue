@@ -1,7 +1,11 @@
 <template>
-  <div class="chat-container h-full flex flex-col">
+  <div class="chat-container h-screen flex flex-col">
     <!-- 聊天消息区域 -->
-    <div class="flex-1 overflow-y-auto messagesContainer" ref="messagesContainer">
+    <div
+      class="flex-1 overflow-y-auto messagesContainer"
+      ref="messagesContainer"
+      :style="messageListStyle"
+    >
       <div class="max-w-4xl mx-auto px-8 h-full flex flex-col">
         <!-- 如果没有消息，显示欢迎界面 -->
         <div v-if="messages.length === 0" class="flex flex-col items-center justify-center flex-1 min-h-full">
@@ -38,32 +42,27 @@
         </div>
 
         <!-- 消息列表 -->
-        <div v-else class="space-y-4 py-6">
+        <div v-else class="messages-wrapper">
           <div 
-            v-for="message in messages" 
-            :key="message.workflow_id"
-            class="flex"
-            :class="message.sender === 'user' ? 'justify-end' : 'justify-start'"
+            v-for="pair in messagePairs" 
+            :key="pair.id"
+            class="fullscreen-pair"
           >
-            <div 
-              class="max-w-4xl px-4 py-3 rounded-lg message-bubble"
-              :class="message.sender === 'user' 
-                ? 'user-message ml-12' 
-                : 'ai-message mr-12'"
-            >
-              <div class="flex items-start space-x-3">                
-                <div class="flex-1">
-                  <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ message.content }}</p>
-                </div>
+            <div class="pair-bubble pair-bubble-user" v-if="pair.user">
+              <div class="max-w-3xl px-6 py-4 rounded-lg message-bubble user-message">
+                <p class="text-sm leading-relaxed whitespace-pre-wrap">{{ pair.user.content }}</p>
               </div>
             </div>
-          </div>
-
-          <!-- 加载指示器 -->
-          <div v-if="isLoading" class="flex justify-start">
-            <div class="loading-message mr-12 px-4 py-3 rounded-lg">
-              <div class="flex items-center space-x-3">
-              <span class="loading-text">{{ t('chat.loading') }}</span>
+            <div class="pair-bubble pair-bubble-ai" v-if="pair.ai || pair.isLoading">
+              <div class="max-w-3xl px-6 py-4 rounded-lg message-bubble ai-message">
+                <template v-if="pair.ai && pair.ai.content && pair.ai.content.trim().length > 0">
+                  <div class="markdown-body" v-html="renderMarkdown(pair.ai.content)"></div>
+                </template>
+                <template v-else>
+                  <div class="ai-loading-placeholder">
+                    <span class="loading-text">{{ t('chat.loading') }}</span>
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -72,7 +71,7 @@
     </div>
 
     <!-- 输入区域（仅在有消息时显示在底部） -->
-    <div v-if="messages.length > 0" class="pb-6">
+    <div v-if="messages.length > 0" class="pb-6" ref="inputAreaRef">
       <div class="max-w-4xl mx-auto px-8">
         <div class="relative">
           <input 
@@ -97,23 +96,206 @@
 </template>
 
 <script setup lang="ts">
-import { ref, nextTick, onBeforeUnmount, watch } from 'vue';
+import { ref, nextTick, onBeforeUnmount, watch, onMounted, computed, reactive } from 'vue';
 import Icon from './Icon.vue';
 import { chatService } from '../api/chatService';
 import { chatHistoryService } from '../api/chatHistoryService';
 import type { ChatMessage, ChatSession } from '../../types';
 import { useI18n } from '../i18n';
+import { marked, Renderer, type Tokens } from 'marked';
 
 const inputMessage = ref('');
 const messages = ref<ChatMessage[]>([]);
 const isLoading = ref(false);
 const messagesContainer = ref<HTMLElement>();
+const inputAreaRef = ref<HTMLElement>();
 const currentWorkflowId = ref<string>('');
 const hasUnsavedMessages = ref(false);
+const messageViewportHeight = ref<number>(typeof window !== 'undefined' ? window.innerHeight : 0);
 
 const { t } = useI18n();
 
 const SEND_ICON_PATH = 'M12 5a.75.75 0 01.53.22l5.25 5.25a.75.75 0 11-1.06 1.06L12.75 8.56V18a.75.75 0 01-1.5 0V8.56l-3.97 3.97a.75.75 0 11-1.06-1.06L11.47 5.22A.75.75 0 0112 5z';
+
+type MessagePair = {
+  id: string;
+  user?: ChatMessage;
+  ai?: ChatMessage;
+  isLoading?: boolean;
+};
+
+const updateViewportHeight = () => {
+  if (messagesContainer.value) {
+    messageViewportHeight.value = Math.max(messagesContainer.value.clientHeight, 0);
+  } else if (typeof window !== 'undefined') {
+    messageViewportHeight.value = window.innerHeight;
+  }
+};
+
+const handleResize = () => {
+  updateViewportHeight();
+};
+
+const messagePairs = computed<MessagePair[]>(() => {
+  const pairs: MessagePair[] = [];
+  let currentPair: MessagePair | null = null;
+
+  messages.value.forEach((msg, index) => {
+    const pairId = `${msg.workflow_id || msg.timestamp || index}`;
+
+    if (msg.sender === 'user') {
+      if (currentPair && !currentPair.ai) {
+        pairs.push(currentPair);
+      }
+      currentPair = {
+        id: `${pairId}-pair`,
+        user: msg
+      };
+    } else {
+      if (!currentPair) {
+        currentPair = {
+          id: `${pairId}-pair`,
+          ai: msg
+        };
+        pairs.push(currentPair);
+        currentPair = null;
+      } else if (!currentPair.ai) {
+        currentPair.ai = msg;
+        pairs.push(currentPair);
+        currentPair = null;
+      } else {
+        pairs.push(currentPair);
+        currentPair = {
+          id: `${pairId}-pair`,
+          ai: msg
+        };
+        pairs.push(currentPair);
+        currentPair = null;
+      }
+    }
+  });
+
+  if (currentPair) {
+    pairs.push(currentPair);
+  }
+
+  if (isLoading.value) {
+    if (pairs.length > 0 && !pairs[pairs.length - 1].ai) {
+      pairs[pairs.length - 1] = {
+        ...pairs[pairs.length - 1],
+        isLoading: true
+      };
+    } else if (pairs.length === 0) {
+      pairs.push({
+        id: 'loading-pair',
+        isLoading: true
+      });
+    }
+  }
+
+  return pairs;
+});
+
+const messageListStyle = computed(() => ({
+  '--message-viewport-height': `${messageViewportHeight.value || (typeof window !== 'undefined' ? window.innerHeight : 0)}px`
+}));
+
+const renderer = new Renderer();
+const escapeAttribute = (value: string) =>
+  value.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+renderer.link = function ({ href = '', title, tokens }: Tokens.Link) {
+  if (!href) {
+    return this.parser.parseInline(tokens, renderer);
+  }
+
+  const sanitizedHref = escapeAttribute(href);
+  const attrs = [
+    `href="${sanitizedHref}"`,
+    'target="_blank"',
+    'rel="noopener noreferrer"'
+  ];
+  if (title) {
+    attrs.push(`title="${escapeAttribute(title)}"`);
+  }
+
+  const innerHtml = this.parser.parseInline(tokens, renderer);
+  const rawText = tokens?.map((token) => token.raw ?? '').join('') ?? '';
+
+  if (
+    rawText &&
+    rawText !== href &&
+    rawText.includes(href) &&
+    typeof DOMParser !== 'undefined'
+  ) {
+    const domParser = new DOMParser();
+    const doc = domParser.parseFromString(`<div>${innerHtml}</div>`, 'text/html');
+    const container = doc.body.firstElementChild as HTMLElement | null;
+
+    if (container) {
+      let replaced = false;
+      const walker = doc.createTreeWalker(container, NodeFilter.SHOW_TEXT);
+
+      while (walker.nextNode()) {
+        const textNode = walker.currentNode as Text;
+        const textValue = textNode.nodeValue ?? '';
+        const matchIndex = textValue.indexOf(href);
+
+        if (matchIndex === -1) continue;
+
+        const parent = textNode.parentNode;
+        if (!parent) continue;
+
+        const before = textValue.slice(0, matchIndex);
+        const after = textValue.slice(matchIndex + href.length);
+
+        if (before) {
+          parent.insertBefore(doc.createTextNode(before), textNode);
+        }
+
+        const anchorEl = doc.createElement('a');
+        anchorEl.setAttribute('href', href);
+        anchorEl.setAttribute('target', '_blank');
+        anchorEl.setAttribute('rel', 'noopener noreferrer');
+        anchorEl.textContent = href;
+        parent.insertBefore(anchorEl, textNode);
+
+        if (after) {
+          parent.insertBefore(doc.createTextNode(after), textNode);
+        }
+
+        parent.removeChild(textNode);
+        replaced = true;
+      }
+
+      if (replaced) {
+        return container.innerHTML;
+      }
+    }
+  }
+
+  const linkContent = innerHtml || sanitizedHref;
+  return `<a ${attrs.join(' ')}>${linkContent}</a>`;
+};
+
+marked.use({ renderer });
+
+const renderMarkdown = (content: string) => {
+  if (!content) return '';
+  return marked.parse(content) as string;
+};
+
+let rafId: number | null = null;
+const scheduleViewportUpdate = () => {
+  if (rafId !== null) return;
+  rafId = window.requestAnimationFrame(() => {
+    rafId = null;
+    nextTick(() => {
+      scrollToBottom();
+      updateViewportHeight();
+    });
+  });
+};
 
 // 滚动到底部
 const scrollToBottom = async () => {
@@ -138,6 +320,33 @@ watch(messages, (newMessages) => {
     hasUnsavedMessages.value = true;
   }
 }, { deep: true });
+
+watch(
+  () => messages.value.length,
+  async () => {
+    await nextTick();
+    updateViewportHeight();
+  }
+);
+
+watch(
+  () => messagePairs.value.length,
+  async () => {
+    await nextTick();
+    updateViewportHeight();
+  }
+);
+
+watch(isLoading, async () => {
+  await nextTick();
+  updateViewportHeight();
+});
+
+onMounted(async () => {
+  await nextTick();
+  updateViewportHeight();
+  window.addEventListener('resize', handleResize);
+});
 
 // 组件卸载前自动保存
 onBeforeUnmount(() => {
@@ -180,6 +389,11 @@ window.addEventListener('beforeunload', handleBeforeUnload);
 onBeforeUnmount(() => {
   document.removeEventListener('visibilitychange', handleVisibilityChange);
   window.removeEventListener('beforeunload', handleBeforeUnload);
+  window.removeEventListener('resize', handleResize);
+  if (rafId !== null) {
+    window.cancelAnimationFrame(rafId);
+    rafId = null;
+  }
 });
 
 const handleSend = async () => {
@@ -206,13 +420,36 @@ const handleSend = async () => {
   
   try {
     // 发送消息到后端并获取回复
-    const aiResponse = await chatService.sendMessage(userMessage, currentWorkflowId.value || undefined);
-    messages.value.push(aiResponse);
-    
-    // 更新当前的workflow_id
-    if (aiResponse.workflow_id) {
-      currentWorkflowId.value = aiResponse.workflow_id;
-    }
+    const streamingMessage = reactive<ChatMessage>({
+      workflow_id: '',
+      content: '',
+      sender: 'ai',
+      timestamp: new Date().toISOString()
+    }) as ChatMessage;
+
+    messages.value.push(streamingMessage);
+    await nextTick();
+    await scrollToBottom();
+
+    const finalMessage = await chatService.sendMessageStream(
+      userMessage,
+      currentWorkflowId.value || undefined,
+      {
+        onToken: (token) => {
+          streamingMessage.content += token;
+          scheduleViewportUpdate();
+        },
+        onWorkflowId: (workflowId) => {
+          if (!workflowId) return;
+          currentWorkflowId.value = workflowId;
+          streamingMessage.workflow_id = workflowId;
+        }
+      }
+    );
+
+    streamingMessage.content = finalMessage.content;
+    streamingMessage.workflow_id = finalMessage.workflow_id;
+    streamingMessage.timestamp = finalMessage.timestamp;
   } catch (error) {
     console.error('Error sending message:', error);
     // 添加错误消息
@@ -234,6 +471,115 @@ const handleSend = async () => {
 <style scoped>
 .chat-container {
   background-color: #0f172a;
+}
+
+.messagesContainer {
+  scroll-snap-type: y mandatory;
+}
+
+.messages-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreen-pair {
+  min-height: var(--message-viewport-height, 100vh);
+  scroll-snap-align: start;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  padding: 4rem 0 4rem;
+  gap: 2rem;
+}
+
+.pair-bubble {
+  display: flex;
+}
+
+.pair-bubble-user {
+  justify-content: flex-end;
+}
+
+.pair-bubble-ai {
+  justify-content: flex-start;
+}
+
+.ai-loading-placeholder {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.markdown-body :deep(h1),
+.markdown-body :deep(h2),
+.markdown-body :deep(h3),
+.markdown-body :deep(h4),
+.markdown-body :deep(h5),
+.markdown-body :deep(h6) {
+  font-weight: 600;
+  color: #e2e8f0;
+  margin: 1.25rem 0 0.75rem;
+}
+
+.markdown-body :deep(p) {
+  margin: 0.75rem 0;
+  line-height: 1.8;
+  color: inherit;
+}
+
+.markdown-body :deep(code) {
+  background-color: rgba(148, 163, 184, 0.18);
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.375rem;
+  font-family: 'Fira Code', 'JetBrains Mono', Consolas, monospace;
+  font-size: 0.95rem;
+}
+
+.markdown-body :deep(pre code) {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  padding: 1.25rem;
+  background-color: rgba(15, 23, 42, 0.8);
+  border-radius: 0.75rem;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.markdown-body :deep(ul),
+.markdown-body :deep(ol) {
+  padding-left: 1.5rem;
+  margin: 0.75rem 0;
+}
+
+.markdown-body :deep(li) {
+  margin: 0.5rem 0;
+}
+
+.markdown-body :deep(a) {
+  color: #60a5fa;
+  text-decoration: underline;
+}
+
+.markdown-body :deep(table) {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+.markdown-body :deep(th),
+.markdown-body :deep(td) {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  padding: 0.6rem 0.75rem;
+  text-align: left;
+}
+
+.markdown-body :deep(blockquote) {
+  border-left: 4px solid rgba(96, 165, 250, 0.6);
+  padding-left: 1rem;
+  margin: 0.75rem 0;
+  color: rgba(226, 232, 240, 0.85);
+  font-style: italic;
 }
 
 .ai-avatar-container {
@@ -397,6 +743,37 @@ const handleSend = async () => {
 
   .user-avatar {
     background-color: #9ca3af;
+  }
+
+  .markdown-body :deep(h1),
+  .markdown-body :deep(h2),
+  .markdown-body :deep(h3),
+  .markdown-body :deep(h4),
+  .markdown-body :deep(h5),
+  .markdown-body :deep(h6) {
+    color: #1f2937;
+  }
+
+  .markdown-body :deep(p) {
+    color: #1f2937;
+  }
+
+  .markdown-body :deep(code) {
+    background-color: rgba(59, 130, 246, 0.1);
+  }
+
+  .markdown-body :deep(pre code) {
+    background-color: rgba(15, 23, 42, 0.06);
+    border-color: rgba(148, 163, 184, 0.3);
+  }
+
+  .markdown-body :deep(a) {
+    color: #1d4ed8;
+  }
+
+  .markdown-body :deep(blockquote) {
+    border-left-color: rgba(59, 130, 246, 0.6);
+    color: rgba(31, 41, 55, 0.8);
   }
 
   .loading-text {
