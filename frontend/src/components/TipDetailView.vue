@@ -6,7 +6,7 @@
         <ul>
           <li v-for="tip in props.tips" :key="tip.id">
             <button 
-              @click="() => props.onSelectTip(tip)"
+              @click="() => { props.onSelectTip(tip); router.push({ name: 'tipDetail', params: { id: tip.id.toString() } }); }"
               :class="`w-full text-left flex items-center gap-3 p-3 rounded-lg font-medium text-sm transition-colors ${
                 props.selectedTip.id === tip.id 
                   ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' 
@@ -23,7 +23,7 @@
 
     <main class="relative flex-1 bg-slate-200 dark:bg-slate-800 rounded-2xl p-8 overflow-y-auto shadow-lg flex flex-col">
       <button 
-        @click="props.onClose" 
+        @click="() => { props.onClose(); router.push({ name: 'dashboard' }); }" 
         class="absolute top-6 right-6 p-2 rounded-full text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-700 z-10"
         :aria-label="t('tips.detail.closeAria')"
       >
@@ -77,6 +77,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch, nextTick, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { marked } from 'marked';
 import mermaid from 'mermaid';
 import Icon from './Icon.vue';
@@ -92,6 +93,8 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const router = useRouter();
+const route = useRoute();
 const { t, locale } = useI18n();
 
 // Mermaid 容器引用
@@ -110,7 +113,7 @@ mermaid.initialize({
 const fixSplitWordsInHTML = () => {
   if (!markdownContainer.value) return;
   
-  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'Dockerfile', 'bash', 'sql', 'json', 'vue', 'http', 'yaml'];
+  const commonWords = ['notion', 'github', 'javascript', 'typescript', 'docker', 'kubernetes', 'postgresql', 'mongodb', 'redis', 'elasticsearch', 'apache', 'nginx', 'react', 'vue', 'angular', 'nodejs', 'python', 'java', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'rust', 'golang', 'flutter', 'reactnative', 'nextjs', 'nuxtjs', 'express', 'django', 'flask', 'laravel', 'spring', 'hibernate', 'graphql', 'restful', 'websocket', 'microservice', 'terraform', 'ansible', 'jenkins', 'gitlab', 'bitbucket', 'jira', 'confluence', 'slack', 'discord', 'telegram', 'whatsapp', 'wechat', 'alipay', 'paypal', 'stripe', 'aws', 'azure', 'gcp', 'heroku', 'vercel', 'netlify', 'Dockerfile', 'bash', 'sql', 'json', 'vue', 'http', 'yaml', 'html'];
   
   const walker = document.createTreeWalker(markdownContainer.value, NodeFilter.SHOW_TEXT, null);
   const textNodes: Text[] = [];
@@ -182,7 +185,7 @@ const normalizeMarkdown = (raw: string): string => {
   if (!raw) return '';
   
   let text = raw;
-  const commonLanguages = ['javascript', 'typescript', 'python', 'bash', 'sh', 'json', 'html', 'css', 'java', 'cpp', 'c', 'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'xml', 'markdown', 'dockerfile', 'makefile', 'ini', 'toml', 'diff', 'plaintext', 'text'];
+  const commonLanguages = ['sh', 'css', 'java', 'cpp', 'c', 'go', 'rust', 'php', 'ruby', 'swift', 'kotlin', 'scala', 'r', 'matlab', 'xml', 'markdown', 'dockerfile', 'makefile', 'ini', 'toml', 'diff', 'plaintext', 'text'];
   
   // 修复被分割的语言标识（在转义处理之前处理转义序列格式）
   text = text.replace(/```(\w+)\\n\s*([a-z])\\n/g, (match, p1, p2) => {

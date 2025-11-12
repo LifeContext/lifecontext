@@ -113,7 +113,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import Header from './src/components/Header.vue';
 import LeftPanel from './src/components/LeftPanel.vue';
 import CenterPanel from './src/components/CenterPanel.vue';
@@ -131,6 +132,9 @@ import { tipService } from './src/api/tipService'; // 导入Tip API服务
 import { eventService } from './src/api/eventService'; // 导入事件服务
 import { dataRefreshManager } from './src/utils/dataRefreshManager'; // 导入数据刷新管理器
 import { useI18n } from './src/i18n';
+
+const router = useRouter();
+const route = useRoute();
 
 const { t, locale } = useI18n();
 
@@ -299,12 +303,12 @@ const deleteTodoItem = async (id: number) => {
 const handleViewReport = (report: DailyReport) => {
   selectedDashboardReport.value = report;
   viewingReport.value = report;
-  activeView.value = 'reportDetail';
+  router.push({ name: 'reportDetail', params: { id: report.id.toString() } });
 };
 
 const handleViewTip = (tip: Tip) => {
   viewingTip.value = tip;
-  activeView.value = 'tipDetail';
+  router.push({ name: 'tipDetail', params: { id: tip.id.toString() } });
 };
 
 const handleToggleChatHistory = () => {
@@ -319,7 +323,9 @@ const handleCloseDetailView = (targetView: 'dashboard' | 'timeline' | 'chat' = '
   if (activeView.value === 'tipDetail' || activeView.value === 'reportDetail') {
     viewToCloseRef.value = activeView.value;
     exitingView.value = activeView.value;
-    activeView.value = targetView;
+    
+    // 使用路由导航
+    router.push({ name: targetView });
 
     setTimeout(() => {
       if (viewToCloseRef.value === 'tipDetail') {
@@ -327,6 +333,7 @@ const handleCloseDetailView = (targetView: 'dashboard' | 'timeline' | 'chat' = '
       }
       if (viewToCloseRef.value === 'reportDetail') {
         viewingReport.value = null;
+        selectedDashboardReport.value = null;
       }
       exitingView.value = null;
       viewToCloseRef.value = null;
@@ -344,7 +351,7 @@ const handleNavigation = (targetView: 'dashboard' | 'timeline' | 'chat') => {
     handleCloseDetailView(targetView);
   } else {
     exitingView.value = activeView.value as ActiveView;
-    activeView.value = targetView;
+    router.push({ name: targetView });
     setTimeout(() => exitingView.value = null, 200);
   }
 };
@@ -432,6 +439,55 @@ const initializeEventPolling = () => {
 // Lifecycle
 let timer: number;
 
+// 监听路由变化
+watch(() => [route.name, route.params.id], async ([routeName, tipId]) => {
+  if (routeName === 'tipDetail') {
+    const id = parseInt(tipId as string);
+    if (id) {
+      // 如果 tips 数据已加载，直接查找
+      if (tips.value.length > 0) {
+        const tip = tips.value.find(t => t.id === id);
+        if (tip) {
+          viewingTip.value = tip;
+          activeView.value = 'tipDetail';
+        }
+      } else {
+        // 如果数据未加载，等待数据加载完成后再查找
+        await loadTips();
+        const tip = tips.value.find(t => t.id === id);
+        if (tip) {
+          viewingTip.value = tip;
+          activeView.value = 'tipDetail';
+        }
+      }
+    }
+  } else if (routeName === 'reportDetail') {
+    const id = parseInt(tipId as string);
+    if (id) {
+      if (reports.value.length > 0) {
+        const report = reports.value.find(r => r.id === id);
+        if (report) {
+          viewingReport.value = report;
+          selectedDashboardReport.value = report;
+          activeView.value = 'reportDetail';
+        }
+      } else {
+        await loadReports();
+        const report = reports.value.find(r => r.id === id);
+        if (report) {
+          viewingReport.value = report;
+          selectedDashboardReport.value = report;
+          activeView.value = 'reportDetail';
+        }
+      }
+    }
+  } else if (routeName === 'dashboard' || routeName === 'chat' || routeName === 'timeline') {
+    activeView.value = routeName as ActiveView;
+    viewingTip.value = null;
+    viewingReport.value = null;
+  }
+}, { immediate: true });
+
 onMounted(() => {
   loadReports(); // 组件挂载时加载Reports数据
   loadTodos(); // 组件挂载时加载Todo数据
@@ -457,7 +513,6 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* 暗色模式样式（默认） */
 .chat-history-toggle-btn {
   background-color: #1e293b;
   color: #94a3b8;

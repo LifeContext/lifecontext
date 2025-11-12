@@ -42,7 +42,7 @@
       <div 
         v-for="tip in props.tips" 
         :key="tip.id"
-        @click="() => { selectedTipId = tip.id; props.onSelectTip(tip); }"
+        @click="handleTipClick(tip)"
         :class="[
           'tip-card bg-white dark:bg-slate-700 rounded-lg p-3 cursor-pointer transition-all duration-300 relative',
           selectedTipId === tip.id ? 'tip-card-selected' : ''
@@ -90,6 +90,15 @@ const { t, locale } = useI18n();
 
 // 响应式数据
 const selectedTipId = ref<number | null>(null);
+
+// 处理 tip 点击事件
+const handleTipClick = (tip: Tip) => {
+  selectedTipId.value = tip.id;
+  props.onSelectTip(tip);
+  setTimeout(() => {
+    selectedTipId.value = null;
+  }, 300);
+};
 
 // 分类图标配置 - 使用与种类含义对应的图标
 const TIP_CATEGORY_ICONS = {
@@ -317,7 +326,6 @@ const recalcGridState = () => {
   overflow: hidden;
   min-height: 100px;
   max-height: 200px;
-  /* 默认阴影：Material Design elevation 2 */
   box-shadow: 
     0 1px 3px 0 rgba(0, 0, 0, 0.12),
     0 1px 2px 0 rgba(0, 0, 0, 0.24);
@@ -339,7 +347,6 @@ const recalcGridState = () => {
   font-size: 0.8rem;
 }
 
-/* 浅色模式悬停：Material Design elevation 4 */
 .tip-card:hover {
   transform: translateY(-2px);
   box-shadow: 
@@ -382,7 +389,6 @@ const recalcGridState = () => {
     0 1px 2px 0 rgba(0, 0, 0, 0.24);
 }
 
-/* 深色模式悬停：增强阴影 */
 .dark .tip-card:hover {
   transform: translateY(-2px);
   box-shadow: 

@@ -596,7 +596,6 @@ const handleSend = async () => {
 }
 
 .ai-message {
-  /* background-color: #1e293b; */
   color: white;
   width: 100%;
   margin: 0;
