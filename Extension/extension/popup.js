@@ -488,35 +488,115 @@ async function initDomainChip() {
 
   const host = await getActiveHostname();
   chipText.textContent = host || 'unknown';
+  // 保证可点击的交互体验
+  try { chip.style.cursor = 'pointer'; chip.style.pointerEvents = 'auto'; chip.style.userSelect = 'none'; } catch (_) {}
+
+  // 先与服务端同步一次本地黑名单
+  try {
+    await syncBlockedDomainsFromServer();
+  } catch (_) {}
 
   const { blockedDomains = [] } = await new Promise((resolve) => {
     chrome.storage.sync.get({ blockedDomains: [] }, (res) => resolve(res || { blockedDomains: [] }));
   });
   const isBlocked = Array.isArray(blockedDomains) && blockedDomains.map(d=>String(d||'').toLowerCase()).includes(host);
   applyDomainChipUI(!isBlocked);
-  chip.disabled = true;
+  try { chip.disabled = false; chip.removeAttribute('disabled'); chip.setAttribute('aria-disabled', 'false'); chip.setAttribute('tabindex', '0'); } catch (_) {}
 
-  chip.onclick = async () => {
-    const { blockedDomains: bds = [] } = await new Promise((resolve) => {
-      chrome.storage.sync.get({ blockedDomains: [] }, (res) => resolve(res || { blockedDomains: [] }));
-    });
-    const list = Array.isArray(bds) ? [...bds] : [];
-    const idx = list.map(d=>String(d||'').toLowerCase()).indexOf(host);
-    if (idx >= 0) {
-      // 目前为阻止 -> 允许（移除）
-      list.splice(idx, 1);
-      await new Promise((resolve) => chrome.storage.sync.set({ blockedDomains: list }, resolve));
+  const handleChipClick = async () => {
+    chip.disabled = true;
+    try {
+      const { blockedDomains: bds = [] } = await new Promise((resolve) => {
+        chrome.storage.sync.get({ blockedDomains: [] }, (res) => resolve(res || { blockedDomains: [] }));
+      });
+      const list = Array.isArray(bds) ? [...bds] : [];
+      const lowerList = list.map(d=>String(d||'').toLowerCase());
+      const idx = lowerList.indexOf(host);
+
+      if (idx >= 0) {
+        // 阻止 -> 允许（服务端尽力删除，本地必定移除）
+        try {
+          const entries = await getServerBlacklist();
+          if (entries && Array.isArray(entries)) {
+            const toDelete = entries
+              .filter(e => normalizeHostname(e?.url) === host)
+              .map(e => e.id)
+              .filter(id => Number.isFinite(id));
+
+            for (const id of toDelete) {
+              await new Promise((resolve) => {
+                chrome.runtime.sendMessage({ type: 'URL_BLACKLIST_DELETE', id }, (resp) => resolve(resp));
+              });
+            }
+          }
+        } catch (_) {}
+
+        list.splice(idx, 1);
+        await new Promise((resolve) => chrome.storage.sync.set({ blockedDomains: list }, resolve));
+        applyDomainChipUI(true);
+      } else {
+        // 允许 -> 阻止（服务端尽力新增，本地必定加入）
+        const toUrl = host.includes('://') ? host : `https://${host}`;
+        const resp = await new Promise((resolve) => {
+          chrome.runtime.sendMessage({ type: 'URL_BLACKLIST_ADD', url: toUrl }, (r) => resolve(r || { ok: false }));
+        });
+        // 无论服务端是否成功，都先本地生效，确保“✖”后立即不再爬取
+        if (!lowerList.includes(host)) list.push(host);
+        await new Promise((resolve) => chrome.storage.sync.set({ blockedDomains: list }, resolve));
+        applyDomainChipUI(false);
+      }
+
       // 通知当前标签刷新爬取策略
       try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         await chrome.tabs.sendMessage(tab.id, { type: 'REFRESH_CRAWL_POLICY' });
       } catch (_) {}
+    } finally {
+      chip.disabled = false;
     }
   };
+  chip.addEventListener('click', handleChipClick);
 
   function applyDomainChipUI(allowed) {
     const t = TEXT[getUILang()] || TEXT.en;
     chipIcon.textContent = allowed ? t.domainAllowed : t.domainBlocked;
     chip.style.opacity = allowed ? '1' : '0.5';
+  }
+}
+
+// ====== Helpers for URL Blacklist API sync via background ======
+function normalizeHostname(input) {
+  try {
+    const s = String(input || '').trim();
+    if (!s) return '';
+    // Try parse as full URL first
+    try {
+      const u = new URL(s);
+      return (u.hostname || '').toLowerCase();
+    } catch (_) {
+      // Not a full URL; treat as hostname
+      return s.toLowerCase();
+    }
+  } catch (_) {
+    return '';
+  }
+}
+
+async function getServerBlacklist() {
+  const resp = await new Promise((resolve) => {
+    chrome.runtime.sendMessage({ type: 'URL_BLACKLIST_LIST', limit: 1000, offset: 0 }, (r) => resolve(r || { ok: false, data: [] }));
+  });
+  if (resp && resp.ok && Array.isArray(resp.data)) return resp.data;
+  return null; // 标记失败，避免上层误清空本地
+}
+
+async function syncBlockedDomainsFromServer() {
+  try {
+    const entries = await getServerBlacklist();
+    if (!entries) return; // 仅在成功时覆盖本地，避免 404 时清空
+    const hostnames = [...new Set(entries.map(e => normalizeHostname(e?.url)).filter(Boolean))];
+    await new Promise((resolve) => chrome.storage.sync.set({ blockedDomains: hostnames }, resolve));
+  } catch (_) {
+    // ignore sync errors
   }
 }

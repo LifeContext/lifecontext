@@ -185,13 +185,17 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log('Extension installed');
   
   // 请求通知权限
-  chrome.notifications.getPermissionLevel((level) => {
-    if (level === 'denied') {
-      console.log('通知权限被拒绝');
-    } else {
-      console.log('通知权限状态:', level);
+  try {
+    if (chrome.notifications && typeof chrome.notifications.getPermissionLevel === 'function') {
+      chrome.notifications.getPermissionLevel((level) => {
+        if (level === 'denied') {
+          console.log('通知权限被拒绝');
+        } else {
+          console.log('通知权限状态:', level);
+        }
+      });
     }
-  });
+  } catch (_) {}
   
   // 设置定时器，每30秒检查一次事件 
   chrome.alarms.create('checkEvents', { 
@@ -212,6 +216,57 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// ===== URL 黑名单：集中在后台代理，统一 API 基址与 CORS 处理 =====
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'URL_BLACKLIST_ADD') {
+    (async () => {
+      try {
+        const apiUrl = await getApiUrl(); // 形如 http://host:port/api
+        const resp = await fetch(`${apiUrl}/url-blacklist`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url: message.url })
+        });
+        let data = null;
+        try { data = await resp.json(); } catch (_) {}
+        sendResponse({ ok: resp.status === 201, status: resp.status, data });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
+    return true;
+  }
+  if (message.type === 'URL_BLACKLIST_DELETE') {
+    (async () => {
+      try {
+        const apiUrl = await getApiUrl();
+        const resp = await fetch(`${apiUrl}/url-blacklist/${message.id}`, { method: 'DELETE' });
+        let data = null;
+        try { data = await resp.json(); } catch (_) {}
+        const ok = resp.status === 200 || resp.status === 404;
+        sendResponse({ ok, status: resp.status, data });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
+    return true;
+  }
+  if (message.type === 'URL_BLACKLIST_LIST') {
+    (async () => {
+      try {
+        const apiUrl = await getApiUrl();
+        const limit = Number.isFinite(message.limit) && message.limit > 0 ? message.limit : 1000;
+        const offset = Number.isFinite(message.offset) && message.offset >= 0 ? message.offset : 0;
+        const resp = await fetch(`${apiUrl}/url-blacklist?limit=${limit}&offset=${offset}`);
+        const data = await resp.json().catch(() => []);
+        sendResponse({ ok: resp.ok, status: resp.status, data });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
+    return true;
+  }
+});
 // 浏览器启动时也确保重试存在
 chrome.runtime.onStartup.addListener(() => {
   ensurePromptLanguageAlarm();
@@ -263,6 +318,10 @@ async function checkEventsAndNotify() {
 
 // 显示事件通知
 async function showEventNotification(event) {
+  if (!chrome.notifications || typeof chrome.notifications.create !== 'function') {
+    console.warn('通知 API 不可用或未授予权限，跳过通知。');
+    return;
+  }
   const notificationId = `event_${event.id || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const locale = getLocale();
   const t = I18N[locale] || I18N.en;
@@ -359,71 +418,51 @@ async function showEventNotification(event) {
   }
 }
 
-// 处理通知点击事件
-chrome.notifications.onClicked.addListener((notificationId) => {
-  console.log('通知被点击:', notificationId);
-  
-  // 关闭通知
-  chrome.notifications.clear(notificationId);
-  
-  // 默认点击也跳转到主页并唤起浏览器
-  (async () => {
-    try {
-      await openFrontendPage();
-    } catch (e) {
-      console.error('处理通知点击跳转失败:', e);
-    }
-  })();
-});
-
-// 处理通知按钮点击事件
-chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
-  console.log('通知按钮被点击:', notificationId, '按钮索引:', buttonIndex);
-  
-  if (buttonIndex === 0) {
-    // 查看详情 - 跳转到主页面并确保浏览器被唤起
-    console.log('用户选择查看详情，跳转到主页面');
+// 处理通知点击事件（在 API 可用时才注册）
+if (chrome.notifications && chrome.notifications.onClicked) {
+  chrome.notifications.onClicked.addListener((notificationId) => {
+    console.log('通知被点击:', notificationId);
+    try { chrome.notifications.clear(notificationId); } catch (_) {}
     (async () => {
-      try {
-        await openFrontendPage();
-      } catch (error) {
-        console.error('跳转到主页面失败:', error);
-      }
+      try { await openFrontendPage(); } catch (e) { console.error('处理通知点击跳转失败:', e); }
     })();
-  } else if (buttonIndex === 1) {
-    // 稍后提醒 - 3分钟后重新提醒
-    console.log('用户选择稍后提醒，3分钟后重新提醒');
+  });
+}
 
-    setTimeout(() => {
-      (async () => {
-        const [pluginOn, notifOn] = await Promise.all([
-          isPluginEnabled(),
-          areNotificationsEnabled()
-        ]);
-        if (!pluginOn || !notifOn) return;
-        const locale = getLocale();
-        const t = I18N[locale] || I18N.en;
-          chrome.notifications.create(`reminder_${Date.now()}`, {
-          type: 'basic',
-            iconUrl: 'logo.png',
-
-          title: t.reminderTitle,
-          message: t.reminderMessage,
-          contextMessage: 'LifeContext',
-          priority: 1,
-          buttons: [
-            { title: t.viewDetails },
-            { title: t.remindLater }
-          ]
-        });
-      })();
-    }, 30 * 1000); // 3分钟后提醒
-
-  }
-  
-  // 关闭原通知
-  chrome.notifications.clear(notificationId);
-});
+// 处理通知按钮点击事件（在 API 可用时才注册）
+if (chrome.notifications && chrome.notifications.onButtonClicked) {
+  chrome.notifications.onButtonClicked.addListener((notificationId, buttonIndex) => {
+    console.log('通知按钮被点击:', notificationId, '按钮索引:', buttonIndex);
+    if (buttonIndex === 0) {
+      console.log('用户选择查看详情，跳转到主页面');
+      (async () => { try { await openFrontendPage(); } catch (error) { console.error('跳转到主页面失败:', error); } })();
+    } else if (buttonIndex === 1) {
+      console.log('用户选择稍后提醒，3分钟后重新提醒');
+      setTimeout(() => {
+        (async () => {
+          const [pluginOn, notifOn] = await Promise.all([ isPluginEnabled(), areNotificationsEnabled() ]);
+          if (!pluginOn || !notifOn) return;
+          const locale = getLocale();
+          const t = I18N[locale] || I18N.en;
+          try {
+            if (chrome.notifications && chrome.notifications.create) {
+              chrome.notifications.create(`reminder_${Date.now()}`, {
+                type: 'basic',
+                iconUrl: 'logo.png',
+                title: t.reminderTitle,
+                message: t.reminderMessage,
+                contextMessage: 'LifeContext',
+                priority: 1,
+                buttons: [ { title: t.viewDetails }, { title: t.remindLater } ]
+              });
+            }
+          } catch (_) {}
+        })();
+      }, 30 * 1000);
+    }
+    try { chrome.notifications.clear(notificationId); } catch (_) {}
+  });
+}
 
 // 可以接收来自 content 或 popup 的消息（现在 popup 直接监听了）
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
