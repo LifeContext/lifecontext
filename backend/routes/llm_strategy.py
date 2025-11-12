@@ -145,9 +145,11 @@ class LLMContextStrategy:
             # 2. 构建系统提示词
             system_prompt = """你是一个智能上下文分析助手。你的任务是分析用户意图，决定需要调用哪些工具来获取更多上下文信息。
 
-请根据用户意图和已有上下文，决定是否需要调用工具，以及调用哪些工具。如果已有上下文足够回答问题，可以返回空列表。
+**重要规则**：
+1. 如果用户明确询问邮件/邮箱/email相关问题，必须调用 email_reader 工具
+2. 即使已有一些本地上下文（如todos、tips），也要调用相应的专门工具来获取最新的邮件/日历/文档信息
 
-可用工具将通过 Function Calling 提供给你，请根据工具的描述和功能来选择合适的工具。"""
+请根据用户意图和已有上下文，决定需要调用哪些工具。可用工具将通过 Function Calling 提供给你。"""
             
             # 3. 构建用户提示词
             user_prompt = f"""用户查询: {intent.query}
@@ -220,8 +222,23 @@ class LLMContextStrategy:
     ) -> ContextSufficiency:
         """
         核心功能：评估已有上下文是否足够回答问题
+        
+        特别处理：如果用户明确询问需要外部数据源的问题（邮件/日程/文档），
+        直接返回 INSUFFICIENT，强制调用对应的工具。
         """
         try:
+            # 【关键修复】检查是否明确需要调用特定工具
+            query_lower = intent.query.lower()
+            
+            # 定义需要强制调用工具的关键词
+            email_keywords = ['邮件', '邮箱', '收件箱', 'email', 'mail', 'inbox', '未读邮件', '新邮件']
+            
+            # 如果包含这些关键词，强制返回 INSUFFICIENT，让系统调用工具
+            if any(kw in query_lower for kw in email_keywords):
+                logger.info(f"检测到邮件相关关键词，强制返回 INSUFFICIENT 以调用 email_reader")
+                return ContextSufficiency.INSUFFICIENT
+            
+            # 如果没有特殊关键词，按正常流程评估
             client = get_openai_client()
             if not client:
                 logger.warning("LLM unavailable, defaulting to INSUFFICIENT")
@@ -508,6 +525,55 @@ class LLMContextStrategy:
                             )
                             items.append(context_item)
         
+        # 处理 email_reader 工具结果
+        elif function_name == "email_reader":
+            if result.get("status") == "success":
+                emails = result.get("emails", [])
+                for i, email in enumerate(emails):
+                    email_content = f"""邮件主题: {email.get('subject', '无主题')}
+发件人: {email.get('from', '未知')}
+收件人: {email.get('to', '未知')}
+日期: {email.get('date', '未知')}
+摘要: {email.get('snippet', '无内容')}
+{'🔴 未读' if email.get('is_unread') else ''}"""
+                    
+                    context_item = ContextItem(
+                        id=f"{call_id}_email_{i}",
+                        content=email_content,
+                        source="email",
+                        metadata={
+                            "email_id": email.get("id", ""),
+                            "subject": email.get("subject", ""),
+                            "from": email.get("from", ""),
+                            "date": email.get("date", ""),
+                            "is_unread": email.get("is_unread", False),
+                            "context_type": "email"
+                        },
+                        relevance_score=1.0 if email.get("is_unread") else 0.8
+                    )
+                    items.append(context_item)
+                logger.info(f"Converted {len(emails)} emails from email_reader")
+            else:
+                # 如果获取邮件失败，也要告诉 LLM
+                error_content = f"邮箱状态: {result.get('status', 'unknown')}\n"
+                error_content += f"信息: {result.get('message', '')}\n"
+                if result.get('authorization_url'):
+                    error_content += f"授权链接: {result.get('authorization_url')}"
+                
+                context_item = ContextItem(
+                    id=f"{call_id}_email_status",
+                    content=error_content,
+                    source="email_status",
+                    metadata={"status": result.get("status"), "context_type": "email_error"},
+                    relevance_score=1.0
+                )
+                items.append(context_item)
+
+        else:
+            logger.warning(f"No conversion logic for tool: {function_name}")
+            logger.warning(f"Tool result: {result}")
+        logger.error(f"tool result: {result}")
+        logger.error(f"items {items}")
         return items
     
     async def validate_and_filter_tool_results(

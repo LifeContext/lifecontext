@@ -13,6 +13,7 @@ from routes.agent import agent_bp
 from routes.events import events_bp
 from routes.settings import settings_bp
 from routes.url_blacklist import url_blacklist_bp
+from routes.oauth import oauth_bp  # 新增 OAuth 路由
 
 logger = get_logger(__name__)
 
@@ -53,6 +54,7 @@ def create_app():
     app.register_blueprint(events_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(url_blacklist_bp)
+    app.register_blueprint(oauth_bp)  # 注册 OAuth 路由
     
     # 健康检查端点
     @app.route('/health', methods=['GET'])

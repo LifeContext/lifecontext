@@ -185,11 +185,23 @@ class ToolsExecutor:
         
         try:
             # 操作工具
-            from tools.operation_tools import get_operation_tools
+            from tools.operation_tools import (
+                get_operation_tools, 
+                get_email_tools
+            )
+            
+            # 注册会话记忆工具
             tools = get_operation_tools()
             logger.info(f"Found {len(tools)} operation tools")
             for tool in tools:
                 self.register_tool(tool)
+            
+            # 注册邮箱工具
+            email_tools = get_email_tools()
+            logger.info(f"Found {len(email_tools)} email tools")
+            for tool in email_tools:
+                self.register_tool(tool)
+                
         except ImportError as e:
             logger.error(f"Failed to import operation tools: {e}")
         except Exception as e:

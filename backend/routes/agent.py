@@ -272,9 +272,31 @@ async def process_query_with_strategy(
     # 7. 构建最终响应
     # 构建上下文摘要
     if context.items:
+        # 检测查询中是否包含邮件关键词
+        query_lower = query.lower()
+        email_keywords = ['邮件', '邮箱', '收件箱', 'email', 'mail', 'inbox', 'gmail']
+        
+        is_email_query = any(kw in query_lower for kw in email_keywords)
+        
+        # 分类items
+        email_items = [item for item in context.items if item.source == 'email']
+        other_items = [item for item in context.items if item.source != 'email']
+        
+        logger.info(f"Item counts: {len(email_items)} emails, {len(other_items)} others")
+        logger.info(f"Query type: is_email_query={is_email_query}")
+        
+        # 根据查询类型选择要展示的items
+        if is_email_query and email_items:
+            # 邮件查询：只显示邮件，不显示其他无关内容
+            selected_items = email_items[:10]
+            logger.info(f"Email query detected, showing only {len(selected_items)} email items")
+        else:
+            # 其他查询：优先展示邮件，然后是其他
+            selected_items = other_items[:10]
+            logger.info(f"General query, showing prioritized items")
         context_summary = "\n\n".join([
             f"[{item.source}] {item.content[:500]}"
-            for item in context.items[:10]  # 最多10个上下文项
+            for item in selected_items
         ])
         user_message = f"""用户问题: {query}
 
