@@ -49,7 +49,7 @@ const messages: Messages = {
     chat: {
       welcomeTitle: 'Chat with your life',
       placeholder: 'Ask, search, or make anything...',
-      loading: 'Searching browser memories',
+      loading: 'Searching memories',
       error: 'Sorry, an error occurred while sending the message. Please try again later.',
     },
     chatHistory: {
@@ -132,8 +132,12 @@ const messages: Messages = {
         dailyReportHint: 'Set the time for generating daily reports',
         excludedDomains: 'Websites to Skip Crawling',
       },
+      options: {
+        domain: 'Domain',
+        Url: 'URL',
+      },
       hints: {
-        excludedDomains: 'Enter one domain per line; matching links will be ignored during crawling.',
+        excludedDomains: 'Enter a domain or URL and click Add; matching links will be ignored during crawling.',
         noExcludedDomains: 'No excluded domains configured.',
       },
       labels: {
@@ -146,6 +150,7 @@ const messages: Messages = {
         hour: 'HH',
         minute: 'MM',
         excludedDomains: 'example.com',
+        excludedUrl: 'https://example.com/path',
       },
       errors: {
         intervalPositive: 'Interval must be greater than 0',
@@ -155,7 +160,9 @@ const messages: Messages = {
         save: 'Failed to save settings',
         languageUpdate: 'Failed to update language preference',
         invalidDomain: 'Please enter a valid domain.',
-        duplicateDomain: 'This domain is already in the list.',
+        invalidUrl: 'Please enter a valid URL.',
+        duplicateDomain: 'This domain or URL is already in the list.',
+        invalidDomainId: 'Invalid domain ID. Cannot delete.',
       },
       buttons: {
         cancel: 'Cancel',
@@ -217,7 +224,7 @@ const messages: Messages = {
     chat: {
       welcomeTitle: '和你的人生对话',
       placeholder: '提问、搜索或创建任何内容...',
-      loading: '正在检索浏览器记忆',
+      loading: '正在检索记忆',
       error: '抱歉，发送消息时出现错误，请稍后再试。',
     },
     chatHistory: {
@@ -300,8 +307,12 @@ const messages: Messages = {
         dailyReportHint: '设置每日生成日报的时间',
         excludedDomains: '不爬取的网站列表',
       },
+      options: {
+        domain: '域名',
+        Url: 'URL',
+      },
       hints: {
-        excludedDomains: '每行填写一个域名，系统将跳过这些网址的抓取。',
+        excludedDomains: '输入域名或URL后点击添加，系统将跳过这些网址的抓取。',
         noExcludedDomains: '暂未配置需要跳过的网站。',
       },
       labels: {
@@ -314,6 +325,7 @@ const messages: Messages = {
         hour: 'HH',
         minute: 'MM',
         excludedDomains: '例如 example.com',
+        excludedUrl: '例如 https://example.com/path',
       },
       errors: {
         intervalPositive: '间隔必须大于 0',
@@ -323,7 +335,9 @@ const messages: Messages = {
         save: '保存设置失败',
         languageUpdate: '更新语言偏好失败',
         invalidDomain: '请输入有效的域名。',
-        duplicateDomain: '该域名已存在于列表中。',
+        invalidUrl: '请输入有效的URL。',
+        duplicateDomain: '该域名或URL已存在于列表中。',
+        invalidDomainId: '无效的域名ID，无法删除。',
       },
       buttons: {
         cancel: '取消',
