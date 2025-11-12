@@ -2,6 +2,13 @@
 
 ![img](src/logo.jpg)
 
+[![GitHub stars](https://img.shields.io/github/stars/LifeContext/lifecontext?style=flat-square&color=F8C63D)](https://github.com/LifeContext/lifecontext/stargazers)
+[![GitHub issues](https://img.shields.io/github/issues/LifeContext/lifecontext?style=flat-square&color=F00F80)](https://github.com/LifeContext/lifecontext/issues)
+[![GitHub contributors](https://img.shields.io/github/contributors/LifeContext/lifecontext?style=flat-square&color=A4DD00)](https://github.com/LifeContext/lifecontext/graphs/contributors)
+[![GitHub license](https://img.shields.io/github/license/LifeContext/lifecontext?style=flat-square&color=lightgrey)](https://github.com/LifeContext/lifecontext/blob/main/LICENSE)
+[![GitHub last commit](https://img.shields.io/github/last-commit/LifeContext/lifecontext?style=flat-square&color=BFD500)](https://github.com/LifeContext/lifecontext/commits/main)
+[![Follow on Reddit](https://img.shields.io/badge/Reddit-u%2FHungry_Refuse_8537-FF4500?logo=reddit&style=flat-square)](https://www.reddit.com/user/Hungry_Refuse_8537/)
+
 [中文](readme_zh.md) / English
 
 
