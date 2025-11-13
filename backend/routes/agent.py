@@ -27,6 +27,8 @@ from routes.llm_strategy import (
     ContextSufficiency
 )
 from utils.db import get_todos
+from utils.prompt_config import prompt_config_zh, prompt_config_en
+from string import Template
 
 logger = get_logger(__name__)
 
@@ -598,33 +600,20 @@ async def optimize_user_prompt(
         
         context_summary = "\n\n".join(context_summary_parts) if context_summary_parts else "暂无上下文信息"
         
-        # 构建优化提示词
-        system_prompt = """你是一个提示词优化专家。你的任务是根据用户的原始问题和已有上下文，生成一个更清晰、更结构化的优化问题。
-
-优化原则：
-1. **保留原意**：不得改变用户的核心意图和要求
-2. **补充上下文**：基于已有信息，补充隐含的时间、对象、限制等
-3. **澄清模糊**：如果问题模糊，基于上下文做合理推断并明确
-4. **结构化**：使用清晰的结构组织问题（意图、条件、期望输出）
-5. **简洁准确**：避免冗余，保持专业和准确
-
-返回JSON格式：
-{
-    "optimized_query": "优化后的问题",
-    "optimization_reason": "优化说明（简要说明做了哪些优化）",
-    "confidence": 0.9  // 置信度（0-1），如果原问题已经很清晰，置信度应较低
-}
-
-如果原问题已经足够清晰且不需要优化，返回原问题并设置 confidence < 0.5。"""
+        # 根据语言配置获取提示词
+        prompts = prompt_config_zh.PROMPTS if config.PROMPT_LANGUAGE == "zh" else prompt_config_en.PROMPTS
+        optimization_prompts = prompts.get("prompt_optimization", {})
         
-        user_prompt = f"""原始问题：{original_query}
-
-已有上下文信息：
-{context_summary}
-
-会话ID：{session_id}
-
-请基于上下文优化这个问题。"""
+        # 构建优化提示词
+        system_prompt = optimization_prompts.get("system", "")
+        user_template = optimization_prompts.get("user_template", "")
+        
+        # 使用 Template 替换变量
+        user_prompt = Template(user_template).safe_substitute(
+            original_query=original_query,
+            context_summary=context_summary,
+            session_id=session_id
+        )
         
         # 调用 LLM 优化
         response = client.chat.completions.create(

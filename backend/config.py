@@ -19,14 +19,14 @@ except ImportError:
 # ============================================================================
 
 # LLM API 配置（用于内容分析和智能对话）
-LLM_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
-LLM_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
-LLM_MODEL = "doubao-seed-1-6-flash-250828"
+LLM_API_KEY = os.getenv("LLM_API_KEY", "")
+LLM_BASE_URL = os.getenv("LLM_BASE_URL")
+LLM_MODEL = os.getenv("LLM_MODEL")
 
 # 向量化 Embedding API 配置（用于向量数据库）
-EMBEDDING_API_KEY = "fed0bdea-c0d3-4880-b4ce-ded3e1d9d3b0"
-EMBEDDING_BASE_URL = "https://ark.cn-beijing.volces.com/api/v3"
-EMBEDDING_MODEL = "doubao-embedding-large-text-250515"
+EMBEDDING_API_KEY = os.getenv("EMBEDDING_API_KEY", "")
+EMBEDDING_BASE_URL = os.getenv("EMBEDDING_BASE_URL")
+EMBEDDING_MODEL = os.getenv("EMBEDDING_MODEL")
 
 # ============================================================================
 # 📁 基础路径配置
