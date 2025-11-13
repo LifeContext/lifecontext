@@ -104,6 +104,96 @@ async function isPluginEnabled() {
   }
 }
 
+// 检查浏览器是否支持所需的 API（Edge 和 Chrome 都支持）
+function supportsImageDataMethod() {
+  return typeof OffscreenCanvas !== 'undefined' && 
+         typeof createImageBitmap !== 'undefined' &&
+         typeof fetch !== 'undefined';
+}
+
+// 将图像转换为指定尺寸的 ImageData
+async function imageToImageData(imageUrl, size) {
+  const response = await fetch(imageUrl);
+  const blob = await response.blob();
+  const imageBitmap = await createImageBitmap(blob);
+  
+  const canvas = new OffscreenCanvas(size, size);
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(imageBitmap, 0, 0, size, size);
+  return ctx.getImageData(0, 0, size, size);
+}
+
+// 更新扩展图标
+async function updateExtensionIcon() {
+  try {
+    const enabled = await isPluginEnabled();
+    const iconFileName = enabled ? 'logo.png' : 'logo-gray.png';
+    const iconUrl = chrome.runtime.getURL(iconFileName);
+    
+    // 方法1: 尝试使用路径（最简单的方法）
+    try {
+      await new Promise((resolve, reject) => {
+        chrome.action.setIcon({
+          path: iconFileName
+        }, () => {
+          if (chrome.runtime.lastError) {
+            reject(new Error(chrome.runtime.lastError.message));
+          } else {
+            resolve();
+          }
+        });
+      });
+      console.log(`扩展图标已更新（使用路径）: ${enabled ? '正常' : '灰色'}`);
+      return;
+    } catch (pathError) {
+      console.log('使用路径方法失败，尝试使用 ImageData:', pathError.message);
+    }
+    
+    // 方法2: 使用 ImageData（更可靠但更复杂）
+    // 检查浏览器是否支持 ImageData 方法（Edge 和 Chrome 都支持）
+    if (!supportsImageDataMethod()) {
+      console.warn('浏览器不支持 ImageData 方法，图标更新可能失败');
+      throw new Error('浏览器不支持 ImageData 方法');
+    }
+    
+    const sizes = [16, 32, 48, 128];
+    const imageDataMap = {};
+    
+    // 先加载原始图像
+    const response = await fetch(iconUrl);
+    if (!response.ok) {
+      throw new Error(`无法加载图标文件: ${response.status} ${response.statusText}`);
+    }
+    const blob = await response.blob();
+    const imageBitmap = await createImageBitmap(blob);
+    
+    // 为每个尺寸生成 ImageData
+    for (const size of sizes) {
+      const canvas = new OffscreenCanvas(size, size);
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(imageBitmap, 0, 0, size, size);
+      imageDataMap[size.toString()] = ctx.getImageData(0, 0, size, size);
+    }
+    
+    await new Promise((resolve, reject) => {
+      chrome.action.setIcon({
+        imageData: imageDataMap
+      }, () => {
+        if (chrome.runtime.lastError) {
+          reject(new Error(chrome.runtime.lastError.message));
+        } else {
+          resolve();
+        }
+      });
+    });
+    
+    console.log(`扩展图标已更新（使用 ImageData）: ${enabled ? '正常' : '灰色'}`);
+  } catch (error) {
+    console.error('更新扩展图标失败:', error);
+    // 如果所有方法都失败，不影响其他功能
+  }
+}
+
 // 读取通知开关
 async function areNotificationsEnabled() {
   try {
@@ -205,6 +295,9 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // 安装后同步 prompt_language（重试直到成功）
   ensurePromptLanguageAlarm();
+  
+  // 初始化图标状态
+  updateExtensionIcon();
 });
 
 // 监听定时器事件
@@ -270,6 +363,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // 浏览器启动时也确保重试存在
 chrome.runtime.onStartup.addListener(() => {
   ensurePromptLanguageAlarm();
+  // 启动时更新图标状态
+  updateExtensionIcon();
+});
+
+// 监听存储变化，当 crawlEnabled 改变时更新图标
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes.crawlEnabled) {
+    updateExtensionIcon();
+  }
 });
 
 // 获取事件数据并显示通知

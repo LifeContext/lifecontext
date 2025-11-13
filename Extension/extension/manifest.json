@@ -32,7 +32,8 @@
       "chat/assets/*",
       "chat/*.svg",
       "chat/*.png",
-      "logo.png"
+      "logo.png",
+      "logo-gray.png"
     ],
     "matches": ["<all_urls>"]
   }
