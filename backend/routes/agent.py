@@ -68,7 +68,8 @@ async def process_query_with_strategy(
     use_tools: bool = True,
     max_iterations: int = 3,
     stream_final_response: bool = True,
-    page_context: Optional[Dict[str, Any]] = None  # 当前页面上下文
+    page_context: Optional[Dict[str, Any]] = None,  # 当前页面上下文
+    optimize_prompt: bool = False  # 是否优化用户提示词
 ) -> dict:
     """
     使用策略处理查询（智能工具调用和上下文管理）
@@ -80,6 +81,7 @@ async def process_query_with_strategy(
         max_iterations: 最大迭代次数
         stream_final_response: 是否流式输出最终回答
         page_context: 当前页面上下文，包含 url、title 和 content
+        optimize_prompt: 是否优化用户提示词
         
     Returns:
         处理结果字典
@@ -248,6 +250,20 @@ async def process_query_with_strategy(
         logger.info(f"Storing context to session memory for session: {session_id}")
         await strategy.store_to_session_memory(session_id, context, query)
     
+    # ========== 步骤 6.3: 优化用户提示词（新增） ==========
+    optimized_query = query  # 默认使用原查询
+    optimization_result = None
+    
+    if optimize_prompt and context.items:
+        logger.info(f"Optimizing user prompt based on context")
+        optimization_result = await optimize_user_prompt(query, context, session_id)
+        
+        if optimization_result.get("success"):
+            optimized_query = optimization_result.get("optimized_query", query)
+            logger.info(f"Prompt optimization successful: confidence={optimization_result.get('confidence', 0)}")
+        else:
+            logger.warning(f"Prompt optimization failed: {optimization_result.get('error', 'unknown error')}")
+    
     # ========== 步骤 6.5: 检查时间冲突（新增） ==========
     # 从上下文中提取todo信息，检查是否有时间冲突
     conflict_check_result = check_schedule_conflict(context, query)
@@ -276,14 +292,16 @@ async def process_query_with_strategy(
             f"[{item.source}] {item.content[:500]}"
             for item in context.items[:10]  # 最多10个上下文项
         ])
-        user_message = f"""用户问题: {query}
+        # 使用优化后的查询（如果启用了优化）
+        final_query = optimized_query if optimize_prompt else query
+        user_message = f"""用户问题: {final_query}
 
 相关上下文信息:
 {context_summary}
 
 请基于以上上下文信息直接回答用户的问题。如果上下文信息不够完整，可以结合常识和最佳实践给出合理的建议。"""
     else:
-        user_message = query
+        user_message = optimized_query if optimize_prompt else query
     
     messages.append({"role": "user", "content": user_message})
     
@@ -333,7 +351,7 @@ async def process_query_with_strategy(
             context_items=context.items
         )
     
-    return {
+    result = {
         "success": True,
         "response": final_response,
         "context_items_count": len(context.items),
@@ -346,6 +364,18 @@ async def process_query_with_strategy(
             for item in context.items[:5]
         ]
     }
+    
+    # 如果进行了提示词优化，添加优化信息
+    if optimize_prompt and optimization_result:
+        result["prompt_optimization"] = {
+            "enabled": True,
+            "original_query": optimization_result.get("original_query", query),
+            "optimized_query": optimization_result.get("optimized_query", query),
+            "optimization_reason": optimization_result.get("optimization_reason", ""),
+            "confidence": optimization_result.get("confidence", 0.0)
+        }
+    
+    return result
 
 
 # ========== 新增：存储迭代上下文到向量数据库 ==========
@@ -502,6 +532,152 @@ async def store_conversation_to_vectorstore(
         
     except Exception as e:
         logger.warning(f"Failed to store conversation to vectorstore: {e}", exc_info=True)
+
+
+async def optimize_user_prompt(
+    original_query: str,
+    context: ContextCollection,
+    session_id: str
+) -> Dict[str, Any]:
+    """
+    基于上下文和大模型优化用户提示词
+    
+    Args:
+        original_query: 用户原始查询
+        context: 已收集的上下文信息
+        session_id: 会话ID
+    
+    Returns:
+        {
+            "success": bool,
+            "original_query": str,
+            "optimized_query": str,
+            "optimization_reason": str  # 优化说明
+        }
+    """
+    try:
+        client = get_openai_client()
+        if not client:
+            logger.warning("LLM unavailable for prompt optimization")
+            return {
+                "success": False,
+                "original_query": original_query,
+                "optimized_query": original_query,
+                "error": "LLM服务不可用"
+            }
+        
+        # 构建上下文摘要（限制长度，突出关键信息）
+        context_summary_parts = []
+        
+        # 提取用户待办事项
+        task_items = [item for item in context.items if item.source == "user_profile" and item.metadata.get("context_type") == "task"]
+        if task_items:
+            task_summary = "用户待办事项：\n" + "\n".join([f"- {item.content[:100]}" for item in task_items[:5]])
+            context_summary_parts.append(task_summary)
+        
+        # 提取智能提示
+        tip_items = [item for item in context.items if item.source == "user_profile" and item.metadata.get("context_type") == "tip"]
+        if tip_items:
+            tip_summary = "智能提示：\n" + "\n".join([f"- {item.content[:100]}" for item in tip_items[:3]])
+            context_summary_parts.append(tip_summary)
+        
+        # 提取会话记忆
+        memory_items = [item for item in context.items if item.source == "session_memory"]
+        if memory_items:
+            memory_summary = "会话记忆：\n" + "\n".join([f"- {item.content[:100]}" for item in memory_items[:5]])
+            context_summary_parts.append(memory_summary)
+        
+        # 提取页面上下文
+        page_items = [item for item in context.items if item.source in ["current_page", "web_page"]]
+        if page_items:
+            page_summary = "相关页面：\n" + "\n".join([
+                f"- {item.metadata.get('url', 'unknown')}: {item.content[:80]}" 
+                for item in page_items[:3]
+            ])
+            context_summary_parts.append(page_summary)
+        
+        context_summary = "\n\n".join(context_summary_parts) if context_summary_parts else "暂无上下文信息"
+        
+        # 构建优化提示词
+        system_prompt = """你是一个提示词优化专家。你的任务是根据用户的原始问题和已有上下文，生成一个更清晰、更结构化的优化问题。
+
+优化原则：
+1. **保留原意**：不得改变用户的核心意图和要求
+2. **补充上下文**：基于已有信息，补充隐含的时间、对象、限制等
+3. **澄清模糊**：如果问题模糊，基于上下文做合理推断并明确
+4. **结构化**：使用清晰的结构组织问题（意图、条件、期望输出）
+5. **简洁准确**：避免冗余，保持专业和准确
+
+返回JSON格式：
+{
+    "optimized_query": "优化后的问题",
+    "optimization_reason": "优化说明（简要说明做了哪些优化）",
+    "confidence": 0.9  // 置信度（0-1），如果原问题已经很清晰，置信度应较低
+}
+
+如果原问题已经足够清晰且不需要优化，返回原问题并设置 confidence < 0.5。"""
+        
+        user_prompt = f"""原始问题：{original_query}
+
+已有上下文信息：
+{context_summary}
+
+会话ID：{session_id}
+
+请基于上下文优化这个问题。"""
+        
+        # 调用 LLM 优化
+        response = client.chat.completions.create(
+            model=config.LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.3,  # 较低温度以保持稳定
+            max_tokens=800,
+            response_format={"type": "json_object"}
+        )
+        
+        # 解析结果
+        result_text = response.choices[0].message.content.strip()
+        result_json = json.loads(result_text)
+        
+        optimized_query = result_json.get("optimized_query", original_query)
+        optimization_reason = result_json.get("optimization_reason", "")
+        confidence = result_json.get("confidence", 0.5)
+        
+        # 如果置信度低，使用原问题
+        if confidence < 0.5:
+            logger.info(f"Prompt optimization confidence too low ({confidence}), using original query")
+            optimized_query = original_query
+            optimization_reason = "原问题已足够清晰，无需优化"
+        
+        logger.info(f"Prompt optimized: '{original_query}' -> '{optimized_query}' (confidence: {confidence})")
+        
+        return {
+            "success": True,
+            "original_query": original_query,
+            "optimized_query": optimized_query,
+            "optimization_reason": optimization_reason,
+            "confidence": confidence
+        }
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse optimization result: {e}")
+        return {
+            "success": False,
+            "original_query": original_query,
+            "optimized_query": original_query,
+            "error": "优化结果解析失败"
+        }
+    except Exception as e:
+        logger.exception(f"Error optimizing prompt: {e}")
+        return {
+            "success": False,
+            "original_query": original_query,
+            "optimized_query": original_query,
+            "error": str(e)
+        }
 
 
 def check_schedule_conflict(context: ContextCollection, user_query: str) -> Dict[str, Any]:
@@ -731,13 +907,14 @@ def chat():
         temperature = data.get('temperature', 0.7)
         use_tools = data.get('use_tools', True)  # 默认启用工具
         max_iterations = data.get('max_iterations', 3)
+        optimize_prompt = data.get('optimize_prompt', False)  # 新增：提示词优化开关
         
         # 获取当前页面上下文（新增）
         page_context = data.get('context', {}).get('page')
         if page_context:
             logger.info(f"Received page context: url={page_context.get('url')}")
         
-        logger.info(f"Processing chat query: {query}, session: {session_id}, use_tools: {use_tools}")
+        logger.info(f"Processing chat query: {query}, session: {session_id}, use_tools: {use_tools}, optimize_prompt: {optimize_prompt}")
         
         # 根据配置选择处理方式
         if use_tools:
@@ -748,7 +925,8 @@ def chat():
                     session_id, 
                     use_tools, 
                     max_iterations,
-                    page_context=page_context  # 传递页面上下文
+                    page_context=page_context,  # 传递页面上下文
+                    optimize_prompt=optimize_prompt  # 传递优化开关
                 )
             )
             
@@ -818,13 +996,14 @@ def chat_stream():
             temperature = data.get('temperature', 0.7)
             use_tools = data.get('use_tools', True)
             max_iterations = data.get('max_iterations', 3)
+            optimize_prompt = data.get('optimize_prompt', False)  # 新增：提示词优化开关
             
             # 获取当前页面上下文（新增）
             page_context = data.get('context', {}).get('page')
             if page_context:
                 logger.info(f"Received page context: url={page_context.get('url')}")
             
-            logger.info(f"Processing stream chat query: {query}, session: {session_id}, use_tools: {use_tools}")
+            logger.info(f"Processing stream chat query: {query}, session: {session_id}, use_tools: {use_tools}, optimize_prompt: {optimize_prompt}")
             
             # 发送会话开始事件（立即发送）
             yield f"data: {json.dumps({'type': 'start', 'session_id': session_id, 'workflow_id': workflow_id, 'model': config.LLM_MODEL}, ensure_ascii=False)}\n\n"
@@ -839,7 +1018,8 @@ def chat_stream():
                         use_tools, 
                         max_iterations, 
                         stream_final_response=False,
-                        page_context=page_context  # 传递页面上下文
+                        page_context=page_context,  # 传递页面上下文
+                        optimize_prompt=optimize_prompt  # 传递优化开关
                     )
                 )
                 
@@ -862,6 +1042,21 @@ def chat_stream():
                 # 发送工具调用完成事件
                 if strategy_result.get("context_items_count", 0) > 0:
                     yield f"data: {json.dumps({'type': 'tool_complete', 'context_items': strategy_result.get('context_items_count', 0), 'iterations': strategy_result.get('iterations', 0)}, ensure_ascii=False)}\n\n"
+                
+                # 发送提示词优化事件（如果启用了优化）
+                if optimize_prompt and strategy_result.get("prompt_optimization"):
+                    opt_info = strategy_result["prompt_optimization"]
+                    optimization_event = {
+                        "type": "prompt_optimized",
+                        "original_query": opt_info.get("original_query", query),
+                        "optimized_query": opt_info.get("optimized_query", query),
+                        "optimization_reason": opt_info.get("optimization_reason", ""),
+                        "confidence": opt_info.get("confidence", 0.0),
+                        "workflow_id": workflow_id,
+                        "timestamp": datetime.now().isoformat()
+                    }
+                    yield f"data: {json.dumps(optimization_event, ensure_ascii=False)}\n\n"
+                    logger.info(f"Sent prompt optimization event: {opt_info.get('optimized_query', query)[:50]}...")
                 
                 # 检查是否有时间冲突（在流式输出前检查）
                 # 注意：这里需要从strategy_result中提取context信息
