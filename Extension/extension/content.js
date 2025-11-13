@@ -495,11 +495,14 @@ async function evaluateSkipCrawlForThisPage() {
 
     const isSameHost = currentHost === expectedHost || location.host.toLowerCase() === `${expectedHost}:${expectedPort}`;
     const isSamePort = expectedPort === '' ? true : currentPort === expectedPort;
-    const shouldSkip = Boolean(expectedHost) && isSameHost && isSamePort;
+    const shouldSkipFrontend = Boolean(expectedHost) && isSameHost && isSamePort;
 
-    if (shouldSkip) {
-      window.__LC_SKIP_CRAWL__ = true;
+    // 基线：是否主前端页面
+    window.__LC_SKIP_CRAWL__ = !!shouldSkipFrontend;
+    if (shouldSkipFrontend) {
       console.log(`🚫 当前为主网页(${expectedHost}:${expectedPort})，将跳过所有爬取与监听`);
+    } else {
+      console.log('✅ 非主网页，继续评估域名策略');
     }
 
     // 基于域名的爬取策略：若域名在阻止列表中，则禁用爬取
@@ -510,11 +513,16 @@ async function evaluateSkipCrawlForThisPage() {
       const hostname = (location.hostname || '').toLowerCase();
       const isBlocked = Array.isArray(blockedDomains) && blockedDomains.map(d => String(d || '').toLowerCase()).includes(hostname);
       if (isBlocked) {
-        window.__LC_CRAWL_ENABLED__ = false;
-        console.log(`🚫 已阻止域名 ${hostname} 的爬取，当前页面将不爬取`);
+        window.__LC_SKIP_CRAWL__ = true;
+        console.log(`🚫 已阻止域名 ${hostname} 的爬取，当前页面将不爬取（不影响全局记录/通知）`);
         // 停止观察器（若已开启）
         if (domCrawler && domCrawler.isObserving) {
           domCrawler.stop();
+        }
+      } else {
+        // 域名未被阻止且不是主前端时，允许爬取
+        if (!shouldSkipFrontend) {
+          window.__LC_SKIP_CRAWL__ = false;
         }
       }
     } catch (err) {
@@ -759,12 +767,23 @@ if (isChromeRuntimeAvailable()) {
     } else if (message.type === 'UPDATE_DOM_CONFIG') {
       domCrawler.updateConfig(message.config);
       sendResponse({ success: true });
-  } else if (message.type === 'REFRESH_CRAWL_POLICY') {
-    (async () => {
-      await evaluateSkipCrawlForThisPage();
-      sendResponse({ success: true });
-    })();
-    return true;
+    } else if (message.type === 'REFRESH_CRAWL_POLICY') {
+      (async () => {
+        await evaluateSkipCrawlForThisPage();
+        // 根据最新策略启动或停止
+        const skip = window.__LC_SKIP_CRAWL__ === true;
+        const enabled = window.__LC_CRAWL_ENABLED__ !== false;
+        if (skip || !enabled) {
+          if (domCrawler && domCrawler.isObserving) {
+            domCrawler.stop();
+          }
+        } else {
+          // 触发一次自动爬取（含初始化监听）
+          await autoCrawlPage();
+        }
+        sendResponse({ success: true, skip });
+      })();
+      return true;
     } else if (message.type === 'GET_DOM_STATUS') {
       sendResponse({
         isObserving: domCrawler.isObserving,
