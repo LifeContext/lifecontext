@@ -1051,4 +1051,324 @@
     return true;
   });
 
+  // ==============================
+  // 主流 AI 网站输入框右侧优化按钮（圆形 Logo）
+  // - 支持：ChatGPT、Gemini、Claude、豆包、Kimi Chat
+  // - 功能：读取输入框文本 -> 调用 /api/agent/chat/stream (optimize_prompt) -> 接收 prompt_optimized 事件 -> 覆盖输入框内容
+  // ==============================
+  function initPromptOptimizeButton() {
+    try {
+      // 仅在主流 AI 网站生效
+      if (!isSupportedAISite(location.hostname)) return;
+      const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+        ? chrome.runtime.getURL('logo.png')
+        : '';
+      
+      let btn = null;
+      let targetEl = null;
+      let optimizerPort = null;
+      let optimizing = false;
+      let lastTargetRect = null;
+      let lastEl = null;
+      let clearedTextCache = '';
+      let hasWrittenOptimized = false;
+      // 本次优化会话状态
+      let activeWorkflowId = '';
+      let promptOptimizedBuffer = '';
+      let contentBuffer = '';
+
+      function isSupportedAISite(host) {
+        const h = String(host || '').toLowerCase();
+        return (
+          h.includes('chat.openai.com') || h.includes('chatgpt.com') || h.endsWith('openai.com') ||
+          h.includes('gemini.google.com') || h.includes('aistudio.google.com') || h.includes('ai.google.com') ||
+          h.includes('claude.ai') ||
+          h.includes('doubao.com') || h.includes('douba.ai') ||
+          h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn')
+        );
+      }
+
+      function isVisible(el) {
+        if (!el || !(el instanceof Element)) return false;
+        const style = window.getComputedStyle(el);
+        if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) return false;
+        const rect = el.getBoundingClientRect();
+        return rect.width > 200 && rect.height > 30 && rect.bottom > 0 && rect.right > 0 &&
+               rect.left < window.innerWidth && rect.top < window.innerHeight;
+      }
+
+      function getCandidateInputs() {
+        // 常见选择器集合（多站点尽量命中）
+        const selectors = [
+          'textarea[data-testid="prompt-textarea"]',
+          'textarea[placeholder*="Message"]',
+          'textarea[placeholder*="message"]',
+          'textarea[placeholder*="Send"]',
+          'textarea[placeholder]',
+          'form textarea',
+          'div[contenteditable="true"][role="textbox"]',
+          'div[contenteditable="true"]',
+          'div[role="textbox"]'
+        ];
+        const nodes = new Set();
+        for (const sel of selectors) {
+          document.querySelectorAll(sel).forEach(n => nodes.add(n));
+        }
+        // 兜底：页面上最后一个 textarea/可编辑框
+        document.querySelectorAll('textarea, div[contenteditable="true"]').forEach(n => nodes.add(n));
+        return Array.from(nodes).filter(isVisible);
+      }
+
+      function pickChatInput() {
+        const list = getCandidateInputs();
+        if (!list.length) return null;
+        // 偏好靠近页面底部的较大输入框
+        list.sort((a, b) => {
+          const ra = a.getBoundingClientRect();
+          const rb = b.getBoundingClientRect();
+          const scoreA = ra.top + ra.height * 0.5 + (window.innerHeight - ra.bottom); // 越靠下、越高分
+          const scoreB = rb.top + rb.height * 0.5 + (window.innerHeight - rb.bottom);
+          return scoreB - scoreA;
+        });
+        return list[0];
+      }
+
+      function ensureBtn() {
+        if (btn) return btn;
+        btn = document.createElement('button');
+        btn.id = 'lc-optimize-btn';
+        btn.type = 'button';
+        btn.style.cssText = `
+          position: fixed;
+          width: 34px;
+          height: 34px;
+          border-radius: 50%;
+          border: none;
+          padding: 0;
+          margin: 0;
+          background: #ffffff url('${logoUrl}') center/70% no-repeat;
+          box-shadow: 0 6px 16px rgba(0,0,0,.2);
+          z-index: 2147483646;
+          cursor: pointer;
+          transition: transform .15s ease, opacity .15s ease;
+          opacity: .95;
+        `;
+        btn.title = '优化提示词（LifeContext）';
+        btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.05)'; });
+        btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; });
+        btn.addEventListener('click', onOptimizeClick);
+        document.body.appendChild(btn);
+        return btn;
+      }
+
+      function setBtnLoading(on) {
+        if (!btn) return;
+        if (on) {
+          btn.disabled = true;
+          btn.style.opacity = '.7';
+          btn.style.cursor = 'not-allowed';
+          btn.innerHTML = `
+            <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
+                         background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
+                         position:relative;">
+              <span style="position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+                           border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
+                           animation:lc-spin .8s linear infinite;"></span>
+            </span>`;
+        } else {
+          btn.disabled = false;
+          btn.style.opacity = '.95';
+          btn.style.cursor = 'pointer';
+          btn.innerHTML = '';
+        }
+      }
+
+      function positionBtn() {
+        if (!btn || !targetEl || !isVisible(targetEl)) {
+          if (btn) btn.style.display = 'none';
+          return;
+        }
+        const rect = targetEl.getBoundingClientRect();
+        lastTargetRect = rect;
+        const size = parseInt((btn.style.width || '34px'), 10) || 34;
+        // 读取 padding-right，避免覆盖文字；另外预留空间给站点自带按钮（语音/发送等）
+        let pr = 0;
+        try {
+          const cs = window.getComputedStyle(targetEl);
+          pr = parseFloat(cs.paddingRight || '0') || 0;
+        } catch (_) {}
+        const reservedRight = Math.max(52, pr + 12); // 至少 52px，或比 padding 多 12px
+        // 垂直位置：单行输入框垂直居中；多行输入框靠右下方（距底 12px）
+        let top;
+        if (rect.height > 64) {
+          top = Math.round(rect.bottom - size - 12);
+        } else {
+          top = Math.round(rect.top + rect.height / 2 - size / 2);
+        }
+        const left = Math.round(rect.right - reservedRight - size);
+        // 边界保护
+        const clampedLeft = Math.max(0, Math.min(left, window.innerWidth - size - 2));
+        const clampedTop = Math.max(0, Math.min(top, window.innerHeight - size - 2));
+        btn.style.display = 'block';
+        btn.style.top = `${clampedTop}px`;
+        btn.style.left = `${clampedLeft}px`;
+      }
+
+      function readTextFrom(el) {
+        if (!el) return '';
+        if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') return el.value || '';
+        if (el.getAttribute('contenteditable') === 'true') return el.innerText || el.textContent || '';
+        return '';
+      }
+
+      function writeTextTo(el, text) {
+        if (!el) return;
+        if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
+          el.value = text;
+        } else if (el.getAttribute('contenteditable') === 'true') {
+          el.innerHTML = '';
+          el.textContent = text;
+        }
+        // 触发站点监听
+        try {
+          el.dispatchEvent(new InputEvent('input', { bubbles: true }));
+          el.dispatchEvent(new Event('change', { bubbles: true }));
+          // 将光标移至末尾（contenteditable 简单处理）
+          if (el.getAttribute && el.getAttribute('contenteditable') === 'true') {
+            const sel = window.getSelection();
+            const range = document.createRange();
+            range.selectNodeContents(el);
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          } else if (typeof el.selectionStart === 'number') {
+            el.selectionStart = el.selectionEnd = (el.value || '').length;
+          }
+        } catch (_) {}
+      }
+
+      function ensureOptimizePort() {
+        if (optimizerPort) return optimizerPort;
+        optimizerPort = chrome.runtime.connect({ name: 'STREAM_CHAT' });
+        optimizerPort.onDisconnect.addListener(() => {
+          optimizerPort = null;
+          optimizing = false;
+          setBtnLoading(false);
+        });
+        optimizerPort.onMessage.addListener((msg) => {
+          if (!msg || msg.type !== 'STREAM_CHUNK') return;
+          const data = msg.data || {};
+          const t = String(data.type || '');
+          if (!optimizing) return;
+          if (t === 'start') {
+            activeWorkflowId = data.workflow_id || '';
+            promptOptimizedBuffer = '';
+            contentBuffer = '';
+          } else if (t === 'prompt_optimized') {
+            // 仅处理当前会话
+            if (activeWorkflowId && data.workflow_id && data.workflow_id !== activeWorkflowId) return;
+            const optimized = (data.optimized_query || data.content || '').toString();
+            if (optimized) {
+              // 流中可能多次出现，累积
+              promptOptimizedBuffer += optimized;
+            }
+          } else if (t === 'content') {
+            if (activeWorkflowId && data.workflow_id && data.workflow_id !== activeWorkflowId) return;
+            const piece = (data.content || '').toString();
+            if (piece) contentBuffer += piece;
+          } else if (t === 'error') {
+            optimizing = false;
+            setBtnLoading(false);
+          } else if (t === 'done') {
+            if (activeWorkflowId && data.workflow_id && data.workflow_id !== activeWorkflowId) return;
+            // 优先顺序：prompt_optimized 累积 > full_response > content 累积
+            let finalText = '';
+            if (promptOptimizedBuffer && promptOptimizedBuffer.trim()) {
+              finalText = promptOptimizedBuffer.trim();
+            } else if (typeof data.full_response === 'string' && data.full_response.trim()) {
+              finalText = data.full_response.trim();
+            } else if (contentBuffer && contentBuffer.trim()) {
+              finalText = contentBuffer.trim();
+            }
+            if (finalText && targetEl) {
+              writeTextTo(targetEl, finalText);
+              hasWrittenOptimized = true;
+            }
+            optimizing = false;
+            setBtnLoading(false);
+          } else {
+            // 忽略其他事件（避免影响悬浮聊天）
+          }
+        });
+        return optimizerPort;
+      }
+
+      async function onOptimizeClick(e) {
+        try {
+          e.preventDefault();
+          targetEl = pickChatInput();
+          if (!targetEl) return;
+          const text = readTextFrom(targetEl).trim();
+          if (!text) return;
+          // 清空输入框，等待优化结果
+          clearedTextCache = text;
+          hasWrittenOptimized = false;
+          writeTextTo(targetEl, '');
+          ensureBtn();
+          setBtnLoading(true);
+          optimizing = true;
+          const payload = {
+            query: text,
+            optimize_prompt: true
+          };
+          const port = ensureOptimizePort();
+          if (port) {
+            port.postMessage({ action: 'start', payload });
+          } else {
+            optimizing = false;
+            setBtnLoading(false);
+            // 端口不可用时回滚原始文本
+            writeTextTo(targetEl, clearedTextCache);
+          }
+        } catch (_) {
+          optimizing = false;
+          setBtnLoading(false);
+          // 出错时回滚原始文本
+          try { if (targetEl && !hasWrittenOptimized) writeTextTo(targetEl, clearedTextCache); } catch(_) {}
+        }
+      }
+
+      function rescan() {
+        const el = pickChatInput();
+        if (el !== lastEl) {
+          lastEl = el;
+          targetEl = el;
+        }
+        if (el) {
+          ensureBtn();
+          positionBtn();
+        } else if (btn) {
+          btn.style.display = 'none';
+        }
+      }
+
+      // 事件绑定与周期性检测
+      window.addEventListener('scroll', () => positionBtn(), { passive: true });
+      window.addEventListener('resize', () => positionBtn(), { passive: true });
+      document.addEventListener('focusin', () => { targetEl = pickChatInput(); positionBtn(); });
+      document.addEventListener('input', () => positionBtn());
+      const mo = new MutationObserver(() => rescan());
+      mo.observe(document.documentElement, { childList: true, subtree: true });
+      setInterval(rescan, 1500);
+      // 初始执行
+      rescan();
+    } catch (e) {
+      // 静默失败，避免影响宿主站点
+      console.warn('Init optimize button failed:', e);
+    }
+  }
+
+  // 在主入口执行初始化
+  try { initPromptOptimizeButton(); } catch (_) {}
+
 })();
