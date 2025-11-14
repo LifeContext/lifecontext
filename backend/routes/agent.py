@@ -1328,6 +1328,177 @@ def cancel_workflow(workflow_id):
         return convert_resp(code=500, status=500, message=f"取消工作流失败: {str(e)}")
 
 
+@agent_bp.route('/optimize_prompt', methods=['POST'])
+@auth_required
+def optimize_prompt_api():
+    """
+    基于页面上下文优化用户提示词的独立接口
+    
+    适用场景：在第三方大模型网页（如 ChatGPT、Claude）中，
+            系统已通过爬虫获取当前页面数据，调用此接口优化用户输入
+    
+    请求参数：
+    - prompt (必填): 原始提示词
+    - url (必填): 当前页面 URL（用于检索已爬取的页面数据）
+    
+    返回：
+    {
+        "success": true,
+        "optimized_prompt": "优化后的提示词"
+    }
+    """
+    try:
+        data = request.get_json()
+        
+        # 参数验证
+        if not data or 'prompt' not in data:
+            return convert_resp(code=400, status=400, message="缺少 prompt 参数")
+        
+        if 'url' not in data:
+            return convert_resp(code=400, status=400, message="缺少 url 参数")
+        
+        prompt = data['prompt'].strip()
+        url = data['url'].strip()
+        
+        # 快速检查：问候语或过短直接返回
+        if len(prompt) < 3 or prompt.lower() in ['你好', '在吗', 'hello', 'hi', 'hey']:
+            return convert_resp(data={
+                "success": True,
+                "optimized_prompt": prompt
+            })
+        
+        logger.info(f"Optimizing prompt for URL: {url}, prompt: '{prompt[:50]}...'")
+        
+        # 执行优化
+        result = run_async(optimize_prompt_simple(prompt, url))
+        
+        return convert_resp(data=result)
+        
+    except Exception as e:
+        logger.exception(f"Error in optimize_prompt_api: {e}")
+        return convert_resp(code=500, status=500, message=f"优化失败: {str(e)}")
+
+
+async def optimize_prompt_simple(prompt: str, url: str) -> Dict[str, Any]:
+    """
+    简化版提示词优化（基于页面上下文）
+    
+    Args:
+        prompt: 原始提示词
+        url: 当前页面 URL（用于检索已爬取的页面内容）
+    
+    Returns:
+        {
+            "success": true/false,
+            "optimized_prompt": "优化后的提示词",
+            "error": "错误信息（仅失败时）"
+        }
+    """
+    try:
+        client = get_openai_client()
+        if not client:
+            return {"success": False, "error": "LLM服务不可用"}
+        
+        # ========== 步骤 1: 检索页面上下文 ==========
+        page_content = ""
+        if config.ENABLE_VECTOR_STORAGE:
+            try:
+                from utils.vectorstore import search_user_context
+                
+                # 使用 URL 精确检索当前页面数据
+                results = search_user_context(
+                    query=prompt,
+                    context_type="all",
+                    limit=3,
+                    include_page_content=True,
+                    current_page_url=url
+                )
+                
+                # 提取页面内容
+                for result in results:
+                    if result.get("metadata", {}).get("url") == url:
+                        page_content = result.get("content", "")
+                        break
+                
+                logger.info(f"Retrieved page content length: {len(page_content)}")
+            except Exception as e:
+                logger.warning(f"Failed to retrieve page context: {e}")
+        
+        # 如果没有页面内容，直接返回原提示词
+        if not page_content:
+            logger.info("No page content found, returning original prompt")
+            return {
+                "success": True,
+                "optimized_prompt": prompt
+            }
+        
+        # 截断过长内容（保留前2000字符）
+        if len(page_content) > 2000:
+            page_content = page_content[:2000] + "..."
+        
+        # ========== 步骤 2: 构建优化提示词 ==========
+        prompts = prompt_config_zh.PROMPTS if config.PROMPT_LANGUAGE == "zh" else prompt_config_en.PROMPTS
+        base_optimization = prompts.get("prompt_optimization", {})
+        
+        system_prompt = base_optimization.get("system", "") + """
+
+**针对当前场景的额外要求**:
+1. 仅基于提供的页面内容优化提示词
+2. 如果提示词与页面内容高度相关，补充具体细节
+3. 如果提示词与页面内容关联不强，保持原样
+4. 返回的 optimized_query 应该是可以直接使用的提示词
+
+**返回JSON格式**:
+{
+    "optimized_query": "优化后的提示词",
+    "confidence": 0.85
+}"""
+        
+        user_prompt = f"""原始提示词：{prompt}
+
+当前页面内容：
+{page_content}
+
+请基于页面内容优化这个提示词。如果提示词与页面内容无关，或页面内容不足以优化，请返回原提示词。"""
+        
+        # ========== 步骤 3: 调用 LLM 优化 ==========
+        response = client.chat.completions.create(
+            model=config.LLM_MODEL,
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_prompt}
+            ],
+            temperature=0.3,
+            max_tokens=800,
+            response_format={"type": "json_object"}
+        )
+        
+        # 解析结果
+        result_text = response.choices[0].message.content.strip()
+        result_json = json.loads(result_text)
+        
+        optimized_prompt = result_json.get("optimized_query", prompt)
+        confidence = result_json.get("confidence", 0.5)
+        
+        # 置信度过低，使用原提示词
+        if confidence < 0.5:
+            optimized_prompt = prompt
+        
+        logger.info(f"Prompt optimization completed: confidence={confidence}")
+        
+        return {
+            "success": True,
+            "optimized_prompt": optimized_prompt
+        }
+        
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse optimization result: {e}")
+        return {"success": False, "optimized_prompt": prompt, "error": "优化结果解析失败"}
+    except Exception as e:
+        logger.exception(f"Error in optimize_prompt_simple: {e}")
+        return {"success": False, "optimized_prompt": prompt, "error": str(e)}
+
+
 @agent_bp.route('/test', methods=['GET'])
 @auth_required
 def test_agent():
