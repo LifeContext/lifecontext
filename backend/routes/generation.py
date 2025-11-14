@@ -553,3 +553,61 @@ def manual_generate_todos():
     except Exception as e:
         logger.exception(f"Error generating todo: {e}")
         return convert_resp(code=500, status=500, message=f"生成待办事项失败: {str(e)}")
+
+
+@generation_bp.route('/daily-feed', methods=['POST'])
+@auth_required
+def get_daily_feed():
+    """获取每日Feed卡片"""
+    try:
+        # 获取查询参数
+        lookback_hours = request.args.get('lookback_hours', 24, type=int)
+        date_param = request.args.get('date')  # 可选的日期参数，格式：YYYY-MM-DD
+        
+        # 如果指定了日期，计算该日期的时间范围
+        if date_param:
+            try:
+                target_date = datetime.strptime(date_param, '%Y-%m-%d')
+                # 设置为当天的开始和结束
+                from datetime import time
+                start_dt = datetime.combine(target_date.date(), time.min)
+                end_dt = datetime.combine(target_date.date(), time.max)
+                
+                # 计算lookback_hours（用于兼容现有逻辑）
+                lookback_hours = int((end_dt - start_dt).total_seconds() / 3600)
+            except ValueError:
+                return convert_resp(
+                    code=400,
+                    status=400,
+                    message="日期格式错误，请使用 YYYY-MM-DD 格式"
+                )
+        
+        # 导入daily feed生成函数
+        from utils.generation.daily_feed_gen import generate_daily_feed
+        
+        # 生成每日Feed
+        result = asyncio.run(generate_daily_feed(lookback_hours))
+        
+        if result.get('success'):
+            cards = result.get('cards', [])
+            logger.info(f"Generated daily feed with {len(cards)} cards")
+            
+            return convert_resp(
+                message="daily feed generated successfully",
+                data={
+                    "date": result.get('date'),
+                    "cards": cards,
+                    "total_count": result.get('total_count', len(cards))
+                }
+            )
+        else:
+            return convert_resp(
+                code=500,
+                status=500,
+                message=result.get('message', 'daily feed generation failed')
+            )
+        
+    except Exception as e:
+        logger.exception(f"Error generating daily feed: {e}")
+        return convert_resp(code=500, status=500, message=f"daily feed generation failed: {str(e)}")
+
