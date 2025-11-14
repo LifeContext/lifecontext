@@ -594,12 +594,7 @@ def daily_feed_endpoint():
                 if feed_data:
                     return convert_resp(
                         message="Daily feed retrieved successfully",
-                        data={
-                            "date": feed_data['date'],
-                            "cards": feed_data['cards'],
-                            "total_count": feed_data['total_count'],
-                            "create_time": feed_data['create_time']
-                        }
+                        data=feed_data  # 直接返回feed数据，不包装
                     )
                 else:
                     return convert_resp(
