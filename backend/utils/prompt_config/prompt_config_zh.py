@@ -65,7 +65,8 @@ PROMPTS = {
 2. 从上下文数据中的`web_data`和`relevant_history`字段中选择
 3. 每个tip的source_urls应该包含1-5个最相关的URL
 4. 只选择真正作为有效参考的URL，不要包含所有URL
-5. 如果某个tip不基于任何URL（例如基于活动记录或待办事项），可以返回空数组
+5. **禁止**在`content`正文中直接粘贴或罗列`available_urls`里的链接，所有URL必须只出现在`source_urls`字段
+6. 如果某个tip不基于任何URL（例如基于活动记录或待办事项），可以返回空数组
 
 **URL来源说明**：
 - `web_data`：当前时间段的网页浏览记录，每个条目包含`url`字段
@@ -130,6 +131,7 @@ $available_urls
 2. `source_urls`应该包含1-5个与tip内容直接相关的URL
 3. 只选择真正作为有效参考的URL，不要包含所有URL
 4. 如果tip不基于URL（例如基于活动或待办），`source_urls`可以为空数组[]
+5. 不得在`content`正文中粘贴`available_urls`列表或原始链接，URL只能出现在`source_urls`
 
 ## ⚠️ 避免重复（极其重要）
 你必须严格避免生成与`existing_tips`中已有提示重复或高度相似的提示。

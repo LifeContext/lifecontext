@@ -65,7 +65,8 @@ Each tip must include a `source_urls` field with the URLs genuinely used while c
 2. Sources must come from `web_data` or `relevant_history`
 3. Provide 1-5 URLs per tip
 4. Include only genuinely referenced URLs, not entire lists
-5. If a tip is based purely on activities or todos, the array can be empty
+5. **Never** paste the `available_urls` list or raw URLs inside the `content` body; URLs must appear only in `source_urls`
+6. If a tip is based purely on activities or todos, the array can be empty
 
 **Source explanations:**
 - `web_data`: current-window browsing records, each containing a `url`
@@ -127,6 +128,7 @@ $available_urls
 2. Each `source_urls` array must contain 1-5 directly relevant URLs
 3. Only include URLs that were meaningful references; do not dump everything
 4. If a tip is based on activities or todos instead of URLs, `source_urls` can be []
+5. Do not copy the `available_urls` list or raw links into the tip `content`; hyperlinks belong only in `source_urls`
 
 ## ⚠️ Duplicate avoidance (mandatory)
 You must avoid generating tips that duplicate items in `existing_tips`.
