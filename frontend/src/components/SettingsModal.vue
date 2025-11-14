@@ -359,8 +359,8 @@ const addExcludedDomain = async () => {
     const created = await settingsService.createExcludedDomain(normalized);
     const createdUrl = created.url || normalized;
     const entry: UrlBlacklistEntry = {
-      id: typeof created.id === 'number' ? created.id : Date.now(),
-      url: createdUrl
+      id: typeof created.id === 'number' ? created.id : null,
+      url: created.url || normalized
     };
     urlBlacklist.value = [...urlBlacklist.value, entry];
     syncExcludedDomains();
@@ -408,37 +408,14 @@ const loadSettings = async () => {
       settingsService.getSettings(),
       settingsService.getExcludedDomains().catch((err) => {
         console.error('Failed to fetch excluded domains:', err);
-        return null;
+        return [];
       })
     ]);
-    const blacklistEntries: UrlBlacklistEntry[] = Array.isArray(domains)
-      ? domains
-          .map((domain, index) => {
-            if (typeof domain === 'string') {
-              const normalized = normalizeDomain(domain);
-              return normalized ? { id: null, url: normalized } : null;
-            }
-            if (domain && typeof domain === 'object') {
-              const item = domain as { id?: number; url?: string };
-              const normalized = typeof item.url === 'string' ? normalizeDomain(item.url) : '';
-              if (!normalized) return null;
-              return {
-                id: typeof item.id === 'number' ? item.id : null,
-                url: normalized
-              };
-            }
-            return null;
-          })
-          .filter((entry): entry is UrlBlacklistEntry => entry !== null)
-      : Array.isArray(settings.excluded_domains)
-        ? settings.excluded_domains
-            .map((domain) => {
-              const normalized = normalizeDomain(domain);
-              return normalized ? { id: null, url: normalized } : null;
-            })
-            .filter((entry): entry is UrlBlacklistEntry => entry !== null)
-        : [];
-    console.log('blacklistEntries', blacklistEntries);
+    
+    const blacklistEntries: UrlBlacklistEntry[] = domains.map((item) => ({
+      id: typeof item.id === 'number' ? item.id : null,
+      url: item.url || ''
+    })).filter((entry) => entry.url.length > 0);
 
     localSettings.value = {
       tips_interval_minutes: settings.tips_interval_minutes ?? 60,
