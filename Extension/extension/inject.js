@@ -246,6 +246,8 @@
     const mdBufferByWorkflowId = Object.create(null);
     // 发送按钮原始内容，用于恢复
     let cachedOriginalBtnHTML = null;
+      // 记录触发优化的控制条按钮（用于加载态恢复）
+      let currentTriggerBtn = null;
 
     // 切换发送按钮“生成中...”状态
     function setGeneratingState(on) {
@@ -1063,21 +1065,209 @@
       const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
         ? chrome.runtime.getURL('logo.png')
         : '';
-      
-      let btn = null;
+      // 站点适配器：根据不同 AI 网站定位稳定的 Controls Bar（附件/语音/发送所在容器）
+      function getHostCategory() {
+        const h = (location.hostname || '').toLowerCase();
+        if (h.includes('chat.openai.com') || h.includes('chatgpt.com') || h.endsWith('openai.com')) return 'chatgpt';
+        if (h.includes('claude.ai')) return 'claude';
+        if (h.includes('doubao.com') || h.includes('douba.ai')) return 'doubao';
+        if (h.includes('gemini.google.com') || h.includes('ai.google.com') || h.includes('aistudio.google.com')) return 'gemini';
+        if (h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com')) return 'kimi';
+        if (h.includes('x.ai') || h.includes('grok')) return 'grok';
+        return '';
+      }
+      function getControlsBarSelectors(kind) {
+        const common = [];
+        switch (kind) {
+          case 'chatgpt':
+            return [
+              '[data-testid="composer-actions"]'
+            ];
+          case 'claude':
+            return [
+              'button[aria-label*="Attach" i]::parent'
+            ];
+          case 'doubao':
+            return [
+              // 用户提供：Controls Bar 占位容器，类名带稳定前缀 tools-placeholder-
+              'div.tools-placeholder-WzV9jb',
+              'div[class^="tools-placeholder-"]'
+            ];
+          case 'gemini':
+            return [
+              'button[aria-label*="Send" i]::parent'
+            ];
+          case 'kimi':
+            return [
+              // Kimi Chat: 底部整条操作栏容器
+              'div.chat-editor-action'
+            ];
+          case 'grok':
+            return [
+              'button[aria-label*="microphone" i]::parent'
+            ];
+          default:
+            return common;
+        }
+      }
+      function findControlsBar(rootDoc = document) {
+        const kind = getHostCategory();
+        const selectors = getControlsBarSelectors(kind);
+        const root = rootDoc || document;
+        for (const sel of selectors) {
+          if (sel.endsWith('::parent')) {
+            const baseSel = sel.replace('::parent', '');
+            const nodes = queryAllDeep([baseSel], root);
+            for (const n of nodes) {
+              if (n && n.parentElement) return n.parentElement;
+            }
+          } else {
+            const nodes = queryAllDeep([sel], root);
+            if (nodes && nodes.length) return nodes[0];
+          }
+        }
+        // 兜底：带发送按钮的容器
+        try {
+          const sendBtn = queryAllDeep(['button[aria-label*="Send" i]', 'button[type="submit"]'], root)[0];
+          if (sendBtn && sendBtn.parentElement) return sendBtn.parentElement;
+        } catch (_) {}
+        return null;
+      }
+      // 在输入框邻近范围内查找 Controls Bar（优先策略，避免误命中侧边栏）
+      function findControlsBarFor(inputEl) {
+        try {
+          if (!inputEl) return null;
+          const root =
+            (inputEl.closest && (inputEl.closest('form,[role="form"],[class*="composer"],[class*="Composer"],[class*="editor"],[class*="Input"],[class*="input"]') || inputEl.parentElement))
+            || inputEl.parentElement
+            || document;
+          return findControlsBar(root) || null;
+        } catch (_) {
+          return null;
+        }
+      }
+      function ensureInlineBtn() {
+        const id = 'lc-optimize-btn-inline';
+        let b = document.getElementById(id);
+        if (b) return b;
+        b = document.createElement('button');
+        b.id = id;
+        b.type = 'button';
+        b.style.cssText = `
+          width: 34px;
+          height: 34px;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 50%;
+          border: none;
+          background: #ffffff url('${logoUrl}') center/70% no-repeat;
+          box-shadow: 0 6px 16px rgba(0,0,0,.2);
+          cursor: pointer;
+          transition: transform .15s ease, opacity .15s ease;
+          margin-left: 6px;
+          margin-right: 6px;
+        `;
+        b.title = '优化提示词（LifeContext）';
+        b.addEventListener('mouseenter', () => { b.style.transform = 'scale(1.05)'; });
+        b.addEventListener('mouseleave', () => { b.style.transform = 'scale(1)'; });
+        b.addEventListener('click', onOptimizeClick);
+        return b;
+      }
+      function injectIntoControlsBar(bar) {
+        try {
+          if (!bar) return false;
+          const kind = getHostCategory();
+          const btnEl = ensureInlineBtn();
+          if (kind === 'kimi') {
+            // Kimi: 只注入到底部 Controls Bar 的右侧区域，且尽量放在发送按钮之前，避免影响其它控件
+            const rightArea = bar.querySelector('div.right-area') || bar;
+            // 优先：放在 K2 模型选择（current-model）左侧
+            const modelContainer = rightArea.querySelector('div.current-model') || rightArea.querySelector('.current-model') || rightArea.querySelector('.model-name') || null;
+            if (modelContainer && modelContainer.parentElement === rightArea) {
+              if (btnEl.parentElement !== rightArea || btnEl.nextSibling !== modelContainer) {
+                rightArea.insertBefore(btnEl, modelContainer);
+              }
+            } else {
+              // 次选：放在发送按钮之前
+              const sendContainer = rightArea.querySelector('div.send-button-container');
+              if (sendContainer && sendContainer.parentElement === rightArea) {
+                if (btnEl.parentElement !== rightArea || btnEl.nextSibling !== sendContainer) {
+                  rightArea.insertBefore(btnEl, sendContainer);
+                }
+              } else {
+                // 兜底：右侧区域末尾
+                if (btnEl.parentElement !== rightArea) {
+                  rightArea.appendChild(btnEl);
+                }
+              }
+            }
+          } else if (kind === 'chatgpt') {
+            // ChatGPT：将按钮挂入右侧 controls 父容器（听写/语音/发送所在）
+            // 父容器示例：<div class="ms-auto flex items-center gap-1.5"> ... </div>
+            // 需求：把按钮放在“听写按钮（composer-btn）”左边
+            const voiceBtn =
+              bar.querySelector('button.composer-btn[aria-label="听写按钮"]') ||
+              bar.querySelector('button.composer-btn[aria-label*="听写"]') ||
+              null;
+            // 定位父容器（避免命中顶部/侧边栏），优先具有 ms-auto flex items-center 的容器
+            const controlsParent = (voiceBtn && (voiceBtn.closest('div.ms-auto.flex.items-center') || voiceBtn.parentElement)) ||
+              bar.querySelector('div.ms-auto.flex.items-center') ||
+              bar;
+            if (voiceBtn && controlsParent) {
+              const anchor = voiceBtn.closest('span') || voiceBtn;
+              if (btnEl.parentElement !== controlsParent || btnEl.nextSibling !== anchor) {
+                controlsParent.insertBefore(btnEl, anchor);
+              }
+            } else {
+              // 回退：放到语音容器左侧（旧结构兼容）
+              const speechContainer = bar.querySelector('div[data-testid="composer-speech-button-container"]');
+              if (speechContainer && speechContainer.parentElement) {
+                const parent = speechContainer.parentElement;
+                if (btnEl.parentElement !== parent || btnEl.nextSibling !== speechContainer) {
+                  parent.insertBefore(btnEl, speechContainer);
+                }
+              } else if (btnEl.parentElement !== bar) {
+                bar.appendChild(btnEl);
+              }
+            }
+          } else {
+            // 其他站点：优先跟在语音/听写按钮后
+            const mic = bar.querySelector('button[data-testid="composer-voice-button"], button[aria-label*="Voice" i], button[aria-label*="Microphone" i], button[aria-label*="语音" i], button[aria-label*="听写" i]');
+            if (mic && mic.parentElement === bar) {
+              if (btnEl.parentElement !== bar || btnEl.previousSibling !== mic) {
+                bar.insertBefore(btnEl, mic.nextSibling);
+              }
+            } else if (btnEl.parentElement !== bar) {
+              bar.appendChild(btnEl);
+            }
+          }
+          return true;
+        } catch (_) { return false; }
+      }
+      function tryInlineMount() {
+        const inputEl = (typeof pickChatInput === 'function') ? pickChatInput() : null;
+        const bar = findControlsBarFor(inputEl) || findControlsBar();
+        if (!bar) return false;
+        return injectIntoControlsBar(bar);
+      }
+      // 监控 SPA 变化并自动回补
+      let mountedInline = tryInlineMount();
+      const moInline = new MutationObserver(() => { mountedInline = tryInlineMount() || mountedInline; });
+      moInline.observe(document.body || document.documentElement, { childList: true, subtree: true });
+      const inlineTicker = setInterval(() => { mountedInline = tryInlineMount() || mountedInline; }, 1000);
+      // 无论初次是否成功，都采用“仅内嵌”策略，不再使用浮动定位方案
+      // 后续若找到 Controls Bar，会自动插入
+      // 结束初始化
+      // 注意：下面的浮动定位相关旧逻辑将不再使用
+      // 为避免误执行，直接 return
+      // 但保留后续函数（如流式端口、发送逻辑）供按钮点击时使用
+      // 需要在 return 前初始化供后续函数使用的状态变量（避免 TDZ）
       let targetEl = null;
       let optimizerPort = null;
       let optimizing = false;
-      let lastTargetRect = null;
-      let lastEl = null;
-          // 针对“丢失可见性”的短暂宽限，避免闪烁（如豆包输入框重排）
-          let lastVisibleTimestamp = 0;
-      let clearedTextCache = '';
       let hasWrittenOptimized = false;
-      // 本次优化会话状态
-      let activeWorkflowId = '';
-      let promptOptimizedBuffer = '';
-      let contentBuffer = '';
+      return;  // 仅采用内嵌注入策略，阻断旧的浮动定位逻辑
 
       function isSupportedAISite(host) {
         const h = String(host || '').toLowerCase();
@@ -1227,6 +1417,21 @@
           btn.innerHTML = '';
         }
       }
+      // 针对任意按钮元素设置/取消“加载中”状态
+      function setBtnLoadingOn(el, on) {
+        try {
+          if (!el) return;
+          if (on) {
+            el.disabled = true;
+            el.style.opacity = '0.7';
+            el.style.cursor = 'not-allowed';
+          } else {
+            el.disabled = false;
+            el.style.opacity = '';
+            el.style.cursor = '';
+          }
+        } catch (_) {}
+      }
 
       // 读取元素的易读标签（辅助识别“听写/语音/麦克风”按钮）
       function getElementLabel(el) {
@@ -1336,10 +1541,19 @@
         if (hostLower.includes('x.ai') || hostLower.includes('grok')) {
           if (isMultiline) {
             finalLeft += Math.round(size * 1.5);
-            finalTop -= 5;
+            finalTop -= 10;
           } else {
             finalTop += 10;
           }
+        }
+        // Kimi Chat 定制偏移：垂直以“距输入框底部 5px”为准，水平左移 6× 按钮宽度
+        if (hostLower.includes('moonshot.cn') || hostLower.includes('kimi.moonshot.cn') || hostLower.includes('kimi.com')) {
+          finalTop = Math.round(rect.bottom - size - 10);
+          // 追加：在当前基础上再向下 1.5 × 按钮高度
+          finalTop += Math.round(size * 1.5);
+          finalLeft -= Math.round(size * 6);
+          // 再向右移动 1 × 按钮宽度
+          finalLeft += Math.round(size * 1);
         }
 
         const clampedLeft = Math.max(0, Math.min(finalLeft, window.innerWidth - size - 2));
@@ -1388,7 +1602,7 @@
         optimizerPort.onDisconnect.addListener(() => {
           optimizerPort = null;
           optimizing = false;
-          setBtnLoading(false);
+          setBtnLoadingOn(currentTriggerBtn, false);
         });
         optimizerPort.onMessage.addListener((msg) => {
           if (!msg || msg.type !== 'STREAM_CHUNK') return;
@@ -1413,7 +1627,7 @@
             if (piece) contentBuffer += piece;
           } else if (t === 'error') {
             optimizing = false;
-            setBtnLoading(false);
+            setBtnLoadingOn(currentTriggerBtn, false);
           } else if (t === 'done') {
             if (activeWorkflowId && data.workflow_id && data.workflow_id !== activeWorkflowId) return;
             // 优先顺序：prompt_optimized 累积 > full_response > content 累积
@@ -1430,7 +1644,7 @@
               hasWrittenOptimized = true;
             }
             optimizing = false;
-            setBtnLoading(false);
+            setBtnLoadingOn(currentTriggerBtn, false);
           } else {
             // 忽略其他事件（避免影响悬浮聊天）
           }
@@ -1441,35 +1655,47 @@
       async function onOptimizeClick(e) {
         try {
           e.preventDefault();
+          currentTriggerBtn = (e && e.currentTarget) ? e.currentTarget : null;
           targetEl = pickChatInput();
           if (!targetEl) return;
           const text = readTextFrom(targetEl).trim();
           if (!text) return;
-          // 清空输入框，等待优化结果
-          clearedTextCache = text;
-          hasWrittenOptimized = false;
-          writeTextTo(targetEl, '');
-          ensureBtn();
-          setBtnLoading(true);
+          setBtnLoadingOn(currentTriggerBtn, true);
           optimizing = true;
-          const payload = {
-            query: text,
-            optimize_prompt: true
-          };
-          const port = ensureOptimizePort();
-          if (port) {
-            port.postMessage({ action: 'start', payload });
+
+          const pageUrl = (typeof location !== 'undefined' && location.href) ? String(location.href) : '';
+          // 通过后台代理，避免 https 页面的 CORS 限制
+          const resp = await new Promise((resolve) => {
+            try {
+              chrome.runtime.sendMessage({
+                type: 'OPTIMIZE_PROMPT',
+                prompt: text,
+                url: pageUrl
+              }, (r) => resolve(r));
+            } catch (err) {
+              resolve({ ok: false, error: String(err) });
+            }
+          });
+
+          const optimized = resp && resp.ok
+            ? (resp.data && (resp.data.optimized_prompt || resp.data?.data?.optimized_prompt))
+            : null;
+
+          if (optimized && String(optimized).trim()) {
+            writeTextTo(targetEl, String(optimized).trim());
+            hasWrittenOptimized = true;
           } else {
-            optimizing = false;
-            setBtnLoading(false);
-            // 端口不可用时回滚原始文本
-            writeTextTo(targetEl, clearedTextCache);
+            // 未返回有效优化结果则不清空，保留原文
+            writeTextTo(targetEl, text);
           }
+
+          setBtnLoadingOn(currentTriggerBtn, false);
+          optimizing = false;
         } catch (_) {
           optimizing = false;
-          setBtnLoading(false);
+          setBtnLoadingOn(currentTriggerBtn, false);
           // 出错时回滚原始文本
-          try { if (targetEl && !hasWrittenOptimized) writeTextTo(targetEl, clearedTextCache); } catch(_) {}
+          try { if (targetEl) writeTextTo(targetEl, readTextFrom(targetEl) || ''); } catch(_) {}
         }
       }
 
