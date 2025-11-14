@@ -143,6 +143,17 @@ def init_db():
         )
     """)
     
+    # 创建每日Feed表
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS daily_feeds (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT NOT NULL UNIQUE,
+            cards TEXT NOT NULL,
+            total_count INTEGER DEFAULT 0,
+            create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+    """)
+    
     conn.commit()
     conn.close()
     logger.info("Database initialized successfully")
@@ -762,3 +773,143 @@ def get_all_settings():
         }
     
     return settings
+
+
+# ============================================================================
+# Daily Feed 相关函数
+# ============================================================================
+
+def insert_daily_feed(date: str, cards: List[dict], total_count: int) -> Optional[int]:
+    """插入或更新每日Feed
+    
+    Args:
+        date: 日期字符串 (YYYY-MM-DD)
+        cards: 卡片列表
+        total_count: 卡片总数
+    
+    Returns:
+        int: feed ID，失败返回 None
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        # 将cards列表转换为JSON字符串
+        cards_json = json.dumps(cards, ensure_ascii=False)
+        
+        # 使用 INSERT OR REPLACE 实现 upsert
+        cursor.execute("""
+            INSERT OR REPLACE INTO daily_feeds (date, cards, total_count, create_time)
+            VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+        """, (date, cards_json, total_count))
+        
+        feed_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Inserted/Updated daily feed for date {date} with {total_count} cards")
+        return feed_id
+        
+    except Exception as e:
+        logger.exception(f"Error inserting daily feed: {e}")
+        return None
+
+
+def get_daily_feed(date: str) -> Optional[dict]:
+    """获取指定日期的Feed
+    
+    Args:
+        date: 日期字符串 (YYYY-MM-DD)
+    
+    Returns:
+        dict: Feed数据，包含 date, cards, total_count, create_time
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, date, cards, total_count, create_time
+            FROM daily_feeds
+            WHERE date = ?
+        """, (date,))
+        
+        row = cursor.fetchone()
+        conn.close()
+        
+        if row:
+            row_dict = dict(row)
+            # 解析JSON字符串为列表
+            row_dict['cards'] = json.loads(row_dict['cards'])
+            return row_dict
+        
+        return None
+        
+    except Exception as e:
+        logger.exception(f"Error getting daily feed: {e}")
+        return None
+
+
+def get_daily_feeds(limit: int = 10, offset: int = 0) -> List[dict]:
+    """获取多个Feed（按日期倒序）
+    
+    Args:
+        limit: 返回数量限制
+        offset: 偏移量
+    
+    Returns:
+        List[dict]: Feed列表
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            SELECT id, date, cards, total_count, create_time
+            FROM daily_feeds
+            ORDER BY date DESC
+            LIMIT ? OFFSET ?
+        """, (limit, offset))
+        
+        rows = cursor.fetchall()
+        conn.close()
+        
+        feeds = []
+        for row in rows:
+            row_dict = dict(row)
+            # 解析JSON字符串为列表
+            row_dict['cards'] = json.loads(row_dict['cards'])
+            feeds.append(row_dict)
+        
+        return feeds
+        
+    except Exception as e:
+        logger.exception(f"Error getting daily feeds: {e}")
+        return []
+
+
+def delete_daily_feed(date: str) -> bool:
+    """删除指定日期的Feed
+    
+    Args:
+        date: 日期字符串 (YYYY-MM-DD)
+    
+    Returns:
+        bool: 是否成功
+    """
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute("DELETE FROM daily_feeds WHERE date = ?", (date,))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"Deleted daily feed for date {date}")
+        return True
+        
+    except Exception as e:
+        logger.exception(f"Error deleting daily feed: {e}")
+        return False
+

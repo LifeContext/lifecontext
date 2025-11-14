@@ -20,6 +20,7 @@ from utils.db import get_web_data, get_todos, get_activities
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
 from utils.prompt_config import get_prompt_set
+from utils.db import insert_daily_feed, get_daily_feed
 
 logger = get_logger(__name__)
 
@@ -107,11 +108,19 @@ async def generate_daily_feed(lookback_hours: int = 24) -> Dict[str, Any]:
         
         logger.info(f"Generated {len(cards)} feed cards")
         
+        # 将生成的Feed存储到数据库
+        feed_id = insert_daily_feed(date_str, cards, len(cards))
+        if feed_id:
+            logger.info(f"Daily feed saved to database with ID {feed_id}")
+        else:
+            logger.warning("Failed to save daily feed to database")
+        
         return {
             "success": True,
             "date": date_str,
             "cards": cards,
-            "total_count": len(cards)
+            "total_count": len(cards),
+            "feed_id": feed_id
         }
         
     except Exception as e:
