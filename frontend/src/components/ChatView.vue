@@ -8,7 +8,7 @@
     >
       <div class="max-w-4xl mx-auto px-8 h-full flex flex-col">
         <!-- 如果没有消息，显示欢迎界面 -->
-        <div v-if="messages.length === 0" class="flex flex-col items-center justify-center flex-1 min-h-full">
+        <div v-if="!conversationStarted && messages.length === 0" class="flex flex-col items-center justify-center flex-1 min-h-full">
           <!-- AI Avatar -->
           <div class="ai-avatar-container w-16 h-16 rounded-full flex items-center justify-center mb-4">
             <div class="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-500 rounded-full flex items-center justify-center">
@@ -25,14 +25,21 @@
               <input 
                 type="text" 
                 :placeholder="t('chat.placeholder')"
-                class="chat-input w-full rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                class="chat-input w-full rounded-xl px-6 py-4 pr-32 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 v-model="inputMessage"
                 @keypress.enter="handleSend"
-                :disabled="isLoading"
+                :disabled="isLoading || isQuickProcessing"
               />
               <button 
+                @click="handleQuickSend"
+                :disabled="isLoading || isQuickProcessing || !inputMessage.trim()"
+                class="secondary-button"
+              >
+                <img src="../../Logo.png" class="secondary-icon" />
+              </button>
+              <button 
                 @click="handleSend"
-                :disabled="isLoading || !inputMessage.trim()"
+                :disabled="isLoading || isQuickProcessing || !inputMessage.trim()"
                 class="send-button"
               >
                 <Icon :path="SEND_ICON_PATH" class="send-icon" />
@@ -71,20 +78,27 @@
     </div>
 
     <!-- 输入区域（仅在有消息时显示在底部） -->
-    <div v-if="messages.length > 0" class="pb-6" ref="inputAreaRef">
+    <div v-if="conversationStarted" class="pb-6" ref="inputAreaRef">
       <div class="max-w-4xl mx-auto px-8">
         <div class="relative">
           <input 
             type="text" 
             :placeholder="t('chat.placeholder')"
-            class="chat-input w-full rounded-xl px-6 py-4 pr-16 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+            class="chat-input w-full rounded-xl px-6 py-4 pr-32 text-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             v-model="inputMessage"
             @keypress.enter="handleSend"
-            :disabled="isLoading"
+            :disabled="isLoading || isQuickProcessing"
           />
           <button 
+            @click="handleQuickSend"
+            :disabled="isLoading || isQuickProcessing || !inputMessage.trim()"
+            class="secondary-button"
+          >
+            <img src="../../Logo.png" class="secondary-icon" />
+          </button>
+          <button 
             @click="handleSend"
-            :disabled="isLoading || !inputMessage.trim()"
+            :disabled="isLoading || isQuickProcessing || !inputMessage.trim()"
             class="send-button"
           >
             <Icon :path="SEND_ICON_PATH" class="send-icon" />
@@ -107,6 +121,8 @@ import { marked, Renderer, type Tokens } from 'marked';
 const inputMessage = ref('');
 const messages = ref<ChatMessage[]>([]);
 const isLoading = ref(false);
+const isQuickProcessing = ref(false);
+const conversationStarted = ref(false);
 const messagesContainer = ref<HTMLElement>();
 const inputAreaRef = ref<HTMLElement>();
 const currentWorkflowId = ref<string>('');
@@ -362,6 +378,7 @@ const loadChatSession = (session: ChatSession) => {
   messages.value = [...session.messages];
   currentWorkflowId.value = session.messages[session.messages.length - 1]?.workflow_id || '';
   hasUnsavedMessages.value = false;
+  conversationStarted.value = session.messages.length > 0;
   
   // 滚动到底部
   nextTick(() => {
@@ -400,6 +417,7 @@ const handleSend = async () => {
   if (!inputMessage.value.trim() || isLoading.value) return;
 
   const userMessage = inputMessage.value.trim();
+  conversationStarted.value = true;
   
   // 添加用户消息
   const userMsg: ChatMessage = {
@@ -463,6 +481,145 @@ const handleSend = async () => {
   } finally {
     isLoading.value = false;
     // 滚动到底部
+    await scrollToBottom();
+  }
+};
+
+const handleQuickSend = async () => {
+  const originalContent = inputMessage.value.trim();
+  if (!originalContent || isLoading.value || isQuickProcessing.value) {
+    return;
+  }
+
+  conversationStarted.value = true;
+  isQuickProcessing.value = true;
+
+  let userMessage: ChatMessage | null = null;
+  let streamingMessage: ChatMessage | null = null;
+  let streamingAdded = false;
+  let loadingVisible = false;
+
+  const ensureStreamingMessage = () => {
+    if (streamingAdded) return;
+    streamingMessage = reactive<ChatMessage>({
+      workflow_id: '',
+      content: '',
+      sender: 'ai',
+      timestamp: new Date().toISOString()
+    }) as ChatMessage;
+    streamingAdded = true;
+    messages.value.push(streamingMessage);
+  };
+
+  const showLoadingAfterUser = () => {
+    if (loadingVisible) return;
+    loadingVisible = true;
+    isQuickProcessing.value = false;
+    isLoading.value = true;
+    ensureStreamingMessage();
+  };
+
+  const insertUserMessage = (content: string, workflowId?: string) => {
+    if (userMessage) {
+      userMessage.content = content;
+      if (workflowId) {
+        userMessage.workflow_id = workflowId;
+      }
+      return userMessage;
+    }
+
+    const newUserMessage = reactive<ChatMessage>({
+      workflow_id: workflowId || '',
+      content,
+      sender: 'user',
+      timestamp: new Date().toISOString()
+    }) as ChatMessage;
+
+    const insertIndex =
+      streamingAdded && streamingMessage
+        ? messages.value.indexOf(streamingMessage)
+        : -1;
+
+    if (insertIndex === -1) {
+      messages.value.push(newUserMessage);
+    } else {
+      messages.value.splice(insertIndex, 0, newUserMessage);
+    }
+
+    userMessage = newUserMessage;
+    showLoadingAfterUser();
+    return newUserMessage;
+  };
+
+  try {
+    const finalMessage = await chatService.sendMessageStream(
+      originalContent,
+      currentWorkflowId.value || undefined,
+      {
+        onPromptOptimized: (payload) => {
+          const optimized =
+            typeof payload?.optimized_query === 'string'
+              ? payload.optimized_query
+              : originalContent;
+          inputMessage.value = optimized;
+          insertUserMessage(
+            optimized,
+            typeof payload?.workflow_id === 'string' ? payload.workflow_id : undefined
+          );
+          nextTick(() => {
+            inputMessage.value = '';
+          });
+          scheduleViewportUpdate();
+        },
+        onToken: (token) => {
+          if (!streamingAdded) {
+            insertUserMessage(originalContent);
+          }
+          ensureStreamingMessage();
+          if (streamingMessage) {
+            streamingMessage.content += token;
+          }
+          scheduleViewportUpdate();
+        },
+        onWorkflowId: (workflowId) => {
+          if (!workflowId) return;
+          currentWorkflowId.value = workflowId;
+          if (streamingMessage) {
+            streamingMessage.workflow_id = workflowId;
+          }
+          if (userMessage && !userMessage.workflow_id) {
+            userMessage.workflow_id = workflowId;
+          }
+        }
+      },
+      { optimize_prompt: true }
+    );
+
+    if (!userMessage) {
+      insertUserMessage(originalContent);
+      inputMessage.value = '';
+    }
+
+    ensureStreamingMessage();
+    if (streamingMessage) {
+      streamingMessage.content = finalMessage.content;
+      streamingMessage.workflow_id = finalMessage.workflow_id;
+      streamingMessage.timestamp = finalMessage.timestamp;
+    }
+  } catch (error) {
+    console.error('发送当前输入内容失败:', error);
+    const errorMsg: ChatMessage = {
+      workflow_id: '',
+      content: t('chat.error'),
+      sender: 'ai',
+      timestamp: new Date().toISOString()
+    };
+    messages.value.push(errorMsg);
+  } finally {
+    if (!loadingVisible) {
+      isQuickProcessing.value = false;
+    }
+    isLoading.value = false;
     await scrollToBottom();
   }
 };
@@ -626,6 +783,51 @@ const handleSend = async () => {
   }
 }
 
+.secondary-button {
+  position: absolute;
+  right: 3.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  color: #bfdbfe;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+  backdrop-filter: blur(6px);
+  cursor: pointer;
+}
+
+.secondary-button:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.28);
+  border-color: rgba(96, 165, 250, 0.45);
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.25);
+}
+
+.secondary-button:active:not(:disabled) {
+  transform: translateY(-50%) scale(0.95);
+}
+
+.secondary-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.secondary-icon {
+  width: 22px;
+  height: 22px;
+  color: #bfdbfe;
+  transition: transform 0.18s ease, color 0.18s ease;
+}
+
+.secondary-button:hover:not(:disabled) .secondary-icon {
+  transform: translateY(-1px);
+  color: #e0f2fe;
+}
+
 .send-button {
   position: absolute;
   right: 0.5rem;
@@ -738,6 +940,24 @@ const handleSend = async () => {
 
   .ai-message {
     color: #111827;
+  }
+
+  .secondary-button {
+    border-color: rgba(59, 130, 246, 0.28);
+    color: #1d4ed8;
+  }
+
+  .secondary-button:hover:not(:disabled) {
+    background: rgba(59, 130, 246, 0.2);
+    border-color: rgba(59, 130, 246, 0.38);
+  }
+
+  .secondary-icon {
+    color: #1d4ed8;
+  }
+
+  .secondary-button:hover:not(:disabled) .secondary-icon {
+    color: #1e40af;
   }
 
   .user-avatar {

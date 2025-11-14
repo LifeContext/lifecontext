@@ -118,6 +118,7 @@ def create_app():
                     "POST /api/agent/resume/{workflow_id}",
                     "GET /api/agent/state/{workflow_id}",
                     "DELETE /api/agent/cancel/{workflow_id}",
+                    "POST /api/agent/optimize_prompt",
                     "GET /api/agent/test"
                 ],
                 "events": [

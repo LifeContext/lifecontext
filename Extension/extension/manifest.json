@@ -32,8 +32,7 @@
       "chat/assets/*",
       "chat/*.svg",
       "chat/*.png",
-      "logo.png",
-      "logo-gray.png"
+      "logo.png"
     ],
     "matches": ["<all_urls>"]
   }
@@ -51,7 +50,8 @@
       "matches": ["<all_urls>"],
       "js": ["inject.js"],
       "css": ["inject.css"],
-      "run_at": "document_idle"
+      "run_at": "document_idle",
+      "all_frames": true
     }
   ]
 }

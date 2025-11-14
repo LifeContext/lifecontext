@@ -1070,6 +1070,8 @@
       let optimizing = false;
       let lastTargetRect = null;
       let lastEl = null;
+          // 针对“丢失可见性”的短暂宽限，避免闪烁（如豆包输入框重排）
+          let lastVisibleTimestamp = 0;
       let clearedTextCache = '';
       let hasWrittenOptimized = false;
       // 本次优化会话状态
@@ -1084,22 +1086,52 @@
           h.includes('gemini.google.com') || h.includes('aistudio.google.com') || h.includes('ai.google.com') ||
           h.includes('claude.ai') ||
           h.includes('doubao.com') || h.includes('douba.ai') ||
-          h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn')
+          h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com') ||
+          h.includes('x.ai') || h.includes('grok')
         );
       }
 
       function isVisible(el) {
         if (!el || !(el instanceof Element)) return false;
+        const host = (location.hostname || '').toLowerCase();
+        const rect = el.getBoundingClientRect();
+        // 豆包页面在输入框加载/重排时可能短暂设置 opacity/transform，导致误判不可见
+        if (host.includes('doubao.com') || host.includes('douba.ai')) {
+          return rect.width > 120 && rect.height > 24 && rect.bottom > 0 && rect.right > 0 &&
+                 rect.left < window.innerWidth && rect.top < window.innerHeight;
+        }
         const style = window.getComputedStyle(el);
         if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) return false;
-        const rect = el.getBoundingClientRect();
         return rect.width > 200 && rect.height > 30 && rect.bottom > 0 && rect.right > 0 &&
                rect.left < window.innerWidth && rect.top < window.innerHeight;
       }
 
+      // 深度查询（遍历开放的 Shadow DOM）
+      function queryAllDeep(selectors, root = document) {
+        const results = new Set();
+        function walk(node) {
+          if (!node) return;
+          try {
+            selectors.forEach((sel) => {
+              node.querySelectorAll(sel).forEach((e) => results.add(e));
+            });
+          } catch (_) {}
+          // 递归 shadow roots（仅 open）
+          if (node.shadowRoot && node.shadowRoot.mode !== 'closed') {
+            walk(node.shadowRoot);
+          }
+          // 遍历子元素
+          try {
+            node.children && Array.from(node.children).forEach((c) => walk(c));
+          } catch (_) {}
+        }
+        walk(root);
+        return Array.from(results);
+      }
+
       function getCandidateInputs() {
         // 常见选择器集合（多站点尽量命中）
-        const selectors = [
+        const baseSelectors = [
           'textarea[data-testid="prompt-textarea"]',
           'textarea[placeholder*="Message"]',
           'textarea[placeholder*="message"]',
@@ -1110,12 +1142,25 @@
           'div[contenteditable="true"]',
           'div[role="textbox"]'
         ];
-        const nodes = new Set();
-        for (const sel of selectors) {
-          document.querySelectorAll(sel).forEach(n => nodes.add(n));
+        // 站点特定补充
+        const host = location.hostname.toLowerCase();
+        const siteExtra = [];
+        if (host.includes('claude.ai')) {
+          siteExtra.push('div[contenteditable="true"].ProseMirror', 'textarea');
+        } else if (host.includes('moonshot.cn') || host.includes('kimi.moonshot.cn') || host.includes('kimi.com')) {
+          siteExtra.push('div[contenteditable="true"][data-lexical-editor]', 'div[contenteditable="true"]');
+        } else if (host.includes('x.ai') || host.includes('grok')) {
+          siteExtra.push('div[contenteditable="true"][data-slate-editor]', 'div[contenteditable="true"]', 'textarea');
+        } else if (host.includes('doubao.com') || host.includes('douba.ai')) {
+          siteExtra.push('div[contenteditable="true"]', 'textarea');
+        } else if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
+          // Gemini 可能在 open shadow 内
+          siteExtra.push('textarea', 'div[role="textbox"][contenteditable="true"]', 'textarea[aria-label], div[contenteditable="true"][aria-label]');
         }
+        const selectors = [...new Set([...baseSelectors, ...siteExtra])];
+        const nodes = new Set(queryAllDeep(selectors, document));
         // 兜底：页面上最后一个 textarea/可编辑框
-        document.querySelectorAll('textarea, div[contenteditable="true"]').forEach(n => nodes.add(n));
+        queryAllDeep(['textarea', 'div[contenteditable="true"]'], document).forEach(n => nodes.add(n));
         return Array.from(nodes).filter(isVisible);
       }
 
@@ -1183,32 +1228,122 @@
         }
       }
 
+      // 读取元素的易读标签（辅助识别“听写/语音/麦克风”按钮）
+      function getElementLabel(el) {
+        try {
+          const tryAttrs = ['aria-label', 'title', 'data-tooltip', 'alt'];
+          for (const a of tryAttrs) {
+            const v = (el.getAttribute && el.getAttribute(a)) || '';
+            if (v && v.trim()) return v.trim().toLowerCase();
+          }
+          const txt = (el.textContent || '').trim();
+          return txt.length <= 12 ? txt.toLowerCase() : '';
+        } catch (_) { return ''; }
+      }
+
+      // 在输入框容器内寻找“听写/语音”按钮的矩形
+      function findDictationButtonRect(targetEl, inputRect) {
+        try {
+          const container =
+            targetEl.closest('form,[role="form"],[data-testid*="composer"],[class*="composer"],[class*="input"],[class*="editor"]')
+            || targetEl.parentElement
+            || document;
+          const selectors = ['button', '[role="button"]', 'input[type="submit"]'];
+          const nodes = new Set(queryAllDeep(selectors, container));
+          const micKeywords = ['听写', '语音', '麦克风', 'voice', 'mic', 'microphone', 'dictation', 'speak'];
+          let bestRect = null;
+          let bestScore = -1e9;
+          nodes.forEach((el) => {
+            if (!isVisible(el)) return;
+            const r = el.getBoundingClientRect();
+            // 与输入框右下区域相交
+            const verticalOverlap = Math.max(0, Math.min(r.bottom, inputRect.bottom + 40) - Math.max(r.top, inputRect.bottom - 72));
+            if (verticalOverlap <= 0) return;
+            if (r.left < inputRect.left || r.right > inputRect.right + 220) return;
+            const label = getElementLabel(el);
+            const hasMicHint = micKeywords.some(k => label.includes(k));
+            // 综合评分：关键词优先、越靠近右下角分越高、越小越像圆形按钮
+            const diffBottom = Math.abs(inputRect.bottom - r.bottom);
+            const diffRight = Math.abs(inputRect.right - r.right);
+            const approxSize = Math.min(r.width, r.height);
+            let score = 0;
+            if (hasMicHint) score += 400;
+            score += Math.max(0, 140 - diffBottom) + Math.max(0, 160 - diffRight);
+            score += Math.max(0, 60 - Math.abs(approxSize - 32));
+            if (score > bestScore) { bestScore = score; bestRect = r; }
+          });
+          return bestRect;
+        } catch (_) { return null; }
+      }
+
       function positionBtn() {
         if (!btn || !targetEl || !isVisible(targetEl)) {
-          if (btn) btn.style.display = 'none';
+          // 宽限：若刚刚还可见，则保留上次位置一段时间，避免闪烁
+          const now = Date.now();
+          if (btn && lastTargetRect && now - lastVisibleTimestamp < 1500) {
+            btn.style.display = 'block';
+            btn.style.top = `${Math.max(0, Math.min(lastTargetRect.top, window.innerHeight - 2))}px`;
+            btn.style.left = `${Math.max(0, Math.min(lastTargetRect.left, window.innerWidth - 2))}px`;
+          } else {
+            if (btn) btn.style.display = 'none';
+          }
           return;
         }
-        const rect = targetEl.getBoundingClientRect();
+        let rect = targetEl.getBoundingClientRect();
         lastTargetRect = rect;
+        lastVisibleTimestamp = Date.now();
         const size = parseInt((btn.style.width || '34px'), 10) || 34;
-        // 读取 padding-right，避免覆盖文字；另外预留空间给站点自带按钮（语音/发送等）
+        // 读取 padding-right 作为基线，避免覆盖文字
         let pr = 0;
         try {
           const cs = window.getComputedStyle(targetEl);
           pr = parseFloat(cs.paddingRight || '0') || 0;
         } catch (_) {}
-        const reservedRight = Math.max(52, pr + 12); // 至少 52px，或比 padding 多 12px
-        // 垂直位置：单行输入框垂直居中；多行输入框靠右下方（距底 12px）
-        let top;
-        if (rect.height > 64) {
-          top = Math.round(rect.bottom - size - 12);
-        } else {
-          top = Math.round(rect.top + rect.height / 2 - size / 2);
+        // 站点与形态（单行/多行）专用偏移
+        function getPlacement(host, isMultiline) {
+          const h = (host || location.hostname || '').toLowerCase();
+          let base = { right: Math.max(52, pr + 12), bottom: 12 };
+          if (h.includes('gemini.google.com') || h.includes('ai.google.com') || h.includes('aistudio.google.com')) {
+            base = { right: Math.max(72, pr + 10), bottom: 14 };
+          } else if (h.includes('claude.ai')) {
+            base = { right: Math.max(64, pr + 10), bottom: 12 };
+          } else if (h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn')) {
+            base = { right: Math.max(64, pr + 10), bottom: 14 };
+          } else if (h.includes('x.ai') || h.includes('grok')) {
+            base = { right: Math.max(60, pr + 10), bottom: 12 };
+          } else if (h.includes('doubao.com') || h.includes('douba.ai')) {
+            base = { right: Math.max(60, pr + 10), bottom: 12 };
+          }
+          if (!isMultiline) base.right += 2;
+          return base;
         }
-        const left = Math.round(rect.right - reservedRight - size);
-        // 边界保护
-        const clampedLeft = Math.max(0, Math.min(left, window.innerWidth - size - 2));
-        const clampedTop = Math.max(0, Math.min(top, window.innerHeight - size - 2));
+        const isMultiline = rect.height > 64;
+        const place = getPlacement(location.hostname, isMultiline);
+
+        let finalTop;
+        let finalLeft;
+
+        // 统一策略：多行与单行一致（居中、上移 10px、右移 1.5×）
+        const top = Math.round(rect.top + rect.height / 2 - size / 2);
+        const left = Math.round(rect.right - Math.max(place.right, pr + 12) - size);
+        finalTop = top - 10;
+        finalLeft = left + Math.round(size * 1.5);
+
+        // Grok/x.ai 定制偏移：
+        // - 单行：向下 10px
+        // - 多行：向上 5px，且额外再向右 1.5 × 按钮宽度
+        const hostLower = (location.hostname || '').toLowerCase();
+        if (hostLower.includes('x.ai') || hostLower.includes('grok')) {
+          if (isMultiline) {
+            finalLeft += Math.round(size * 1.5);
+            finalTop -= 5;
+          } else {
+            finalTop += 10;
+          }
+        }
+
+        const clampedLeft = Math.max(0, Math.min(finalLeft, window.innerWidth - size - 2));
+        const clampedTop = Math.max(0, Math.min(finalTop, window.innerHeight - size - 2));
         btn.style.display = 'block';
         btn.style.top = `${clampedTop}px`;
         btn.style.left = `${clampedLeft}px`;
@@ -1359,7 +1494,7 @@
       document.addEventListener('input', () => positionBtn());
       const mo = new MutationObserver(() => rescan());
       mo.observe(document.documentElement, { childList: true, subtree: true });
-      setInterval(rescan, 1500);
+      setInterval(rescan, 1000);
       // 初始执行
       rescan();
     } catch (e) {

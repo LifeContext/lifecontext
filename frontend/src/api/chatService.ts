@@ -10,12 +10,15 @@ export class ChatService {
     handlers: {
       onToken?: (token: string) => void;
       onWorkflowId?: (workflowId: string) => void;
-    } = {}
+      onPromptOptimized?: (payload: Record<string, unknown>) => void;
+    } = {},
+    extraPayload: Record<string, unknown> = {}
   ): Promise<ChatMessage> {
     try {
       const requestBody = {
         query: message,
-        workflow_id: workflowId || null
+        workflow_id: workflowId || null,
+        ...extraPayload
       };
       const response = await fetch(`/api/agent/chat/stream`, {
         method: 'POST',
@@ -94,6 +97,10 @@ export class ChatService {
             }
 
             const payloadType = payload?.type;
+            if (payloadType === 'prompt_optimized') {
+              handlers.onPromptOptimized?.(payload);
+              continue;
+            }
             if (payloadType === 'start') {
               if (payload?.workflow_id) {
                 workflowIdFromStream = payload.workflow_id;

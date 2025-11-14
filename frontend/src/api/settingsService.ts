@@ -60,7 +60,7 @@ export class SettingsService {
     }
   }
 
-  async getExcludedDomains(): Promise<string[]> {
+  async getExcludedDomains(): Promise<UrlBlacklistItem[]> {
     try {
       const response = await fetch('/api/url-blacklist', {
         method: 'GET',
@@ -76,7 +76,20 @@ export class SettingsService {
       const data: unknown = await response.json();
 
       if (Array.isArray(data)) {
-        return data
+        return data.map((item) => {
+          if (typeof item === 'string') {
+            return { id: Date.now(), url: item };
+          }
+          if (item && typeof item === 'object') {
+            const urlItem = item as Partial<UrlBlacklistItem>;
+            return {
+              id: typeof urlItem.id === 'number' ? urlItem.id : Date.now(),
+              url: typeof urlItem.url === 'string' ? urlItem.url : '',
+              create_time: urlItem.create_time
+            };
+          }
+          return { id: Date.now(), url: '' };
+        }).filter((item) => item.url.length > 0);
       }
 
       return [];
