@@ -328,10 +328,21 @@ async def _generate_news_cards(context: Dict[str, Any], date_str: str, count: in
             logger.info("No data for news generation")
             return []
         
+        # 为news推荐预留足够的上下文空间（约8000 tokens）
+        max_context_tokens = 8000
+        truncated_web_data = truncate_web_data_by_tokens(
+            web_data, 
+            max_tokens=max_context_tokens,
+            content_field='detailed_summary',  # 使用detailed_summary字段
+            use_metadata=False
+        )
+        
+        logger.info(f"News generation: using {len(truncated_web_data)}/{len(web_data)} web_data items after token truncation")
+        
         # 构建上下文JSON
         context_data = {
-            "web_data": web_data[:20],  # 限制数量避免token过多
-            "activities": activities[:10]
+            "web_data": truncated_web_data,
+            "activities": activities[:30]  # activities通常较短，可以保留更多
         }
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
         
@@ -446,10 +457,21 @@ async def _generate_knowledge_cards(context: Dict[str, Any], date_str: str, coun
             logger.info("No data for knowledge generation")
             return []
         
+        # 为knowledge推荐预留足够的上下文空间
+        max_context_tokens = 10000
+        truncated_web_data = truncate_web_data_by_tokens(
+            web_data, 
+            max_tokens=max_context_tokens,
+            content_field='detailed_summary',  # 使用detailed_summary字段
+            use_metadata=False
+        )
+        
+        logger.info(f"Knowledge generation: using {len(truncated_web_data)}/{len(web_data)} web_data items after token truncation")
+        
         # 构建上下文JSON
         context_data = {
-            "web_data": web_data[:20],  # 限制数量避免token过多
-            "activities": activities[:10]
+            "web_data": truncated_web_data,
+            "activities": activities[:30]  # activities通常较短，可以保留更多
         }
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
         

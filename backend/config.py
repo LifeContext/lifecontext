@@ -107,6 +107,7 @@ ENABLE_SCHEDULER_ACTIVITY = True   # 每15分钟生成活动记录
 ENABLE_SCHEDULER_TODO = True       # 每30分钟生成待办任务
 ENABLE_SCHEDULER_TIP = True        # 每小时整生成智能提示
 ENABLE_SCHEDULER_REPORT = True     # 每天早上8点生成日报
+ENABLE_SCHEDULER_DAILY_FEED = True # 每天早上8点生成每日Feed
 
 # ============================================================================
 # 📡 事件推送配置
@@ -124,6 +125,9 @@ ENABLE_EVENT_ACTIVITY = False
 
 # Report 生成事件推送
 ENABLE_EVENT_REPORT = True
+
+# Daily Feed 生成事件推送
+ENABLE_EVENT_FEED = True
 
 # 系统状态事件推送
 ENABLE_EVENT_SYSTEM_STATUS = False
