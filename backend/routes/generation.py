@@ -24,6 +24,24 @@ from utils.event_manager import EventType, publish_event
 
 logger = get_logger(__name__)
 
+
+def _assign_sequential_ids(cards: list) -> list:
+    """为 cards 列表按顺序添加或覆盖 id 字段（从1开始）。
+
+    目的：在返回给前端之前统一为每张卡片提供稳定的顺序 id，
+    避免在生成端引入复杂的 id 生成或匹配逻辑。
+    """
+    if not isinstance(cards, list):
+        return cards
+    for idx, card in enumerate(cards, start=1):
+        try:
+            if isinstance(card, dict):
+                card['id'] = idx
+        except Exception:
+            # 保持容错，不阻塞整个返回流程
+            continue
+    return cards
+
 generation_bp = Blueprint('generation', __name__, url_prefix='/api/generation')
 
 
@@ -576,7 +594,16 @@ def daily_feed_endpoint():
                 limit = request.args.get('limit', 10, type=int)
                 offset = request.args.get('offset', 0, type=int)
                 feeds = get_daily_feeds(limit=limit, offset=offset)
-                
+                # 为返回的每个 feed 中的 cards 添加顺序 id
+                try:
+                    for f in feeds:
+                        if isinstance(f, dict) and 'cards' in f:
+                            f['cards'] = _assign_sequential_ids(f.get('cards', []))
+                            f['total_count'] = len(f.get('cards', []))
+                except Exception:
+                    # 不阻塞，继续返回原始数据
+                    pass
+
                 return convert_resp(
                     message="Daily feeds retrieved successfully",
                     data={
@@ -592,6 +619,13 @@ def daily_feed_endpoint():
                 # 获取指定日期的Feed
                 feed_data = get_daily_feed(date_param)
                 if feed_data:
+                    # 为返回的 cards 添加顺序 id（覆盖或新增 id 字段）
+                    try:
+                        feed_data['cards'] = _assign_sequential_ids(feed_data.get('cards', []))
+                        feed_data['total_count'] = len(feed_data.get('cards', []))
+                    except Exception:
+                        pass
+
                     return convert_resp(
                         message="Daily feed retrieved successfully",
                         data=feed_data  # 直接返回feed数据，不包装
@@ -641,6 +675,12 @@ def daily_feed_endpoint():
             
             if result.get('success'):
                 cards = result.get('cards', [])
+                # 为生成结果的 cards 添加顺序 id（仅用于返回给前端）
+                try:
+                    cards = _assign_sequential_ids(cards)
+                except Exception:
+                    pass
+
                 logger.info(f"Generated and saved daily feed with {len(cards)} cards")
                 
                 return convert_resp(
@@ -648,8 +688,7 @@ def daily_feed_endpoint():
                     data={
                         "date": result.get('date'),
                         "cards": cards,
-                        "total_count": result.get('total_count', len(cards)),
-                        "feed_id": result.get('feed_id')
+                        "total_count": result.get('total_count', len(cards))
                     }
                 )
             else:

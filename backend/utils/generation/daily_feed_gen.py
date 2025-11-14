@@ -58,6 +58,20 @@ def _generate_cover_url(card_type: str, title: str, date_str: str) -> str:
     return f"https://picsum.photos/seed/{safe_seed}/800/420"
 
 
+def _assign_sequential_ids(cards: List[dict], start: int = 1) -> List[dict]:
+    """为 cards 列表按顺序添加或覆盖 id 字段
+    """
+    if not isinstance(cards, list):
+        return cards
+    for idx, card in enumerate(cards, start=start):
+        try:
+            if isinstance(card, dict):
+                card['id'] = idx
+        except Exception:
+            continue
+    return cards
+
+
 async def generate_daily_feed(lookback_hours: int = 24) -> Dict[str, Any]:
     """
     生成每日Feed卡片（主入口）
@@ -107,7 +121,14 @@ async def generate_daily_feed(lookback_hours: int = 24) -> Dict[str, Any]:
         cards.extend(knowledge_cards)
         
         logger.info(f"Generated {len(cards)} feed cards")
-        
+
+        # 为 cards 按顺序分配 id（从1开始），然后保存到数据库
+        try:
+            cards = _assign_sequential_ids(cards, start=1)
+        except Exception:
+            # 若出错则继续使用原始 cards
+            pass
+
         # 将生成的Feed存储到数据库
         feed_id = insert_daily_feed(date_str, cards, len(cards))
         if feed_id:
