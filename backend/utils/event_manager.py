@@ -24,6 +24,7 @@ class EventType(str, Enum):
     TODO_GENERATED = "todo"
     ACTIVITY_GENERATED = "activity"
     REPORT_GENERATED = "report"
+    FEED_GENERATED = "feed"
     SYSTEM_STATUS = "system_status"
 
 
@@ -62,6 +63,7 @@ class EventManager:
             EventType.TODO_GENERATED: config.ENABLE_EVENT_TODO,
             EventType.ACTIVITY_GENERATED: config.ENABLE_EVENT_ACTIVITY,
             EventType.REPORT_GENERATED: config.ENABLE_EVENT_REPORT,
+            EventType.FEED_GENERATED: config.ENABLE_EVENT_FEED,
             EventType.SYSTEM_STATUS: config.ENABLE_EVENT_SYSTEM_STATUS,
         }
         return event_config_map.get(event_type, True)  # 默认启用
@@ -124,6 +126,7 @@ class EventManager:
             EventType.TODO_GENERATED.value: config.ENABLE_EVENT_TODO,
             EventType.ACTIVITY_GENERATED.value: config.ENABLE_EVENT_ACTIVITY,
             EventType.REPORT_GENERATED.value: config.ENABLE_EVENT_REPORT,
+            EventType.FEED_GENERATED.value: config.ENABLE_EVENT_FEED,
             EventType.SYSTEM_STATUS.value: config.ENABLE_EVENT_SYSTEM_STATUS,
         }
         

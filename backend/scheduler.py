@@ -13,7 +13,8 @@ from utils.generation import (
     create_activity_report,
     create_activity_record,
     generate_smart_tips,
-    generate_task_list
+    generate_task_list,
+    generate_daily_feed
 )
 from utils.event_manager import EventType, publish_event
 from utils.db import get_reports, get_setting
@@ -21,7 +22,8 @@ from config import (
     ENABLE_SCHEDULER_ACTIVITY,
     ENABLE_SCHEDULER_TODO,
     ENABLE_SCHEDULER_TIP,
-    ENABLE_SCHEDULER_REPORT
+    ENABLE_SCHEDULER_REPORT,
+    ENABLE_SCHEDULER_DAILY_FEED
 )
 
 logger = get_logger(__name__)
@@ -93,6 +95,21 @@ def init_scheduler():
         logger.info(f"✅ Report scheduler enabled (time: {report_hour:02d}:{report_minute:02d})")
     else:
         logger.info("⏸️ Report scheduler disabled")
+    
+    # 5. 生成每日Feed（支持自定义时间）
+    if ENABLE_SCHEDULER_DAILY_FEED:
+        feed_hour = int(get_setting('daily_feed_hour', '8'))
+        feed_minute = int(get_setting('daily_feed_minute', '5'))
+        scheduler.add_job(
+            func=job_generate_daily_feed,
+            trigger=CronTrigger(hour=feed_hour, minute=feed_minute),
+            id='daily_feed',
+            name=f'每日{feed_hour:02d}:{feed_minute:02d}生成Feed',
+            replace_existing=True
+        )
+        logger.info(f"✅ Daily Feed scheduler enabled (time: {feed_hour:02d}:{feed_minute:02d})")
+    else:
+        logger.info("⏸️ Daily Feed scheduler disabled")
     
     scheduler.start()
     logger.info("Scheduler initialized and started")
@@ -237,6 +254,49 @@ def job_generate_daily_report():
             logger.warning(f"⚠️ Report generation failed: {result.get('message')}")
     except Exception as e:
         logger.exception(f"❌ Error in report generation job: {e}")
+
+
+def job_generate_daily_feed():
+    """定时任务：生成每日Feed"""
+    try:
+        logger.info("Starting scheduled daily feed generation")
+        
+        # 生成昨天24小时的Feed（从昨天早上8点到今天早上8点）
+        now = datetime.now()
+        
+        result = asyncio.run(generate_daily_feed(
+            lookback_hours=24
+        ))
+        
+        if result.get('success'):
+            cards = result.get('cards', [])
+            card_count = len(cards)
+            logger.info(f"✅ Daily feed generated: {card_count} cards")
+            
+            # 统计各类卡片数量
+            card_types = {}
+            for card in cards:
+                card_type = card.get('type', 'unknown')
+                card_types[card_type] = card_types.get(card_type, 0) + 1
+            
+            type_summary = ", ".join([f"{t}:{c}" for t, c in card_types.items()])
+            
+            # 发布事件
+            publish_event(
+                event_type=EventType.FEED_GENERATED,
+                data={
+                    "card_count": card_count,
+                    "type_summary": type_summary,
+                    "title": "每日Feed",
+                    "message": f"每日Feed已生成: {card_count}张卡片 ({type_summary})",
+                    "date": (now - timedelta(days=1)).strftime("%Y-%m-%d"),
+                    "cards": cards[:5]  # 只发送前5张卡片的预览
+                }
+            )
+        else:
+            logger.warning(f"⚠️ Daily feed generation failed: {result.get('message')}")
+    except Exception as e:
+        logger.exception(f"❌ Error in daily feed generation job: {e}")
 
 
 def stop_scheduler():
