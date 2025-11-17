@@ -19,12 +19,10 @@ from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_todos, get_activities
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
-from utils.prompt_config import get_prompt_set
+from utils.prompt_config import get_current_prompts
 from utils.db import insert_daily_feed, get_daily_feed
 
 logger = get_logger(__name__)
-
-PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 # 全局LLM客户端缓存
 _client_cache = None

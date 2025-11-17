@@ -27,7 +27,7 @@ from routes.llm_strategy import (
     ContextSufficiency
 )
 from utils.db import get_todos
-from utils.prompt_config import prompt_config_zh, prompt_config_en
+from utils.prompt_config import get_current_prompts
 from string import Template
 
 logger = get_logger(__name__)
@@ -600,8 +600,8 @@ async def optimize_user_prompt(
         
         context_summary = "\n\n".join(context_summary_parts) if context_summary_parts else "暂无上下文信息"
         
-        # 根据语言配置获取提示词
-        prompts = prompt_config_zh.PROMPTS if config.PROMPT_LANGUAGE == "zh" else prompt_config_en.PROMPTS
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
         optimization_prompts = prompts.get("prompt_optimization", {})
         
         # 构建优化提示词
@@ -1437,7 +1437,8 @@ async def optimize_prompt_simple(prompt: str, url: str) -> Dict[str, Any]:
             page_content = page_content[:2000] + "..."
         
         # ========== 步骤 2: 构建优化提示词 ==========
-        prompts = prompt_config_zh.PROMPTS if config.PROMPT_LANGUAGE == "zh" else prompt_config_en.PROMPTS
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
         base_optimization = prompts.get("prompt_optimization", {})
         
         system_prompt = base_optimization.get("system", "") + """

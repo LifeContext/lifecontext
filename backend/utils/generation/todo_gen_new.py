@@ -22,15 +22,13 @@ from utils.db import (
     insert_todo
 )
 from utils.llm import get_openai_client
-from utils.prompt_config import get_prompt_set
+from utils.prompt_config import get_current_prompts
 from utils.vectorstore import search_similar_content
 
 logger = get_logger(__name__)
 
 # 全局客户端
 _llm_instance = None
-
-PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 
 def _get_llm():
@@ -229,9 +227,11 @@ async def _create_tasks_from_context(context: Dict, lookback_mins: int) -> List[
         
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
          
-        system_msg = PROMPTS["todo"]["system"]
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_msg = prompts["todo"]["system"]
 
-        user_template = Template(PROMPTS["todo"]["user_template"])
+        user_template = Template(prompts["todo"]["user_template"])
         user_msg = user_template.safe_substitute(context_json=context_json)
         
         response = client.chat.completions.create(

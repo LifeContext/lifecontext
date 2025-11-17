@@ -18,15 +18,12 @@ from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_activities, get_todos, insert_tip, get_tips
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
-from utils.prompt_config import get_prompt_set
+from utils.prompt_config import get_current_prompts
 
 logger = get_logger(__name__)
 
 # LLM客户端缓存
 _llm = None
-
-# 提示词缓存
-PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 
 def _get_client():
@@ -466,7 +463,9 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
         logger.info(f"估算输入 tokens: ~{estimate_tokens(context_json)}")
         logger.info("=" * 60)
  
-        system_prompt = PROMPTS["tip"]["system"]
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_prompt = prompts["tip"]["system"]
         
         # 构建可用的URL列表，供LLM参考
         available_urls = []
@@ -487,7 +486,7 @@ async def _produce_tips(context: Dict, history_mins: int) -> List[Dict[str, Any]
         available_urls = list(set(available_urls))
 
         available_urls_json = json.dumps(available_urls, ensure_ascii=False, indent=2)
-        user_prompt_template = Template(PROMPTS["tip"]["user_template"])
+        user_prompt_template = Template(prompts["tip"]["user_template"])
         user_prompt = user_prompt_template.safe_substitute(
             context_json=context_json,
             available_urls=available_urls_json
