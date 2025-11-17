@@ -1133,6 +1133,17 @@
         } catch (_) {}
         return null;
       }
+      // Page Context 桥接：通过扩展外链脚本注入（避免 CSP 阻止 inline script）
+      function injectPageBridge() {
+        try {
+          if (document.getElementById('lc-page-bridge')) return;
+          const s = document.createElement('script');
+          s.id = 'lc-page-bridge';
+          s.src = chrome.runtime.getURL('page-context.js');
+          (document.documentElement || document.head || document.body).appendChild(s);
+          s.onload = () => { try { s.parentNode && s.parentNode.removeChild(s); } catch(_) {} };
+        } catch (_) {}
+      }
       // 在输入框邻近范围内查找 Controls Bar（优先策略，避免误命中侧边栏）
       function findControlsBarFor(inputEl) {
         try {
@@ -1206,16 +1217,48 @@
             // ChatGPT：将按钮挂入右侧 controls 父容器（听写/语音/发送所在）
             // 父容器示例：<div class="ms-auto flex items-center gap-1.5"> ... </div>
             // 需求：把按钮放在“听写按钮（composer-btn）”左边
-            const voiceBtn =
+            // 更精确与稳健的选择器：兼容 data-state 变化与 radix 描述前缀含下划线
+            // 同时增加 SVG path d 前缀回退（来自提供的 outerHTML）
+            let voiceBtn =
+              bar.querySelector('span[data-state][aria-describedby^="radix-_"] > button.composer-btn[aria-label="听写按钮"]') ||
+              bar.querySelector('span[data-state][aria-describedby^="radix-_"] > button.composer-btn[aria-label*="听写"]') ||
+              bar.querySelector('span[data-state][aria-describedby^="radix-"] > button.composer-btn[aria-label="听写按钮"]') ||
+              bar.querySelector('span[data-state][aria-describedby^="radix-"] > button.composer-btn[aria-label*="听写"]') ||
               bar.querySelector('button.composer-btn[aria-label="听写按钮"]') ||
               bar.querySelector('button.composer-btn[aria-label*="听写"]') ||
+              bar.querySelector('button.composer-btn[aria-label*="语音"]') ||
               null;
+            if (!voiceBtn) {
+              // Fallback 1: 全局查找（避免 bar 未能涵盖该节点）
+              voiceBtn =
+                document.querySelector('span[data-state][aria-describedby^="radix-_"] > button.composer-btn[aria-label="听写按钮"]') ||
+                document.querySelector('span[data-state][aria-describedby^="radix-_"] > button.composer-btn[aria-label*="听写"]') ||
+                document.querySelector('span[data-state][aria-describedby^="radix-"] > button.composer-btn[aria-label="听写按钮"]') ||
+                document.querySelector('span[data-state][aria-describedby^="radix-"] > button.composer-btn[aria-label*="听写"]') ||
+                document.querySelector('button.composer-btn[aria-label="听写按钮"]') ||
+                document.querySelector('button.composer-btn[aria-label*="听写"]') ||
+                document.querySelector('button.composer-btn[aria-label*="语音"]') ||
+                null;
+            }
+            if (!voiceBtn) {
+              // Fallback 2: 通过独有的 SVG path 前缀定位
+              const micPath =
+                bar.querySelector('button.composer-btn svg path[d^="M15.7806"]') ||
+                document.querySelector('button.composer-btn svg path[d^="M15.7806"]');
+              if (micPath && typeof micPath.closest === 'function') {
+                const micBtn = micPath.closest('button');
+                if (micBtn) voiceBtn = micBtn;
+              }
+            }
             // 定位父容器（避免命中顶部/侧边栏），优先具有 ms-auto flex items-center 的容器
-            const controlsParent = (voiceBtn && (voiceBtn.closest('div.ms-auto.flex.items-center') || voiceBtn.parentElement)) ||
+            const controlsParent = (voiceBtn && ((voiceBtn.closest && voiceBtn.closest('div.ms-auto.flex.items-center')) || (voiceBtn.parentElement && voiceBtn.parentElement))) ||
               bar.querySelector('div.ms-auto.flex.items-center') ||
               bar;
             if (voiceBtn && controlsParent) {
-              const anchor = voiceBtn.closest('span') || voiceBtn;
+              // 锚点优先取外层 span，以确保插入在该按钮整体左侧
+              const anchor = (voiceBtn.closest && (voiceBtn.closest('span[data-state]') || voiceBtn.closest('span'))) || voiceBtn;
+              // 让按钮采用站点相同的按钮样式类，视觉一致
+              try { btnEl.classList.add('composer-btn'); } catch (_) {}
               if (btnEl.parentElement !== controlsParent || btnEl.nextSibling !== anchor) {
                 controlsParent.insertBefore(btnEl, anchor);
               }
@@ -1248,8 +1291,53 @@
       function tryInlineMount() {
         const inputEl = (typeof pickChatInput === 'function') ? pickChatInput() : null;
         const bar = findControlsBarFor(inputEl) || findControlsBar();
-        if (!bar) return false;
-        return injectIntoControlsBar(bar);
+        if (!bar) {
+          // ChatGPT 兜底：直接全局查找“听写”按钮并插入到其左侧
+          const kind = getHostCategory();
+          if (kind === 'chatgpt') {
+            const okDirect = (function tryDirectChatGPTMount() {
+              try {
+                const btnEl = ensureInlineBtn();
+                // 全局稳健选择器（不依赖 data-state），并包含 SVG path 回退
+                let voiceBtn =
+                  document.querySelector('button.composer-btn[aria-label="听写按钮"]') ||
+                  document.querySelector('button.composer-btn[aria-label*="听写"]') ||
+                  document.querySelector('button.composer-btn[aria-label*="语音"]') ||
+                  document.querySelector('span[aria-describedby^="radix-_"] > button.composer-btn[aria-label*="听写"]') ||
+                  document.querySelector('span[aria-describedby^="radix-"] > button.composer-btn[aria-label*="听写"]') ||
+                  null;
+                if (!voiceBtn) {
+                  const micPath = document.querySelector('button.composer-btn svg path[d^="M15.7806"]');
+                  if (micPath && typeof micPath.closest === 'function') {
+                    const micBtn = micPath.closest('button');
+                    if (micBtn) voiceBtn = micBtn;
+                  }
+                }
+                if (!voiceBtn) return false;
+                // 父容器与锚点
+                const controlsParent =
+                  (voiceBtn.closest && voiceBtn.closest('div.ms-auto.flex.items-center')) ||
+                  voiceBtn.parentElement ||
+                  document.body;
+                const anchor =
+                  (voiceBtn.closest && (voiceBtn.closest('span[data-state]') || voiceBtn.closest('span'))) ||
+                  voiceBtn;
+                try { btnEl.classList.add('composer-btn'); } catch (_) {}
+                if (btnEl.parentElement !== controlsParent || btnEl.nextSibling !== anchor) {
+                  controlsParent.insertBefore(btnEl, anchor);
+                }
+                return true;
+              } catch (_) { return false; }
+            })();
+            if (!okDirect) return false;
+            injectPageBridge();
+            return true;
+          }
+          return false;
+        }
+        const ok = injectIntoControlsBar(bar);
+        injectPageBridge();
+        return ok;
       }
       // 监控 SPA 变化并自动回补
       let mountedInline = tryInlineMount();
@@ -1267,6 +1355,17 @@
       let optimizerPort = null;
       let optimizing = false;
       let hasWrittenOptimized = false;
+      // 监听来自 Page Context 的点击消息 -> 触发真正的扩展逻辑
+      try {
+        window.addEventListener('message', (evt) => {
+          try {
+            if (evt && evt.source === window && evt.data && evt.data.source === 'lc-page' && evt.data.type === 'LC_OPTIMIZE_CLICK') {
+              try { currentTriggerBtn = document.getElementById('lc-optimize-btn-inline'); } catch(_) {}
+              onOptimizeClick(new Event('lc-optimize'));
+            }
+          } catch(_) {}
+        }, false);
+      } catch(_) {}
       return;  // 仅采用内嵌注入策略，阻断旧的浮动定位逻辑
 
       function isSupportedAISite(host) {
@@ -1596,6 +1695,42 @@
         } catch (_) {}
       }
 
+       // 尝试触发站点原生“发送”按钮，确保内部状态同步（React/Vue/Angular）
+       function tryClickSiteSend() {
+         try {
+           const host = (location.hostname || '').toLowerCase();
+           // ChatGPT
+           if (host.includes('chat.openai.com') || host.includes('chatgpt.com') || host.endsWith('openai.com')) {
+             const bar = findControlsBar();
+             const sendBtn = (bar && (bar.querySelector('#composer-submit-button') || bar.querySelector('button[data-testid="send-button"]'))) || null;
+             if (sendBtn && typeof sendBtn.click === 'function') { sendBtn.click(); return true; }
+           }
+           // Kimi
+           if (host.includes('kimi.com') || host.includes('moonshot.cn')) {
+             const bar = findControlsBar();
+             const sendBtn = bar && (bar.querySelector('div.send-button-container .send-button') || bar.querySelector('div.send-button'));
+             if (sendBtn && typeof sendBtn.click === 'function') { sendBtn.click(); return true; }
+           }
+           // 豆包
+           if (host.includes('doubao.com') || host.includes('douba.ai')) {
+             const btn = document.querySelector('#flow-end-msg-send') || document.querySelector('button[data-testid="chat_input_send_button"]');
+             if (btn && typeof btn.click === 'function') { btn.click(); return true; }
+           }
+           // Gemini（Material 按钮）
+           if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
+             const bar = findControlsBar();
+             const sendBtn = bar && (bar.querySelector('button mat-icon[fonticon="send"]') ? bar.querySelector('button:has(mat-icon[fonticon="send"])') : null);
+             if (sendBtn && typeof sendBtn.click === 'function') { sendBtn.click(); return true; }
+           }
+           // Claude（尽量保守）
+           if (host.includes('claude.ai')) {
+             const btn = document.querySelector('button[aria-label*="发送" i],button[aria-label*="Send" i],button[type="submit"]');
+             if (btn && typeof btn.click === 'function') { btn.click(); return true; }
+           }
+           return false;
+         } catch (_) { return false; }
+       }
+
       function ensureOptimizePort() {
         if (optimizerPort) return optimizerPort;
         optimizerPort = chrome.runtime.connect({ name: 'STREAM_CHAT' });
@@ -1652,14 +1787,58 @@
         return optimizerPort;
       }
 
+      // 从某元素出发，寻找最近的可编辑输入框（作为兜底）
+      function findNearestChatInput(fromEl) {
+        try {
+          const candidates = getCandidateInputs();
+          if (!candidates || !candidates.length) return null;
+          const srcRect = (fromEl && typeof fromEl.getBoundingClientRect === 'function')
+            ? fromEl.getBoundingClientRect()
+            : { left: 0, top: 0, right: 0, bottom: 0, x: 0, y: 0 };
+          let best = null;
+          let bestDist = Infinity;
+          for (const el of candidates) {
+            try {
+              const r = el.getBoundingClientRect();
+              const cx = r.left + r.width / 2;
+              const cy = r.top + r.height / 2;
+              const sx = srcRect.left + (srcRect.width || 0) / 2;
+              const sy = srcRect.top + (srcRect.height || 0) / 2;
+              const dist = Math.hypot(cx - sx, cy - sy);
+              if (dist < bestDist) {
+                bestDist = dist;
+                best = el;
+              }
+            } catch (_) {}
+          }
+          return best || null;
+        } catch (_) {
+          return null;
+        }
+      }
+
       async function onOptimizeClick(e) {
         try {
-          e.preventDefault();
-          currentTriggerBtn = (e && e.currentTarget) ? e.currentTarget : null;
+          e && e.preventDefault && e.preventDefault();
+          currentTriggerBtn = (e && (e.currentTarget || e.target)) ? (e.currentTarget || e.target) : document.getElementById('lc-optimize-btn-inline');
+          // 1) 首选全局策略
           targetEl = pickChatInput();
-          if (!targetEl) return;
-          const text = readTextFrom(targetEl).trim();
-          if (!text) return;
+          // 2) 兜底：从按钮出发就近查找
+          if (!targetEl && currentTriggerBtn) {
+            targetEl = findNearestChatInput(currentTriggerBtn);
+          }
+          // 3) 再兜底：全局最后一个可见输入框
+          if (!targetEl) {
+            const all = getCandidateInputs();
+            targetEl = all && all.length ? all[0] : null;
+          }
+          console.log('[LC] Optimize click -> target input:', targetEl);
+          if (!targetEl) {
+            console.warn('[LC] 未找到可写入的输入框，取消本次优化。');
+            return;
+          }
+          const text = (readTextFrom(targetEl) || '').trim();
+          console.log('[LC] Original text length:', text.length);
           setBtnLoadingOn(currentTriggerBtn, true);
           optimizing = true;
 
@@ -1676,17 +1855,35 @@
               resolve({ ok: false, error: String(err) });
             }
           });
+          console.log('[LC] OPTIMIZE_PROMPT resp:', resp);
 
-          const optimized = resp && resp.ok
-            ? (resp.data && (resp.data.optimized_prompt || resp.data?.data?.optimized_prompt))
-            : null;
+          // 兼容后端返回结构：
+          // { ok:true, status:200, data: { code:200, data: { optimized_prompt: '...' }, message:'success' } }
+          // 或 { ok:true, status:200, data: { optimized_prompt: '...' } }
+          let optimized = null;
+          try {
+            const root = resp && resp.data ? resp.data : null;
+            if (root) {
+              if (typeof root.optimized_prompt === 'string' && root.optimized_prompt.trim()) {
+                optimized = root.optimized_prompt.trim();
+              } else if (root.data && typeof root.data.optimized_prompt === 'string' && root.data.optimized_prompt.trim()) {
+                optimized = root.data.optimized_prompt.trim();
+              } else if (root.result && typeof root.result.optimized_prompt === 'string' && root.result.optimized_prompt.trim()) {
+                optimized = root.result.optimized_prompt.trim();
+              }
+            }
+          } catch (_) {}
+          console.log('[LC] Extracted optimized length:', optimized ? optimized.length : 0);
 
-          if (optimized && String(optimized).trim()) {
+          if (typeof optimized === 'string' && optimized.trim()) {
             writeTextTo(targetEl, String(optimized).trim());
             hasWrittenOptimized = true;
+             // 默认：自动触发一次原生发送，驱动内部状态/提交
+             tryClickSiteSend();
           } else {
-            // 未返回有效优化结果则不清空，保留原文
-            writeTextTo(targetEl, text);
+            // 未返回有效优化结果：保留原文（若原文为空则不改动）
+            if (text) writeTextTo(targetEl, text);
+            console.warn('[LC] 未获得优化结果，保持原文。');
           }
 
           setBtnLoadingOn(currentTriggerBtn, false);
@@ -1696,6 +1893,7 @@
           setBtnLoadingOn(currentTriggerBtn, false);
           // 出错时回滚原始文本
           try { if (targetEl) writeTextTo(targetEl, readTextFrom(targetEl) || ''); } catch(_) {}
+          console.error('[LC] onOptimizeClick error:', _);
         }
       }
 

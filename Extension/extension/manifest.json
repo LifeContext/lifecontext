@@ -32,7 +32,8 @@
       "chat/assets/*",
       "chat/*.svg",
       "chat/*.png",
-      "logo.png"
+      "logo.png",
+      "page-context.js"
     ],
     "matches": ["<all_urls>"]
   }
