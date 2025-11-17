@@ -309,6 +309,32 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   }
 });
 
+// 提示词优化（独立接口代理）
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === 'OPTIMIZE_PROMPT') {
+    (async () => {
+      try {
+        const apiUrl = await getApiUrl(); // http://host:port/api
+        const url = `${apiUrl}/agent/optimize_prompt`;
+        const payload = {
+          prompt: String(message.prompt || ''),
+          url: String(message.url || '')
+        };
+        const resp = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await resp.json().catch(() => null);
+        sendResponse({ ok: resp.ok, status: resp.status, data });
+      } catch (e) {
+        sendResponse({ ok: false, error: String(e) });
+      }
+    })();
+    return true; // 异步响应
+  }
+});
+
 // ===== URL 黑名单：集中在后台代理，统一 API 基址与 CORS 处理 =====
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'URL_BLACKLIST_ADD') {
