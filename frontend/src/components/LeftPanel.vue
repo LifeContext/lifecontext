@@ -71,16 +71,22 @@
             :class="selectedReport?.id === report.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''"
           >
             <!-- 日历图标 -->
-            <div class="flex-shrink-0 w-9 h-9 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow duration-200">
-              <!-- 日历顶部条 -->
-              <div class="w-full h-1 bg-blue-500 rounded-t-lg"></div>
-              <!-- 日期数字 -->
-              <div class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">
-                {{ new Date(report.create_time).getDate() }}
+            <div class="flex-shrink-0 w-9 h-9 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
+              <!-- 封面图片或日历顶部条 -->
+              <img 
+                v-if="report.cover"
+                :src="report.cover"
+                :alt="report.title"
+                class="w-full h-full object-cover"
+              />
+              <div v-else class="w-full h-1 bg-blue-500"></div>
+              <!-- 日期数字 - 如果没有封面图片则显示 -->
+              <div v-if="!report.cover" class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">
+                {{ report.id }}
               </div>
-              <!-- 月份缩写 -->
-              <div class="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-medium leading-none">
-                {{ formatMonthShort(new Date(report.create_time)) }}
+              <!-- 月份缩写 - 如果没有封面图片则显示 -->
+              <div v-if="!report.cover" class="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-medium leading-none">
+                {{ report.type?.substring(0, 3) || 'RPT' }}
               </div>
             </div>
           </div>
@@ -108,16 +114,48 @@
       <!-- 展开状态下的完整内容 -->
       <div 
         v-else-if="!isCollapsed"
-        class="space-y-2 transition-all duration-300 ease-in-out pr-2 pb-2"
+        class="space-y-4 transition-all duration-300 ease-in-out pr-2 pb-2"
       >
         <div 
-          v-for="report in reports" 
+          v-for="(report, index) in reports" 
           :key="report.id"
           @click="() => onSelectReport(report)"
-          :class="`p-3 rounded-lg cursor-pointer transition-all duration-200 ${selectedReport?.id === report.id ? 'bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-300/50 dark:hover:bg-slate-700/50'}`"
+          class="report-card relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-xl shadow-md"
+          :class="selectedReport?.id === report.id ? 'ring-2 ring-blue-500' : ''"
         >
-          <h3 class="font-medium text-sm">{{ report.title }}</h3>
-          <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">{{ formatDateTime(report.create_time) }}</p>
+          <!-- 封面图片背景 - 清晰显示，带去饱和效果 -->
+          <img 
+            v-if="report.cover"
+            :src="report.cover"
+            :alt="report.title"
+            class="absolute inset-0 w-full h-full object-cover report-cover-image"
+            @error="handleImageError"
+            @load="handleImageLoad"
+          />
+          
+          <!-- 背景渐变 - 当没有封面图片或图片加载失败时显示 -->
+          <div 
+            class="absolute inset-0 report-gradient-background"
+            :class="getCardGradient(index)"
+            :style="report.cover ? 'display: none;' : ''"
+          ></div>
+          
+          <!-- 整体渐变遮罩层 - 覆盖底部60-70%，从底部完全不透明向上渐变到透明 -->
+          <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black via-black/60 to-transparent z-10 report-gradient-overlay"></div>
+          
+          <!-- 底部半透明面板 - 实心黑色半透明面板，覆盖约25-30%，在渐变遮罩层之上 -->
+          <div class="absolute bottom-0 left-0 right-0 z-20">
+            <div class="report-overlay-panel bg-black/80 backdrop-blur-md rounded-b-xl px-4 pt-2 pb-2">
+              <div class="flex items-center gap-2 mb-2">
+                <Icon 
+                  path="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" 
+                  class="h-4 w-4 text-orange-400 flex-shrink-0" 
+                />
+                <span class="text-[10px] font-bold text-white uppercase tracking-wider">{{ report.type || 'Daily Report' }}</span>
+              </div>
+              <h3 class="font-bold text-white text-xs leading-tight line-clamp-2">{{ report.title }}</h3>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -145,6 +183,47 @@ const formatDateTime = (dateTime: string): string => {
 const formatMonthShort = (date: Date): string => {
   const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
   return date.toLocaleDateString(lang, { month: 'short' });
+};
+
+const getCardGradient = (index: number): string => {
+  const gradients = [
+    'bg-gradient-to-br from-slate-600 via-slate-700 to-slate-800 dark:from-slate-800 dark:via-slate-900 dark:to-slate-950',
+    'bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 dark:from-slate-900 dark:via-slate-950 dark:to-black',
+    'bg-gradient-to-br from-blue-900/80 via-slate-800 to-slate-900 dark:from-blue-950/60 dark:via-slate-900 dark:to-black',
+    'bg-gradient-to-br from-purple-900/70 via-slate-800 to-slate-900 dark:from-purple-950/50 dark:via-slate-900 dark:to-black',
+    'bg-gradient-to-br from-teal-900/70 via-slate-800 to-slate-900 dark:from-teal-950/50 dark:via-slate-900 dark:to-black',
+  ];
+  return gradients[index % gradients.length];
+};
+
+const handleImageError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  if (img) {
+    img.style.display = 'none';
+    // 显示渐变背景
+    const card = img.closest('.report-card');
+    if (card) {
+      const gradientDiv = card.querySelector('.report-gradient-background') as HTMLElement;
+      if (gradientDiv) {
+        gradientDiv.style.display = 'block';
+      }
+    }
+  }
+};
+
+const handleImageLoad = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  if (img) {
+    const card = img.closest('.report-card');
+    if (card) {
+      const gradientDiv = card.querySelector('.report-gradient-background') as HTMLElement;
+      if (gradientDiv) {
+        gradientDiv.style.display = 'none';
+      }
+      // 确保图片可见
+      img.style.display = 'block';
+    }
+  }
 };
 
 interface Props {
@@ -227,5 +306,69 @@ defineProps<Props>();
 .relative:hover::-webkit-scrollbar-thumb {
   opacity: 1;
   transition: opacity 0.3s ease;
+}
+
+/* 报告卡片样式 */
+.report-card {
+  min-height: 200px;
+  height: 200px;
+}
+
+.report-card .line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.report-card .line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* 封面图片样式 - 清晰显示，轻微去饱和效果 */
+.report-cover-image {
+  transition: transform 0.3s ease, filter 0.3s ease;
+  z-index: 1;
+  pointer-events: none;
+  filter: saturate(0.85) brightness(0.95);
+  /* 图片本身不模糊，保持清晰 */
+}
+
+.report-card:hover .report-cover-image {
+  transform: scale(1.01);
+  filter: saturate(0.9) brightness(0.97);
+}
+
+/* 底部面板样式 - 覆盖约25-30% */
+.report-overlay-panel {
+  min-height: 55px;
+  height: 28%;
+  max-height: 65px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+
+/* 渐变背景样式 */
+.report-gradient-background {
+  z-index: 1;
+  pointer-events: none;
+}
+
+/* 整体渐变遮罩层样式 - 覆盖底部65% */
+.report-gradient-overlay {
+  height: 65%;
+  pointer-events: none;
+}
+
+/* 选中状态的卡片样式 */
+.report-card.ring-2 {
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.8), 0 4px 12px rgba(59, 130, 246, 0.3);
+  border: 2px solid rgba(59, 130, 246, 0.6);
 }
 </style>

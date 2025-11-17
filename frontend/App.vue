@@ -197,7 +197,7 @@ const loadReports = async () => {
     isLoadingReports.value = true;
     errorLoadingReports.value = null;
     const reportsData = await reportService.getReports();
-    reports.value = reportsData.data.reports;
+    reports.value = reportsData.data.cards;
     // 设置默认选中的报告
     if (reportsData.length > 0 && !selectedDashboardReport.value) {
       selectedDashboardReport.value = reportsData[0];

@@ -1,9 +1,10 @@
 
 export interface DailyReport {
   id: number;
-  create_time: string;
   title: string;
   content: string;
+  cover: string;
+  type: string;
 }
 
 export type Priority = 3 | 2 | 1;
