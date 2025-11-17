@@ -1180,6 +1180,17 @@
           margin-right: 6px;
         `;
         b.title = '优化提示词（LifeContext）';
+        // 防止站点委托的发送事件（click/mouseup/pointerup 等）被触发
+        try {
+          const swallow = (evt) => {
+            try { evt.preventDefault && evt.preventDefault(); } catch(_) {}
+            try { evt.stopPropagation && evt.stopPropagation(); } catch(_) {}
+            try { evt.stopImmediatePropagation && evt.stopImmediatePropagation(); } catch(_) {}
+          };
+          ['pointerdown','pointerup','mousedown','mouseup','click','touchstart','touchend'].forEach((t) => {
+            b.addEventListener(t, swallow, { capture: true });
+          });
+        } catch(_) {}
         b.addEventListener('mouseenter', () => { b.style.transform = 'scale(1.05)'; });
         b.addEventListener('mouseleave', () => { b.style.transform = 'scale(1)'; });
         b.addEventListener('click', onOptimizeClick);
@@ -1386,7 +1397,8 @@
         const rect = el.getBoundingClientRect();
         // 豆包页面在输入框加载/重排时可能短暂设置 opacity/transform，导致误判不可见
         if (host.includes('doubao.com') || host.includes('douba.ai')) {
-          return rect.width > 120 && rect.height > 24 && rect.bottom > 0 && rect.right > 0 &&
+          // 放宽尺寸阈值，避免初次渲染/动画阶段被误过滤
+          return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 &&
                  rect.left < window.innerWidth && rect.top < window.innerHeight;
         }
         const style = window.getComputedStyle(el);
@@ -1441,13 +1453,36 @@
         } else if (host.includes('x.ai') || host.includes('grok')) {
           siteExtra.push('div[contenteditable="true"][data-slate-editor]', 'div[contenteditable="true"]', 'textarea');
         } else if (host.includes('doubao.com') || host.includes('douba.ai')) {
-          siteExtra.push('div[contenteditable="true"]', 'textarea');
+          // 豆包：输入框常为 contenteditable，可带 role/placeholder 等属性，且可能在容器内
+          siteExtra.push(
+            'div[role="textbox"][contenteditable="true"]',
+            'div[contenteditable="plaintext-only"]',
+            'div[contenteditable][role="textbox"]',
+            'div[contenteditable="true"][data-placeholder]',
+            '.tools-input div[contenteditable="true"]',
+            '.editor div[contenteditable="true"]',
+            'div[contenteditable="true"]',
+            'textarea[placeholder]',
+            'textarea[aria-label]',
+            'textarea'
+          );
         } else if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
           // Gemini 可能在 open shadow 内
           siteExtra.push('textarea', 'div[role="textbox"][contenteditable="true"]', 'textarea[aria-label], div[contenteditable="true"][aria-label]');
         }
         const selectors = [...new Set([...baseSelectors, ...siteExtra])];
         const nodes = new Set(queryAllDeep(selectors, document));
+        // 豆包：调试可见性与命中情况（便于排障）
+        try {
+          if (host.includes('doubao.com') || host.includes('douba.ai')) {
+            const allBeforeFilter = Array.from(nodes);
+            const extraAll = queryAllDeep(['textarea', 'div[contenteditable="true"]'], document);
+            extraAll.forEach(n => nodes.add(n));
+            const afterUnion = Array.from(nodes);
+            // 仅在豆包站点输出一次概要日志（采样：每 3s 内最多一次，可由上层节流）
+            console.log(`[LC][Doubao] 候选输入框(初筛): ${allBeforeFilter.length}，并集后: ${afterUnion.length}`);
+          }
+        } catch (_) {}
         // 兜底：页面上最后一个 textarea/可编辑框
         queryAllDeep(['textarea', 'div[contenteditable="true"]'], document).forEach(n => nodes.add(n));
         return Array.from(nodes).filter(isVisible);
@@ -1488,6 +1523,17 @@
           opacity: .95;
         `;
         btn.title = '优化提示词（LifeContext）';
+        // 防止站点委托的发送事件（click/mouseup/pointerup 等）被触发
+        try {
+          const swallow = (evt) => {
+            try { evt.preventDefault && evt.preventDefault(); } catch(_) {}
+            try { evt.stopPropagation && evt.stopPropagation(); } catch(_) {}
+            try { evt.stopImmediatePropagation && evt.stopImmediatePropagation(); } catch(_) {}
+          };
+          ['pointerdown','pointerup','mousedown','mouseup','click','touchstart','touchend'].forEach((t) => {
+            btn.addEventListener(t, swallow, { capture: true });
+          });
+        } catch(_) {}
         btn.addEventListener('mouseenter', () => { btn.style.transform = 'scale(1.05)'; });
         btn.addEventListener('mouseleave', () => { btn.style.transform = 'scale(1)'; });
         btn.addEventListener('click', onOptimizeClick);
@@ -1671,28 +1717,101 @@
 
       function writeTextTo(el, text) {
         if (!el) return;
-        if (el.tagName === 'TEXTAREA' || el.tagName === 'INPUT') {
-          el.value = text;
-        } else if (el.getAttribute('contenteditable') === 'true') {
-          el.innerHTML = '';
-          el.textContent = text;
-        }
-        // 触发站点监听
+        const hostLower = (location.hostname || '').toLowerCase();
+
+        // 若传入的是容器，尝试寻找内部可编辑节点
+        let target = el;
         try {
-          el.dispatchEvent(new InputEvent('input', { bubbles: true }));
-          el.dispatchEvent(new Event('change', { bubbles: true }));
-          // 将光标移至末尾（contenteditable 简单处理）
-          if (el.getAttribute && el.getAttribute('contenteditable') === 'true') {
-            const sel = window.getSelection();
-            const range = document.createRange();
-            range.selectNodeContents(el);
-            range.collapse(false);
-            sel.removeAllRanges();
-            sel.addRange(range);
-          } else if (typeof el.selectionStart === 'number') {
-            el.selectionStart = el.selectionEnd = (el.value || '').length;
+          if (!(target instanceof Element)) return;
+          const isCE = target.getAttribute && (target.getAttribute('contenteditable') === 'true' || target.isContentEditable);
+          if (!isCE && target.tagName !== 'TEXTAREA' && target.tagName !== 'INPUT') {
+            const innerCE = target.querySelector && target.querySelector('div[contenteditable="true"],[contenteditable="plaintext-only"],[contenteditable][role="textbox"]');
+            if (innerCE) target = innerCE;
           }
         } catch (_) {}
+
+        // React/受控组件：通过原生 setter 设置值，确保 onInput/onChange 被正确感知
+        function setNativeValue(node, value) {
+          try {
+            const desc = Object.getOwnPropertyDescriptor(node, 'value');
+            const proto = Object.getPrototypeOf(node);
+            const protoDesc = Object.getOwnPropertyDescriptor(proto, 'value');
+            if (desc && desc.set) {
+              desc.set.call(node, value);
+            } else if (protoDesc && protoDesc.set) {
+              protoDesc.set.call(node, value);
+            } else {
+              node.value = value;
+            }
+          } catch (_) {
+            try { node.value = value; } catch(__) {}
+          }
+        }
+
+        // 针对不同类型分别处理
+        if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) {
+          try {
+            target.focus && target.focus();
+          } catch (_) {}
+          setNativeValue(target, text);
+          try {
+            // 更像“粘贴”的输入类型，提升兼容性
+            target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
+          } catch (_) {
+            try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(__) {}
+          }
+          try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+          try {
+            // 光标移至末尾
+            if (typeof target.selectionStart === 'number') {
+              target.selectionStart = target.selectionEnd = (target.value || '').length;
+            }
+          } catch (_) {}
+          return;
+        }
+
+        // contenteditable（Kimi: Lexical；豆包：部分场景下使用 CE 或 textarea）
+        if (target && (target.getAttribute && (target.getAttribute('contenteditable') === 'true' || target.isContentEditable))) {
+          try { target.focus && target.focus(); } catch (_) {}
+
+          // 优先使用 execCommand 以兼容富文本编辑器的内部状态（Lexical/Slate/ProseMirror 等）
+          let ok = false;
+          try {
+            // 选中全部
+            try { document.execCommand('selectAll', false, null); } catch (_) {}
+            // 插入文本
+            ok = document.execCommand('insertText', false, text);
+          } catch (_) { ok = false; }
+
+          if (!ok) {
+            // 回退：直接替换文本内容
+            try { target.innerHTML = ''; } catch (_) {}
+            try { target.textContent = text; } catch (_) {}
+          }
+
+          // 触发站点监听
+          try { target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text })); } catch (_) {
+            try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(__) {}
+          }
+          try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+
+          // 将光标移至末尾
+          try {
+            const sel = window.getSelection && window.getSelection();
+            if (sel) {
+              const range = document.createRange();
+              range.selectNodeContents(target);
+              range.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(range);
+            }
+          } catch (_) {}
+          return;
+        }
+
+        // 兜底：无法识别类型时直接覆盖文本
+        try { target.textContent = text; } catch (_) {}
+        try { target.dispatchEvent && target.dispatchEvent(new Event('input', { bubbles: true })); } catch(_) {}
       }
 
        // 尝试触发站点原生“发送”按钮，确保内部状态同步（React/Vue/Angular）
@@ -1819,7 +1938,10 @@
 
       async function onOptimizeClick(e) {
         try {
-          e && e.preventDefault && e.preventDefault();
+          // 双保险：阻断默认与冒泡，避免触发站点发送逻辑（豆包/Kimi 等）
+          try { e && e.preventDefault && e.preventDefault(); } catch(_) {}
+          try { e && e.stopPropagation && e.stopPropagation(); } catch(_) {}
+          try { e && e.stopImmediatePropagation && e.stopImmediatePropagation(); } catch(_) {}
           currentTriggerBtn = (e && (e.currentTarget || e.target)) ? (e.currentTarget || e.target) : document.getElementById('lc-optimize-btn-inline');
           // 1) 首选全局策略
           targetEl = pickChatInput();
@@ -1878,8 +2000,15 @@
           if (typeof optimized === 'string' && optimized.trim()) {
             writeTextTo(targetEl, String(optimized).trim());
             hasWrittenOptimized = true;
-             // 默认：自动触发一次原生发送，驱动内部状态/提交
-             tryClickSiteSend();
+              // 非豆包/Kimi：默认自动触发一次原生发送以驱动内部状态
+              try {
+                const kind = (typeof getHostCategory === 'function') ? getHostCategory() : '';
+                if (kind !== 'doubao' && kind !== 'kimi') {
+                  tryClickSiteSend();
+                } else {
+                  // 在豆包与 Kimi 上，严格不触发任何站点发送逻辑
+                }
+              } catch(_) {}
           } else {
             // 未返回有效优化结果：保留原文（若原文为空则不改动）
             if (text) writeTextTo(targetEl, text);
