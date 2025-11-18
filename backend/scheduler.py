@@ -99,7 +99,7 @@ def init_scheduler():
     # 5. 生成每日Feed（支持自定义时间）
     if ENABLE_SCHEDULER_DAILY_FEED:
         feed_hour = int(get_setting('daily_feed_hour', '8'))
-        feed_minute = int(get_setting('daily_feed_minute', '5'))
+        feed_minute = int(get_setting('daily_feed_minute', '0'))
         scheduler.add_job(
             func=job_generate_daily_feed,
             trigger=CronTrigger(hour=feed_hour, minute=feed_minute),

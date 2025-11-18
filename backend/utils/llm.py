@@ -8,11 +8,9 @@ from typing import Dict, Any, List, Optional
 import openai
 import config
 from utils.helpers import get_logger
-from utils.prompt_config import get_prompt_set
+from utils.prompt_config import get_current_prompts
 
 logger = get_logger(__name__)
-
-PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 
 def get_openai_client():
@@ -85,9 +83,11 @@ def analyze_web_content(
         if len(content_text) > 4000:
             content_text = content_text[:4000] + "..."
         
-        system_prompt = PROMPTS["web_analysis"]["system"]
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_prompt = prompts["web_analysis"]["system"]
 
-        user_template = Template(PROMPTS["web_analysis"]["user_template"])
+        user_template = Template(prompts["web_analysis"]["user_template"])
         user_prompt = user_template.safe_substitute(
             title=title,
             url=url or "",
@@ -215,8 +215,10 @@ def summarize_content(content: str, max_length: int = 200) -> Optional[str]:
         if len(content_text) > 4000:
             content_text = content_text[:4000] + "..."
         
-        system_prompt = PROMPTS["content_summary"]["system"]
-        prompt_template = Template(PROMPTS["content_summary"]["user_template"])
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_prompt = prompts["content_summary"]["system"]
+        prompt_template = Template(prompts["content_summary"]["user_template"])
         prompt = prompt_template.safe_substitute(
             max_length=max_length,
             content_text=content_text
@@ -270,8 +272,10 @@ def extract_keywords(content: str, max_keywords: int = 10) -> Optional[List[str]
         if len(content_text) > 4000:
             content_text = content_text[:4000] + "..."
         
-        system_prompt = PROMPTS["keyword_extraction"]["system"]
-        prompt_template = Template(PROMPTS["keyword_extraction"]["user_template"])
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_prompt = prompts["keyword_extraction"]["system"]
+        prompt_template = Template(prompts["keyword_extraction"]["user_template"])
         prompt = prompt_template.safe_substitute(
             max_keywords=max_keywords,
             content_text=content_text

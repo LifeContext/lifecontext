@@ -19,13 +19,11 @@ from utils.json_utils import parse_llm_json_response
 from utils.db import get_tips, get_todos, get_web_data, get_reports, insert_report
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
-from utils.prompt_config import get_prompt_set
+from utils.prompt_config import get_current_prompts
 
 logger = get_logger(__name__)
 
 _llm = None
-
-PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 # 全局LLM客户端
 _client_cache = None
@@ -293,14 +291,16 @@ async def _ask_llm_for_report(data_dict: Dict[str, Any], start_ts: int, end_ts: 
         
         data_json = json.dumps(report_data, ensure_ascii=False, indent=2)
          
-        sys_msg = PROMPTS["report"]["main_system"]
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        sys_msg = prompts["report"]["main_system"]
         
         # 准备数据集JSON
         web_data_json = json.dumps(report_data.get('web_data', []), ensure_ascii=False, indent=2)
         tips_json = json.dumps(report_data.get('tips', []), ensure_ascii=False, indent=2)
         todos_json = json.dumps(report_data.get('todos', []), ensure_ascii=False, indent=2)
         
-        user_template = Template(PROMPTS["report"]["main_user_template"])
+        user_template = Template(prompts["report"]["main_user_template"])
         user_msg = user_template.safe_substitute(
             start_time=dt_start.strftime('%Y-%m-%d %H:%M:%S'),
             end_time=dt_end.strftime('%Y-%m-%d %H:%M:%S'),
@@ -339,9 +339,11 @@ async def _make_segment_summary(data_list: List[Dict], start_ts: int, end_ts: in
         dt_start = datetime.fromtimestamp(start_ts)
         dt_end = datetime.fromtimestamp(end_ts)
         
-        system_msg = PROMPTS["report"]["segment_system"]
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_msg = prompts["report"]["segment_system"]
 
-        user_template = Template(PROMPTS["report"]["segment_user_template"])
+        user_template = Template(prompts["report"]["segment_user_template"])
         user_msg = user_template.safe_substitute(
             start_time=dt_start.strftime('%H:%M'),
             end_time=dt_end.strftime('%H:%M'),
@@ -381,9 +383,11 @@ async def _combine_summaries(summaries: List[Dict], start_ts: int, end_ts: int) 
         dt_start = datetime.fromtimestamp(start_ts)
         dt_end = datetime.fromtimestamp(end_ts)
         
-        system_msg = PROMPTS["report"]["combine_system"]
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_msg = prompts["report"]["combine_system"]
 
-        user_template = Template(PROMPTS["report"]["combine_user_template"])
+        user_template = Template(prompts["report"]["combine_user_template"])
         user_msg = user_template.safe_substitute(
             start_time=dt_start.strftime('%Y-%m-%d %H:%M'),
             end_time=dt_end.strftime('%H:%M'),

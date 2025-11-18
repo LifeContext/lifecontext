@@ -19,12 +19,10 @@ from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_todos, get_activities
 from utils.llm import get_openai_client
 from utils.vectorstore import search_similar_content
-from utils.prompt_config import get_prompt_set
+from utils.prompt_config import get_current_prompts
 from utils.db import insert_daily_feed, get_daily_feed
 
 logger = get_logger(__name__)
-
-PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 # 全局LLM客户端缓存
 _client_cache = None
@@ -278,6 +276,7 @@ async def _generate_todo_card(context: Dict[str, Any], date_str: str) -> Optiona
         todos_json = json.dumps(todos, ensure_ascii=False, indent=2)
         
         # 获取prompt
+        PROMPTS = get_current_prompts()
         todo_prompt = PROMPTS.get("todo_summary", {})
         system_prompt = todo_prompt.get("system", "")
         user_template = todo_prompt.get("user_template", "")
@@ -377,6 +376,7 @@ async def _generate_news_cards(context: Dict[str, Any], date_str: str, count: in
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
         
         # 获取prompt
+        PROMPTS = get_current_prompts()
         news_prompt = PROMPTS.get("news_recommendation", {})
         system_prompt = news_prompt.get("system", "")
         user_template = news_prompt.get("user_template", "")
@@ -506,6 +506,7 @@ async def _generate_knowledge_cards(context: Dict[str, Any], date_str: str, coun
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
         
         # 获取prompt
+        PROMPTS = get_current_prompts()
         knowledge_prompt = PROMPTS.get("knowledge_recommendation", {})
         system_prompt = knowledge_prompt.get("system", "")
         user_template = knowledge_prompt.get("user_template", "")
