@@ -2181,23 +2181,15 @@
           let inlineBtn = null;
           let inserted = false;
           
-          // 创建优化函数，可以直接调用或通过消息触发
+          // 创建优化函数，通过消息机制触发
           function triggerOptimize() {
             try {
               console.log('[LC] triggerOptimize called');
-              // 尝试通过消息机制触发（如果消息监听器存在）
+              // 通过消息机制触发（消息监听器会调用 onOptimizeClick）
               window.postMessage({
                 source: 'lc-page',
                 type: 'LC_OPTIMIZE_CLICK'
               }, '*');
-              // 同时尝试直接调用 onOptimizeClick（如果可用）
-              if (typeof onOptimizeClick === 'function') {
-                console.log('[LC] Directly calling onOptimizeClick');
-                const fakeEvent = new Event('lc-optimize');
-                fakeEvent.currentTarget = inlineBtn;
-                fakeEvent.target = inlineBtn;
-                onOptimizeClick(fakeEvent);
-              }
             } catch (err) {
               console.error('[LC] Error in triggerOptimize:', err);
             }
