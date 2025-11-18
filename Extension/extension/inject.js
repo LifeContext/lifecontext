@@ -2141,6 +2141,8 @@
       let optimizerPort = null;
       let optimizing = false;
       let hasWrittenOptimized = false;
+      // 存储按钮的原始内容，用于恢复（需要在 return 前定义，供 setBtnLoadingOn 使用）
+      const buttonOriginalContent = new WeakMap();
       // 监听来自 Page Context 的点击消息 -> 触发真正的扩展逻辑
       try {
         window.addEventListener('message', (evt) => {
@@ -2639,20 +2641,151 @@
           btn.innerHTML = '';
         }
       }
-      // 针对任意按钮元素设置/取消“加载中”状态
+      
+      // 确保 CSS 动画已定义
+      function ensureSpinAnimation() {
+        if (document.getElementById('lc-spin-keyframes')) return;
+        const style = document.createElement('style');
+        style.id = 'lc-spin-keyframes';
+        style.textContent = '@keyframes lc-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
+        document.head.appendChild(style);
+      }
+      
+      // 针对任意按钮元素设置/取消"加载中"状态（带加载动画）
       function setBtnLoadingOn(el, on) {
         try {
           if (!el) return;
+          
+          // 确保动画已定义
+          ensureSpinAnimation();
+          
           if (on) {
+            // 保存原始内容（如果还没有保存）
+            if (!buttonOriginalContent.has(el)) {
+              const computedStyle = window.getComputedStyle(el);
+              const original = {
+                innerHTML: el.innerHTML,
+                background: el.style.background || computedStyle.background,
+                backgroundImage: el.style.backgroundImage || computedStyle.backgroundImage,
+                opacity: el.style.opacity || computedStyle.opacity,
+                cursor: el.style.cursor || computedStyle.cursor,
+                // 保存所有子元素（特别是图片元素）
+                children: Array.from(el.children).map(child => ({
+                  tagName: child.tagName,
+                  src: child.src || child.getAttribute('src') || '',
+                  outerHTML: child.outerHTML
+                }))
+              };
+              buttonOriginalContent.set(el, original);
+            }
+            
+            // 设置加载状态
             el.disabled = true;
             el.style.opacity = '0.7';
             el.style.cursor = 'not-allowed';
+            
+            // 检查是否为圆形按钮
+            const computedStyle = window.getComputedStyle(el);
+            const borderRadius = el.style.borderRadius || computedStyle.borderRadius;
+            const isCircular = borderRadius === '50%' || borderRadius.includes('50%');
+            
+            // 显示加载动画
+            if (isCircular) {
+              // 圆形按钮：显示旋转的圆圈动画
+              el.innerHTML = `
+                <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
+                             background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
+                             position:relative;">
+                  <span style="position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+                               border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
+                               animation:lc-spin .8s linear infinite;"></span>
+                </span>`;
+            } else {
+              // 非圆形按钮：显示简单的旋转图标
+              el.innerHTML = `
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;">
+                  <span style="width:16px;height:16px;border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
+                               animation:lc-spin .8s linear infinite;"></span>
+                </span>`;
+            }
           } else {
+            // 恢复原始内容
+            const original = buttonOriginalContent.get(el);
+            if (original) {
+              // 恢复 innerHTML（包括所有子元素）
+              el.innerHTML = original.innerHTML;
+              
+              // 恢复背景样式
+              if (original.background && original.background !== 'none' && original.background !== 'rgba(0, 0, 0, 0)') {
+                el.style.background = original.background;
+              } else if (original.backgroundImage && original.backgroundImage !== 'none') {
+                el.style.backgroundImage = original.backgroundImage;
+              }
+              
+              // 恢复 opacity 和 cursor
+              el.style.opacity = original.opacity || '';
+              el.style.cursor = original.cursor || '';
+              
+              // 如果原始内容中有图片，确保图片正确加载和显示
+              if (original.children && original.children.length > 0) {
+                original.children.forEach(childInfo => {
+                  if (childInfo.tagName === 'IMG' && childInfo.src) {
+                    const img = el.querySelector('img');
+                    if (img) {
+                      // 确保图片 src 正确
+                      if (img.src !== childInfo.src) {
+                        img.src = childInfo.src;
+                      }
+                      // 确保图片样式正确
+                      const originalImg = childInfo.outerHTML.match(/style="([^"]*)"/);
+                      if (originalImg && originalImg[1]) {
+                        img.style.cssText = originalImg[1];
+                      }
+                    } else {
+                      // 如果图片不存在，尝试重新创建
+                      const newImg = document.createElement('img');
+                      newImg.src = childInfo.src;
+                      if (childInfo.outerHTML.includes('style=')) {
+                        const styleMatch = childInfo.outerHTML.match(/style="([^"]*)"/);
+                        if (styleMatch && styleMatch[1]) {
+                          newImg.style.cssText = styleMatch[1];
+                        }
+                      }
+                      el.appendChild(newImg);
+                    }
+                  }
+                });
+              }
+              
+              buttonOriginalContent.delete(el);
+            } else {
+              // 如果没有保存的原始内容，尝试恢复为默认的圆形按钮样式
+              const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+                ? chrome.runtime.getURL('logo.png')
+                : '';
+              if (logoUrl) {
+                el.innerHTML = '';
+                el.style.background = `#ffffff url('${logoUrl}') center/70% no-repeat`;
+              } else {
+                el.innerHTML = '';
+              }
+              el.style.opacity = '';
+              el.style.cursor = '';
+            }
+            
             el.disabled = false;
-            el.style.opacity = '';
-            el.style.cursor = '';
           }
-        } catch (_) {}
+        } catch (err) {
+          console.error('[LC] Error in setBtnLoadingOn:', err);
+          // 出错时至少恢复基本状态
+          try {
+            if (!on) {
+              el.disabled = false;
+              el.style.opacity = '';
+              el.style.cursor = '';
+            }
+          } catch (_) {}
+        }
       }
 
       // 读取元素的易读标签（辅助识别“听写/语音/麦克风”按钮）
