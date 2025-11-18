@@ -481,10 +481,14 @@ watch(() => [route.name, route.params.id], async ([routeName, tipId]) => {
         }
       }
     }
-  } else if (routeName === 'dashboard' || routeName === 'chat' || routeName === 'timeline') {
-    activeView.value = routeName as ActiveView;
+  } else {
+    // 当路由不是 reportDetail 时，清除报告相关的选中状态
+    if (routeName === 'dashboard' || routeName === 'chat' || routeName === 'timeline') {
+      activeView.value = routeName as ActiveView;
+    }
     viewingTip.value = null;
     viewingReport.value = null;
+    selectedDashboardReport.value = null;
   }
 }, { immediate: true });
 

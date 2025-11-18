@@ -5,7 +5,7 @@
 
   "version": "1.1",
   "description": "Shaped by your life. Empower yourself. Interact with the world.",
-  "permissions": ["scripting", "activeTab", "storage", "notifications", "alarms", "tabs"],
+  "permissions": ["scripting", "activeTab", "storage", "notifications", "alarms"],
   "host_permissions": ["http://localhost:3000/*", "http://localhost:8000/*", "http://127.0.0.1:3000/*", "http://127.0.0.1:8000/*"],
   "content_security_policy": {
     "extension_pages": "script-src 'self'; object-src 'self'; connect-src http://localhost:3000 http://localhost:8000 http://127.0.0.1:3000 http://127.0.0.1:8000;"
