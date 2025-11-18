@@ -1095,6 +1095,7 @@
         if (h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com')) return 'kimi';
         if (h.includes('x.ai') || h.includes('grok')) return 'grok';
         if (h.includes('perplexity.ai')) return 'perplexity';
+        if (h.includes('deepseek.com')) return 'deepseek';
         return '';
       }
       function getControlsBarSelectors(kind) {
@@ -2144,13 +2145,238 @@
       try {
         window.addEventListener('message', (evt) => {
           try {
-            if (evt && evt.source === window && evt.data && evt.data.source === 'lc-page' && evt.data.type === 'LC_OPTIMIZE_CLICK') {
+            console.log('[LC] Message received:', evt.data, 'source:', evt.source);
+            // 检查消息来源和类型
+            if (evt && evt.data && evt.data.source === 'lc-page' && evt.data.type === 'LC_OPTIMIZE_CLICK') {
+              console.log('[LC] Processing LC_OPTIMIZE_CLICK message');
               try { currentTriggerBtn = document.getElementById('lc-optimize-btn-inline'); } catch(_) {}
-              onOptimizeClick(new Event('lc-optimize'));
+              if (typeof onOptimizeClick === 'function') {
+                console.log('[LC] Calling onOptimizeClick');
+                onOptimizeClick(new Event('lc-optimize'));
+              } else {
+                console.error('[LC] onOptimizeClick is not a function');
+              }
             }
-          } catch(_) {}
+          } catch(err) {
+            console.error('[LC] Error in message handler:', err);
+          }
         }, false);
-      } catch(_) {}
+      } catch(err) {
+        console.error('[LC] Error setting up message listener:', err);
+      }
+      
+      // DeepSeek 特殊处理：将提示词优化按钮插入到"联网搜索"按钮右边
+      function initDeepSeekInlineButton() {
+        try {
+          const host = (location.hostname || '').toLowerCase();
+          if (!host.includes('deepseek.com')) return;
+          
+          // 获取 logo URL（与其他站点一致）
+          const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+            ? chrome.runtime.getURL('logo.png')
+            : '';
+          
+          let inlineBtn = null;
+          let inserted = false;
+          
+          // 创建优化函数，可以直接调用或通过消息触发
+          function triggerOptimize() {
+            try {
+              console.log('[LC] triggerOptimize called');
+              // 尝试通过消息机制触发（如果消息监听器存在）
+              window.postMessage({
+                source: 'lc-page',
+                type: 'LC_OPTIMIZE_CLICK'
+              }, '*');
+              // 同时尝试直接调用 onOptimizeClick（如果可用）
+              if (typeof onOptimizeClick === 'function') {
+                console.log('[LC] Directly calling onOptimizeClick');
+                const fakeEvent = new Event('lc-optimize');
+                fakeEvent.currentTarget = inlineBtn;
+                fakeEvent.target = inlineBtn;
+                onOptimizeClick(fakeEvent);
+              }
+            } catch (err) {
+              console.error('[LC] Error in triggerOptimize:', err);
+            }
+          }
+          
+          function findNetworkSearchButton() {
+            // 查找包含"联网搜索"文本的按钮
+            // 使用简化的查询函数（DeepSeek 通常不需要处理 Shadow DOM）
+            function queryButtons(root = document) {
+              const results = [];
+              function walk(node) {
+                if (!node) return;
+                try {
+                  node.querySelectorAll && node.querySelectorAll('button').forEach((e) => {
+                    if (!results.includes(e)) results.push(e);
+                  });
+                } catch (_) {}
+                // 遍历子元素
+                try {
+                  node.children && Array.from(node.children).forEach((c) => walk(c));
+                } catch (_) {}
+              }
+              walk(root);
+              return results;
+            }
+            
+            const buttons = queryButtons(document);
+            for (const btn of buttons) {
+              const text = (btn.textContent || '').trim();
+              if (text.includes('联网搜索') || text.includes('联网')) {
+                return btn;
+              }
+            }
+            return null;
+          }
+          
+          function createOptimizeButton() {
+            if (inlineBtn) return inlineBtn;
+            
+            const networkBtn = findNetworkSearchButton();
+            if (!networkBtn) return null;
+            
+            // 创建与其他 AI 网站一致的圆形白色按钮样式
+            inlineBtn = document.createElement('button');
+            inlineBtn.id = 'lc-optimize-btn-inline';
+            inlineBtn.type = 'button';
+            inlineBtn.setAttribute('aria-disabled', 'false');
+            inlineBtn.setAttribute('role', 'button');
+            inlineBtn.tabIndex = 0;
+            
+            // 使用与其他站点一致的样式：圆形白色按钮，带 logo
+            inlineBtn.style.cssText = `
+              width: 34px;
+              height: 34px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 50%;
+              border: none;
+              background: #ffffff url('${logoUrl}') center/70% no-repeat;
+              box-shadow: 0 6px 16px rgba(0,0,0,.2);
+              cursor: pointer;
+              transition: transform .15s ease, opacity .15s ease;
+              margin-left: 6px;
+              margin-right: 6px;
+              padding: 0;
+              flex-shrink: 0;
+              opacity: .95;
+            `;
+            
+            inlineBtn.title = '优化提示词（LifeContext）';
+            
+            // 如果 logo 加载失败，使用 SVG 图标作为回退
+            const logoImg = document.createElement('img');
+            logoImg.src = logoUrl;
+            logoImg.style.cssText = 'width: 70%; height: 70%; display: block; object-fit: contain;';
+            logoImg.onerror = () => {
+              // 如果图片加载失败，使用 SVG 图标作为回退
+              inlineBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6;">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                  <path d="M2 17l10 5 10-5"></path>
+                  <path d="M2 12l10 5 10-5"></path>
+                </svg>
+              `;
+            };
+            if (!inlineBtn.querySelector('img')) {
+              inlineBtn.appendChild(logoImg);
+            }
+            
+            // 添加悬停效果
+            inlineBtn.addEventListener('mouseenter', () => {
+              inlineBtn.style.transform = 'scale(1.05)';
+            });
+            inlineBtn.addEventListener('mouseleave', () => {
+              inlineBtn.style.transform = 'scale(1)';
+            });
+            
+            // 添加点击事件（在 swallow 之前，使用 capture 阶段确保优先执行）
+            inlineBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              console.log('[LC] DeepSeek button clicked');
+              // 直接调用优化函数
+              triggerOptimize();
+            }, { capture: true });
+            
+            // 防止站点委托的发送事件被触发（但不阻止 click，因为 click 已经在 capture 阶段处理）
+            try {
+              const swallow = (evt) => {
+                // 如果是 click 事件，不阻止（因为已经在上面处理了）
+                if (evt.type === 'click') return;
+                try { evt.preventDefault && evt.preventDefault(); } catch(_) {}
+                try { evt.stopPropagation && evt.stopPropagation(); } catch(_) {}
+                try { evt.stopImmediatePropagation && evt.stopImmediatePropagation(); } catch(_) {}
+              };
+              ['pointerdown','pointerup','mousedown','mouseup','touchstart','touchend'].forEach((t) => {
+                inlineBtn.addEventListener(t, swallow, { capture: true });
+              });
+            } catch(_) {}
+            
+            return inlineBtn;
+          }
+          
+          function insertButton() {
+            if (inserted && inlineBtn && inlineBtn.parentElement) return;
+            
+            const networkBtn = findNetworkSearchButton();
+            if (!networkBtn) return;
+            
+            const container = networkBtn.parentElement;
+            if (!container) return;
+            
+            const btn = createOptimizeButton();
+            if (!btn) return;
+            
+            // 插入到"联网搜索"按钮之后
+            if (networkBtn.nextSibling) {
+              container.insertBefore(btn, networkBtn.nextSibling);
+            } else {
+              container.appendChild(btn);
+            }
+            
+            inserted = true;
+          }
+          
+          // 初始尝试插入
+          setTimeout(() => {
+            insertButton();
+          }, 500);
+          
+          // 监听 DOM 变化，确保按钮始终存在
+          const observer = new MutationObserver(() => {
+            if (!inserted || !inlineBtn || !inlineBtn.parentElement) {
+              inserted = false;
+              insertButton();
+            }
+          });
+          
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+          
+          // 定期检查（作为兜底）
+          setInterval(() => {
+            if (!inserted || !inlineBtn || !inlineBtn.parentElement) {
+              inserted = false;
+              insertButton();
+            }
+          }, 2000);
+          
+        } catch (e) {
+          console.warn('[LC] DeepSeek inline button init failed:', e);
+        }
+      }
+      
+      // 初始化 DeepSeek 内嵌按钮
+      try { initDeepSeekInlineButton(); } catch (_) {}
+      
       return;  // 仅采用内嵌注入策略，阻断旧的浮动定位逻辑
 
       function isSupportedAISite(host) {
@@ -2162,7 +2388,8 @@
           h.includes('doubao.com') || h.includes('douba.ai') ||
           h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com') ||
           h.includes('x.ai') || h.includes('grok') ||
-          h.includes('perplexity.ai')
+          h.includes('perplexity.ai') ||
+          h.includes('deepseek.com')
         );
       }
 
@@ -2955,8 +3182,8 @@
               const kind = (typeof getHostCategory === 'function') ? getHostCategory() : '';
               if (kind !== 'doubao' && kind !== 'kimi' && kind !== 'claude') {
                 // 其他站点：默认自动触发一次原生发送以驱动内部状态
-                tryClickSiteSend();
-              } else {
+             tryClickSiteSend();
+          } else {
                 // 在豆包、Kimi、Claude 上，严格不触发任何站点发送逻辑
                 console.log('[LC] 站点', kind, '不触发自动发送');
               }
