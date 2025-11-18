@@ -1104,7 +1104,13 @@
             ];
           case 'grok':
             return [
-              'button[aria-label*="microphone" i]::parent'
+              // Grok: 优先使用模型选择按钮的容器（div.z-20），样式更美观
+              'div.z-20:has(button#model-select-trigger)',
+              'button#model-select-trigger::parent',
+              // 兜底：发送按钮的父容器
+              'button[type="submit"]::parent',
+              // 最后兜底：包含输入框的容器
+              'div.tiptap.ProseMirror::parent'
             ];
           default:
             return common;
@@ -1285,6 +1291,56 @@
                 bar.appendChild(btnEl);
               }
             }
+          } else if (kind === 'grok') {
+            // Grok: 优先使用模型选择按钮的容器（div.z-20），样式更美观
+            const modelBtn = bar.querySelector('button#model-select-trigger') || document.querySelector('button#model-select-trigger');
+            if (modelBtn && modelBtn.parentElement) {
+              const modelContainer = modelBtn.parentElement;
+              // 确保是 div.z-20 容器
+              if (modelContainer.classList && modelContainer.classList.contains('z-20')) {
+                // 调整按钮样式以匹配 Grok 的 UI
+                btnEl.style.cssText = '';
+                btnEl.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-100 select-none hover:bg-button-ghost-hover disabled:hover:bg-transparent border border-transparent h-10 py-1.5 text-sm rounded-full text-primary px-3.5 focus:outline-none';
+                // 设置按钮内容：使用图标
+                const logoImg = document.createElement('img');
+                logoImg.src = logoUrl;
+                logoImg.style.cssText = 'width: 18px; height: 18px; display: block;';
+                logoImg.onerror = () => {
+                  // 如果图片加载失败，使用 SVG 图标作为回退
+                  btnEl.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                      <path d="M2 17l10 5 10-5"></path>
+                      <path d="M2 12l10 5 10-5"></path>
+                    </svg>
+                  `;
+                };
+                if (!btnEl.querySelector('img')) {
+                  btnEl.innerHTML = '';
+                  btnEl.appendChild(logoImg);
+                }
+                btnEl.title = '优化提示词（LifeContext）';
+                // 将按钮插入到模型选择按钮之前
+                if (btnEl.parentElement !== modelContainer || btnEl.nextSibling !== modelBtn) {
+                  modelContainer.insertBefore(btnEl, modelBtn);
+                }
+                return true;
+              }
+            }
+            // 兜底：使用发送按钮的父容器
+            const sendBtn = bar.querySelector('button[type="submit"]') || document.querySelector('button[type="submit"]');
+            if (sendBtn && sendBtn.parentElement) {
+              const controlsParent = sendBtn.parentElement;
+              // 将按钮插入到发送按钮之前
+              if (btnEl.parentElement !== controlsParent || btnEl.nextSibling !== sendBtn) {
+                controlsParent.insertBefore(btnEl, sendBtn);
+              }
+              return true;
+            }
+            // 最后兜底：放到 bar 末尾
+            if (btnEl.parentElement !== bar) {
+              bar.appendChild(btnEl);
+            }
           } else {
             // 其他站点：优先跟在语音/听写按钮后
             const mic = bar.querySelector('button[data-testid="composer-voice-button"], button[aria-label*="Voice" i], button[aria-label*="Microphone" i], button[aria-label*="语音" i], button[aria-label*="听写" i]');
@@ -1336,6 +1392,58 @@
                 try { btnEl.classList.add('composer-btn'); } catch (_) {}
                 if (btnEl.parentElement !== controlsParent || btnEl.nextSibling !== anchor) {
                   controlsParent.insertBefore(btnEl, anchor);
+                }
+                return true;
+              } catch (_) { return false; }
+            })();
+            if (!okDirect) return false;
+            injectPageBridge();
+            return true;
+          } else if (kind === 'grok') {
+            // Grok 兜底：优先查找模型选择按钮的容器，否则使用发送按钮的父容器
+            const okDirect = (function tryDirectGrokMount() {
+              try {
+                const btnEl = ensureInlineBtn();
+                // 优先：查找模型选择按钮的容器（div.z-20）
+                const modelBtn = document.querySelector('button#model-select-trigger');
+                if (modelBtn && modelBtn.parentElement) {
+                  const modelContainer = modelBtn.parentElement;
+                  if (modelContainer.classList && modelContainer.classList.contains('z-20')) {
+                    // 调整按钮样式以匹配 Grok 的 UI
+                    btnEl.style.cssText = '';
+                    btnEl.className = 'inline-flex items-center justify-center gap-2 whitespace-nowrap font-medium cursor-pointer focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-100 select-none hover:bg-button-ghost-hover disabled:hover:bg-transparent border border-transparent h-10 py-1.5 text-sm rounded-full text-primary px-3.5 focus:outline-none';
+                    // 设置按钮内容：使用图标
+                    const logoImg = document.createElement('img');
+                    logoImg.src = logoUrl;
+                    logoImg.style.cssText = 'width: 18px; height: 18px; display: block;';
+                    logoImg.onerror = () => {
+                      btnEl.innerHTML = `
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                          <path d="M2 17l10 5 10-5"></path>
+                          <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                      `;
+                    };
+                    if (!btnEl.querySelector('img')) {
+                      btnEl.innerHTML = '';
+                      btnEl.appendChild(logoImg);
+                    }
+                    btnEl.title = '优化提示词（LifeContext）';
+                    // 将按钮插入到模型选择按钮之前
+                    if (btnEl.parentElement !== modelContainer || btnEl.nextSibling !== modelBtn) {
+                      modelContainer.insertBefore(btnEl, modelBtn);
+                    }
+                    return true;
+                  }
+                }
+                // 兜底：使用发送按钮的父容器
+                const sendBtn = document.querySelector('button[type="submit"]');
+                if (!sendBtn || !sendBtn.parentElement) return false;
+                const controlsParent = sendBtn.parentElement;
+                // 将按钮插入到发送按钮之前
+                if (btnEl.parentElement !== controlsParent || btnEl.nextSibling !== sendBtn) {
+                  controlsParent.insertBefore(btnEl, sendBtn);
                 }
                 return true;
               } catch (_) { return false; }
@@ -1451,7 +1559,15 @@
         } else if (host.includes('moonshot.cn') || host.includes('kimi.moonshot.cn') || host.includes('kimi.com')) {
           siteExtra.push('div[contenteditable="true"][data-lexical-editor]', 'div[contenteditable="true"]');
         } else if (host.includes('x.ai') || host.includes('grok')) {
-          siteExtra.push('div[contenteditable="true"][data-slate-editor]', 'div[contenteditable="true"]', 'textarea');
+          // Grok: Tiptap/ProseMirror 编辑器
+          siteExtra.push(
+            'div.tiptap.ProseMirror',
+            'div[contenteditable="true"].tiptap',
+            'div[contenteditable="true"].ProseMirror',
+            'div[contenteditable="true"][data-slate-editor]',
+            'div[contenteditable="true"]',
+            'textarea'
+          );
         } else if (host.includes('doubao.com') || host.includes('douba.ai')) {
           // 豆包：输入框常为 contenteditable，可带 role/placeholder 等属性，且可能在容器内
           siteExtra.push(
@@ -1770,11 +1886,32 @@
           return;
         }
 
-        // contenteditable（Kimi: Lexical；豆包：部分场景下使用 CE 或 textarea）
+        // contenteditable（Kimi: Lexical；豆包：部分场景下使用 CE 或 textarea；Grok: Tiptap/ProseMirror）
         if (target && (target.getAttribute && (target.getAttribute('contenteditable') === 'true' || target.isContentEditable))) {
           try { target.focus && target.focus(); } catch (_) {}
 
-          // 优先使用 execCommand 以兼容富文本编辑器的内部状态（Lexical/Slate/ProseMirror 等）
+          // Grok (Tiptap/ProseMirror): 使用 innerHTML 方式，确保编辑器正确更新
+          const isGrok = hostLower.includes('x.ai') || hostLower.includes('grok');
+          if (isGrok && target.classList && (target.classList.contains('tiptap') || target.classList.contains('ProseMirror'))) {
+            try {
+              // Tiptap/ProseMirror 需要保持 <p> 标签结构
+              target.innerHTML = `<p>${text}</p>`;
+              target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
+              target.dispatchEvent(new Event('change', { bubbles: true }));
+              // 光标移至末尾
+              const sel = window.getSelection && window.getSelection();
+              if (sel) {
+                const range = document.createRange();
+                range.selectNodeContents(target);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+              return;
+            } catch (_) {}
+          }
+
+          // 其他站点：优先使用 execCommand 以兼容富文本编辑器的内部状态（Lexical/Slate/ProseMirror 等）
           let ok = false;
           try {
             // 选中全部
