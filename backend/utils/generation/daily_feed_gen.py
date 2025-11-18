@@ -276,6 +276,7 @@ async def _generate_todo_card(context: Dict[str, Any], date_str: str) -> Optiona
         todos_json = json.dumps(todos, ensure_ascii=False, indent=2)
         
         # 获取prompt
+        PROMPTS = get_current_prompts()
         todo_prompt = PROMPTS.get("todo_summary", {})
         system_prompt = todo_prompt.get("system", "")
         user_template = todo_prompt.get("user_template", "")
@@ -375,6 +376,7 @@ async def _generate_news_cards(context: Dict[str, Any], date_str: str, count: in
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
         
         # 获取prompt
+        PROMPTS = get_current_prompts()
         news_prompt = PROMPTS.get("news_recommendation", {})
         system_prompt = news_prompt.get("system", "")
         user_template = news_prompt.get("user_template", "")
@@ -504,6 +506,7 @@ async def _generate_knowledge_cards(context: Dict[str, Any], date_str: str, coun
         context_json = json.dumps(context_data, ensure_ascii=False, indent=2)
         
         # 获取prompt
+        PROMPTS = get_current_prompts()
         knowledge_prompt = PROMPTS.get("knowledge_recommendation", {})
         system_prompt = knowledge_prompt.get("system", "")
         user_template = knowledge_prompt.get("user_template", "")

@@ -12,7 +12,7 @@ from utils.db import (
     get_reports, get_todos, get_activities, get_tips,
     update_todo_status, update_todo, delete_todo,
     insert_report, insert_activity, insert_tip, insert_todo,
-    get_daily_feed, get_daily_feeds
+    get_daily_feeds, get_setting
 )
 from utils.generation import (
     create_activity_report,
@@ -574,130 +574,161 @@ def manual_generate_todos():
         return convert_resp(code=500, status=500, message=f"生成待办事项失败: {str(e)}")
 
 
-@generation_bp.route('/daily-feed', methods=['GET', 'POST'])
+@generation_bp.route('/daily-feed', methods=['GET'])
 @auth_required
-def daily_feed_endpoint():
+def get_daily_feed():
     """
-    每日Feed接口
-    - GET: 获取已生成的Feed数据（从数据库）
-    - POST: 生成新的Feed并存储到数据库
+    GET - 获取已生成的Feed数据（从数据库）
     """
-    if request.method == 'GET':
-        # GET: 获取已生成的Feed
-        try:
-            # 获取查询参数
-            date_param = request.args.get('date')  # 可选的日期参数，格式：YYYY-MM-DD
-            list_mode = request.args.get('list', 'false').lower() == 'true'  # 是否列表模式
-            
-            if list_mode:
-                # 列表模式：获取最近的Feed列表
-                limit = request.args.get('limit', 10, type=int)
-                offset = request.args.get('offset', 0, type=int)
-                feeds = get_daily_feeds(limit=limit, offset=offset)
-                # 为返回的每个 feed 中的 cards 添加顺序 id
-                try:
-                    for f in feeds:
-                        if isinstance(f, dict) and 'cards' in f:
-                            f['cards'] = _assign_sequential_ids(f.get('cards', []))
-                            f['total_count'] = len(f.get('cards', []))
-                except Exception:
-                    # 不阻塞，继续返回原始数据
-                    pass
-
-                return convert_resp(
-                    message="Daily feeds retrieved successfully",
-                    data={
-                        "feeds": feeds,
-                        "total": len(feeds)
-                    }
-                )
-            else:
-                # 单个Feed模式：默认获取当天的Feed
-                if not date_param:
-                    date_param = datetime.now().strftime('%Y-%m-%d')
-                
-                # 获取指定日期的Feed
-                feed_data = get_daily_feed(date_param)
-                if feed_data:
-                    # 为返回的 cards 添加顺序 id（覆盖或新增 id 字段）
-                    try:
-                        feed_data['cards'] = _assign_sequential_ids(feed_data.get('cards', []))
-                        feed_data['total_count'] = len(feed_data.get('cards', []))
-                    except Exception:
-                        pass
-
-                    return convert_resp(
-                        message="Daily feed retrieved successfully",
-                        data=feed_data  # 直接返回feed数据，不包装
-                    )
-                else:
-                    return convert_resp(
-                        code=404,
-                        status=404,
-                        message=f"No feed found for date {date_param}"
-                    )
-            
+    try:
+        # 获取查询参数
+        date_param = request.args.get('date')  # 可选的日期参数，格式：YYYY-MM-DD
+        list_mode = request.args.get('list', 'false').lower() == 'true'  # 是否列表模式
         
-        except Exception as e:
-            logger.exception(f"Error retrieving daily feed: {e}")
-            return convert_resp(code=500, status=500, message=f"Failed to retrieve daily feed: {str(e)}")
-    
-    else:
-        # POST: 生成新的Feed
-        try:
-            # 获取查询参数
-            lookback_hours = request.args.get('lookback_hours', 24, type=int)
-            date_param = request.args.get('date')  # 可选的日期参数，格式：YYYY-MM-DD
+        if list_mode:
+            # 列表模式：获取最近的Feed列表
+            limit = request.args.get('limit', 10, type=int)
+            offset = request.args.get('offset', 0, type=int)
+            feeds = get_daily_feeds(limit=limit, offset=offset)
+            # 为返回的每个 feed 中的 cards 添加顺序 id
+            try:
+                for f in feeds:
+                    if isinstance(f, dict) and 'cards' in f:
+                        f['cards'] = _assign_sequential_ids(f.get('cards', []))
+                        f['total_count'] = len(f.get('cards', []))
+            except Exception:
+                # 不阻塞，继续返回原始数据
+                pass
+
+            return convert_resp(
+                message="Daily feeds retrieved successfully",
+                data={
+                    "feeds": feeds,
+                    "total": len(feeds)
+                }
+            )
+        else:
+            # 单个Feed模式：默认获取当天的Feed
+            if not date_param:
+                date_param = datetime.now().strftime('%Y-%m-%d')
             
-            # 如果指定了日期，计算该日期的时间范围
-            if date_param:
-                try:
-                    target_date = datetime.strptime(date_param, '%Y-%m-%d')
-                    # 设置为当天的开始和结束
-                    from datetime import time
-                    start_dt = datetime.combine(target_date.date(), time.min)
-                    end_dt = datetime.combine(target_date.date(), time.max)
+            # 获取指定日期的Feed
+            from utils.db import get_daily_feed as db_get_daily_feed
+            feed_data = db_get_daily_feed(date_param)
+            
+            # 如果是当天且没有数据，检查是否已过生成时间点，若已过则立即生成
+            if not feed_data and date_param == datetime.now().strftime('%Y-%m-%d'):
+                # 获取配置的生成时间点
+                from config import ENABLE_SCHEDULER_DAILY_FEED
+                if ENABLE_SCHEDULER_DAILY_FEED:
+                    feed_hour = int(get_setting('daily_feed_hour', '8'))
+                    feed_minute = int(get_setting('daily_feed_minute', '0'))
                     
-                    # 计算lookback_hours（用于兼容现有逻辑）
-                    lookback_hours = int((end_dt - start_dt).total_seconds() / 3600)
-                except ValueError:
-                    return convert_resp(
-                        code=400,
-                        status=400,
-                        message="日期格式错误，请使用 YYYY-MM-DD 格式"
-                    )
+                    # 检查当前时间是否已过生成时间点
+                    now = datetime.now()
+                    generation_time = now.replace(hour=feed_hour, minute=feed_minute, second=0, microsecond=0)
+                    
+                    if now >= generation_time:
+                        # 已过生成时间点，立即生成
+                        logger.info(f"Current time ({now.strftime('%H:%M')}) is past generation time ({feed_hour:02d}:{feed_minute:02d}), generating daily feed now")
+                        try:
+                            from utils.generation.daily_feed_gen import generate_daily_feed
+                            result = asyncio.run(generate_daily_feed(lookback_hours=24))
+                            
+                            if result.get('success'):
+                                # 生成成功，再从数据库获取
+                                feed_data = db_get_daily_feed(date_param)
+                                logger.info(f"Daily feed generated successfully on-demand")
+                            else:
+                                logger.warning(f"Failed to generate daily feed on-demand: {result.get('message')}")
+                        except Exception as e:
+                            logger.exception(f"Error generating daily feed on-demand: {e}")
             
-            # 导入daily feed生成函数
-            from utils.generation.daily_feed_gen import generate_daily_feed
-            
-            # 生成每日Feed（会自动存储到数据库）
-            result = asyncio.run(generate_daily_feed(lookback_hours))
-            
-            if result.get('success'):
-                cards = result.get('cards', [])
-                # 为生成结果的 cards 添加顺序 id（仅用于返回给前端）
+            if feed_data:
+                # 为返回的 cards 添加顺序 id（覆盖或新增 id 字段）
                 try:
-                    cards = _assign_sequential_ids(cards)
+                    feed_data['cards'] = _assign_sequential_ids(feed_data.get('cards', []))
+                    feed_data['total_count'] = len(feed_data.get('cards', []))
                 except Exception:
                     pass
 
-                logger.info(f"Generated and saved daily feed with {len(cards)} cards")
-                
                 return convert_resp(
-                    message="Daily feed generated and saved successfully",
-                    data={
-                        "date": result.get('date'),
-                        "cards": cards,
-                        "total_count": result.get('total_count', len(cards))
-                    }
+                    message="Daily feed retrieved successfully",
+                    data=feed_data  # 直接返回feed数据，不包装
                 )
             else:
+                # 没有生成的feed时，返回空对象，状态码200
                 return convert_resp(
-                    code=500,
-                    status=500,
-                    message=result.get('message', 'Daily feed generation failed')
+                    message="No feed generated yet",
+                    data={"cards":[],"date":date_param,"total_count":0}
                 )
+        
+    
+    except Exception as e:
+        logger.exception(f"Error retrieving daily feed: {e}")
+        return convert_resp(code=500, status=500, message=f"Failed to retrieve daily feed: {str(e)}")
+
+
+@generation_bp.route('/daily-feed', methods=['POST'])
+@auth_required
+def manual_generate_daily_feed():
+    """
+    POST - 生成新的Feed并存储到数据库
+    """
+    try:
+        # 获取查询参数
+        lookback_hours = request.args.get('lookback_hours', 24, type=int)
+        date_param = request.args.get('date')  # 可选的日期参数，格式：YYYY-MM-DD
+        
+        # 如果指定了日期，计算该日期的时间范围
+        if date_param:
+            try:
+                target_date = datetime.strptime(date_param, '%Y-%m-%d')
+                # 设置为当天的开始和结束
+                from datetime import time
+                start_dt = datetime.combine(target_date.date(), time.min)
+                end_dt = datetime.combine(target_date.date(), time.max)
+                
+                # 计算lookback_hours（用于兼容现有逻辑）
+                lookback_hours = int((end_dt - start_dt).total_seconds() / 3600)
+            except ValueError:
+                return convert_resp(
+                    code=400,
+                    status=400,
+                    message="日期格式错误，请使用 YYYY-MM-DD 格式"
+                )
+        
+        # 导入daily feed生成函数
+        from utils.generation.daily_feed_gen import generate_daily_feed
+        
+        # 生成每日Feed（会自动存储到数据库）
+        result = asyncio.run(generate_daily_feed(lookback_hours))
+        
+        if result.get('success'):
+            cards = result.get('cards', [])
+            # 为生成结果的 cards 添加顺序 id（仅用于返回给前端）
+            try:
+                cards = _assign_sequential_ids(cards)
+            except Exception:
+                pass
+
+            logger.info(f"Generated and saved daily feed with {len(cards)} cards")
             
-        except Exception as e:
-            logger.exception(f"Error generating daily feed: {e}")
-            return convert_resp(code=500, status=500, message=f"Daily feed generation failed: {str(e)}")
+            return convert_resp(
+                message="Daily feed generated and saved successfully",
+                data={
+                    "date": result.get('date'),
+                    "cards": cards,
+                    "total_count": result.get('total_count', len(cards))
+                }
+            )
+        else:
+            return convert_resp(
+                code=500,
+                status=500,
+                message=result.get('message', 'Daily feed generation failed')
+            )
+        
+    except Exception as e:
+        logger.exception(f"Error generating daily feed: {e}")
+        return convert_resp(code=500, status=500, message=f"Daily feed generation failed: {str(e)}")
