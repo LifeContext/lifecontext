@@ -2,6 +2,26 @@
   if (window.__my_floating_chat_injected__) return;
   window.__my_floating_chat_injected__ = true;
 
+  // 全局事件拦截器：防止 Claude 在替换输入框内容时自动触发发送
+  // 当 suppressInputEvents 为 true 时，拦截所有 input/change 事件
+  let suppressInputEvents = false;
+  try {
+    window.addEventListener('input', (e) => {
+      if (suppressInputEvents) {
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, { capture: true });
+    window.addEventListener('change', (e) => {
+      if (suppressInputEvents) {
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, { capture: true });
+  } catch (_) {}
+
   // 悬浮球与聊天框功能暂时禁用（保留全部代码以便后续恢复）。
   // 如需恢复，请删除/注释掉下方的 return 语句。
   //return;
@@ -1086,7 +1106,9 @@
             ];
           case 'claude':
             return [
-              'button[aria-label*="Attach" i]::parent'
+              // Claude: 使用最新的输入栏工具栏（2025 最新结构）
+              'div[data-testid="input-composer"] > div.flex.items-center',
+              'div[data-testid="input-composer"] div.flex.items-center.gap-2'
             ];
           case 'doubao':
             return [
@@ -1354,6 +1376,165 @@
             if (btnEl.parentElement !== bar) {
               bar.appendChild(btnEl);
             }
+          } else if (kind === 'claude') {
+            // Claude: 使用最新的输入栏工具栏（2025 最新结构）
+            // 安全区域：div[data-testid="input-composer"] > div.flex.items-center
+            // 绝对不能插入到 Vue 管控区域（如 Extended thinking 按钮的父容器）
+            
+            // 确保 bar 是安全的工具栏区域
+            if (!bar) return false;
+            
+            // 检查是否已经插入过（防止重复插入）
+            if (bar.querySelector('[data-lc-btn]') !== null) {
+              // 如果按钮已经在 bar 中，确保位置正确
+              if (btnEl.parentElement === bar) return true;
+            }
+            
+            // 确保 bar 不包含 Vue 管控的按钮（安全检测）
+            if (bar.querySelector('button[aria-label="Extended thinking"]')) {
+              // 这是 Vue 管控区域，不能插入，查找正确的工具栏
+              const toolbar = document.querySelector('div[data-testid="input-composer"] > div.flex.items-center');
+              if (!toolbar || toolbar.querySelector('button[aria-label="Extended thinking"]')) {
+                return false; // 找不到安全区域，放弃
+              }
+              bar = toolbar; // 使用正确的工具栏
+            }
+            
+            // 查找左侧按钮组（通常包含 +、设置、历史等按钮）
+            // 尝试找到左侧按钮组的最后一个按钮，将我们的按钮插入到它之后
+            const leftButtons = bar.querySelectorAll('button[aria-label*="Attach" i], button[aria-label*="Open" i], button[aria-label*="menu" i]');
+            let insertAfter = null;
+            
+            if (leftButtons.length > 0) {
+              // 找到左侧按钮组的最后一个按钮
+              insertAfter = leftButtons[leftButtons.length - 1];
+            }
+            
+            // 配置按钮样式（匹配 Claude 的按钮风格）
+            btnEl.setAttribute('data-lc-btn', '1');
+            btnEl.setAttribute('type', 'button');
+            btnEl.setAttribute('aria-label', '优化提示词');
+            btnEl.title = '优化提示词（LifeContext）';
+            
+            // 匹配 Claude 按钮的样式：方形、圆角、深色背景、白色图标
+            btnEl.style.cssText = `
+              width: 32px;
+              height: 32px;
+              min-width: 32px;
+              border-radius: 8px;
+              border: none;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              background: rgba(255, 255, 255, 0.05);
+              transition: all 0.15s ease;
+              margin: 0 4px;
+              padding: 0;
+              flex-shrink: 0;
+            `;
+            
+            // 防止触发 Claude 的发送逻辑：使用 pointer-events 方案
+            // 将按钮设置为 pointer-events: none，让内部元素处理点击
+            // 这样 Claude 的全局监听器不会监听到 button 元素的事件
+            btnEl.style.pointerEvents = 'none';
+            
+            // 清空并重建按钮内容
+            btnEl.innerHTML = '';
+            
+            // 创建内部容器，用于处理点击事件
+            const innerContainer = document.createElement('div');
+            innerContainer.style.cssText = `
+              pointer-events: auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 100%;
+              height: 100%;
+              cursor: pointer;
+            `;
+            
+            // 添加 hover 效果（在内部容器上）
+            innerContainer.addEventListener('mouseenter', () => {
+              btnEl.style.background = 'rgba(255, 255, 255, 0.1)';
+              btnEl.style.transform = 'scale(1.05)';
+            });
+            innerContainer.addEventListener('mouseleave', () => {
+              btnEl.style.background = 'rgba(255, 255, 255, 0.05)';
+              btnEl.style.transform = 'scale(1)';
+            });
+            
+            // 创建图标（使用原本的样式）
+            const logoImg = document.createElement('img');
+            logoImg.src = logoUrl;
+            logoImg.alt = 'LifeContext';
+            logoImg.style.cssText = 'width: 18px; height: 18px; display: block;';
+            logoImg.onerror = () => {
+              try {
+                // 如果图片加载失败，使用 SVG 图标作为回退
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', '18');
+                svg.setAttribute('height', '18');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.setAttribute('stroke-width', '2');
+                svg.style.cssText = 'width: 18px; height: 18px;';
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M12 2L2 7l10 5 10-5-10-5z');
+                svg.appendChild(path);
+                if (logoImg.parentElement === innerContainer) {
+                  innerContainer.replaceChild(svg, logoImg);
+                } else {
+                  innerContainer.appendChild(svg);
+                }
+              } catch(_) {
+                // 最后的回退：使用文本
+                innerContainer.textContent = 'LC';
+                innerContainer.style.fontSize = '11px';
+                innerContainer.style.fontWeight = '600';
+              }
+            };
+            
+            // 在内部容器上绑定点击事件，阻止冒泡
+            innerContainer.addEventListener('click', (e) => {
+              try {
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
+                e.stopImmediatePropagation && e.stopImmediatePropagation();
+              } catch(_) {}
+              onOptimizeClick(e);
+            });
+            
+            // 为内部容器添加其他可能的事件阻止
+            ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach((t) => {
+              innerContainer.addEventListener(t, (e) => {
+                try {
+                  e.preventDefault && e.preventDefault();
+                  e.stopPropagation && e.stopPropagation();
+                  e.stopImmediatePropagation && e.stopImmediatePropagation();
+                } catch(_) {}
+              }, { capture: true, passive: false });
+            });
+            
+            innerContainer.appendChild(logoImg);
+            btnEl.appendChild(innerContainer);
+            
+            // 插入按钮到合适的位置
+            if (insertAfter && insertAfter.nextSibling) {
+              // 插入到左侧按钮组的最后一个按钮之后
+              bar.insertBefore(btnEl, insertAfter.nextSibling);
+            } else if (insertAfter) {
+              // 如果没有下一个兄弟节点，追加到按钮之后
+              insertAfter.parentElement.insertBefore(btnEl, insertAfter.nextSibling);
+            } else {
+              // 兜底：插入到工具栏的开头（左侧）
+              if (btnEl.parentElement !== bar) {
+                bar.insertBefore(btnEl, bar.firstChild);
+              }
+            }
+            
+            return true;
           } else if (kind === 'gemini') {
             // Gemini: 将按钮插入到 leading-actions-wrapper 容器中，放在工具按钮之前
             // 注意：使用安全的 DOM 操作，避免破坏 Angular 的渲染结构
@@ -1637,6 +1818,165 @@
             if (!okDirect) return false;
             injectPageBridge();
             return true;
+          } else if (kind === 'claude') {
+            // Claude 兜底：使用最新的输入栏工具栏（2025 最新结构）
+            const okDirect = (function tryDirectClaudeMount() {
+              try {
+                const btnEl = ensureInlineBtn();
+                // Claude 最新的输入栏工具栏（安全区域）
+                const toolbar = document.querySelector('div[data-testid="input-composer"] > div.flex.items-center');
+                if (!toolbar) return false; // Claude 还没渲染完成
+                
+                // 防止插入到 Vue 管控区域（必须只插入 toolbar）
+                if (toolbar.querySelector('[data-lc-btn]') !== null) {
+                  // 如果按钮已经在 toolbar 中，确保位置正确
+                  if (btnEl.parentElement === toolbar) return true;
+                }
+                
+                // 确保 toolbar 不包含 Vue 管控的按钮（安全检测）
+                if (toolbar.querySelector('button[aria-label="Extended thinking"]')) {
+                  return false; // 这是 Vue 管控区域，不能插入
+                }
+                
+                // 查找左侧按钮组（通常包含 +、设置、历史等按钮）
+                const leftButtons = toolbar.querySelectorAll('button[aria-label*="Attach" i], button[aria-label*="Open" i], button[aria-label*="menu" i]');
+                let insertAfter = null;
+                
+                if (leftButtons.length > 0) {
+                  // 找到左侧按钮组的最后一个按钮
+                  insertAfter = leftButtons[leftButtons.length - 1];
+                }
+                
+                // 配置按钮样式（匹配 Claude 的按钮风格）
+                btnEl.setAttribute('data-lc-btn', '1');
+                btnEl.setAttribute('type', 'button');
+                btnEl.setAttribute('aria-label', '优化提示词');
+                btnEl.title = '优化提示词（LifeContext）';
+                
+                // 匹配 Claude 按钮的样式：方形、圆角、深色背景、白色图标
+                btnEl.style.cssText = `
+                  width: 32px;
+                  height: 32px;
+                  min-width: 32px;
+                  border-radius: 8px;
+                  border: none;
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  cursor: pointer;
+                  background: rgba(255, 255, 255, 0.05);
+                  transition: all 0.15s ease;
+                  margin: 0 4px;
+                  padding: 0;
+                  flex-shrink: 0;
+                `;
+                
+                // 防止触发 Claude 的发送逻辑：使用 pointer-events 方案
+                // 将按钮设置为 pointer-events: none，让内部元素处理点击
+                // 这样 Claude 的全局监听器不会监听到 button 元素的事件
+                btnEl.style.pointerEvents = 'none';
+                
+                // 清空并重建按钮内容
+                btnEl.innerHTML = '';
+                
+                // 创建内部容器，用于处理点击事件
+                const innerContainer = document.createElement('div');
+                innerContainer.style.cssText = `
+                  pointer-events: auto;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 100%;
+                  height: 100%;
+                  cursor: pointer;
+                `;
+                
+                // 添加 hover 效果（在内部容器上）
+                innerContainer.addEventListener('mouseenter', () => {
+                  btnEl.style.background = 'rgba(255, 255, 255, 0.1)';
+                  btnEl.style.transform = 'scale(1.05)';
+                });
+                innerContainer.addEventListener('mouseleave', () => {
+                  btnEl.style.background = 'rgba(255, 255, 255, 0.05)';
+                  btnEl.style.transform = 'scale(1)';
+                });
+                
+                // 创建图标（使用原本的样式）
+                const logoImg = document.createElement('img');
+                logoImg.src = logoUrl;
+                logoImg.alt = 'LifeContext';
+                logoImg.style.cssText = 'width: 18px; height: 18px; display: block;';
+                logoImg.onerror = () => {
+                  try {
+                    // 如果图片加载失败，使用 SVG 图标作为回退
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('width', '18');
+                    svg.setAttribute('height', '18');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    svg.setAttribute('fill', 'none');
+                    svg.setAttribute('stroke', 'currentColor');
+                    svg.setAttribute('stroke-width', '2');
+                    svg.style.cssText = 'width: 18px; height: 18px;';
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', 'M12 2L2 7l10 5 10-5-10-5z');
+                    svg.appendChild(path);
+                    if (logoImg.parentElement === innerContainer) {
+                      innerContainer.replaceChild(svg, logoImg);
+                    } else {
+                      innerContainer.appendChild(svg);
+                    }
+                  } catch(_) {
+                    // 最后的回退：使用文本
+                    innerContainer.textContent = 'LC';
+                    innerContainer.style.fontSize = '11px';
+                    innerContainer.style.fontWeight = '600';
+                  }
+                };
+                
+                // 在内部容器上绑定点击事件，阻止冒泡
+                innerContainer.addEventListener('click', (e) => {
+                  try {
+                    e.preventDefault && e.preventDefault();
+                    e.stopPropagation && e.stopPropagation();
+                    e.stopImmediatePropagation && e.stopImmediatePropagation();
+                  } catch(_) {}
+                  onOptimizeClick(e);
+                });
+                
+                // 为内部容器添加其他可能的事件阻止
+                ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach((t) => {
+                  innerContainer.addEventListener(t, (e) => {
+                    try {
+                      e.preventDefault && e.preventDefault();
+                      e.stopPropagation && e.stopPropagation();
+                      e.stopImmediatePropagation && e.stopImmediatePropagation();
+                    } catch(_) {}
+                  }, { capture: true, passive: false });
+                });
+                
+                innerContainer.appendChild(logoImg);
+                btnEl.appendChild(innerContainer);
+                
+                // 插入按钮到合适的位置
+                if (insertAfter && insertAfter.nextSibling) {
+                  // 插入到左侧按钮组的最后一个按钮之后
+                  toolbar.insertBefore(btnEl, insertAfter.nextSibling);
+                } else if (insertAfter) {
+                  // 如果没有下一个兄弟节点，追加到按钮之后
+                  insertAfter.parentElement.insertBefore(btnEl, insertAfter.nextSibling);
+                } else {
+                  // 兜底：插入到工具栏的开头（左侧）
+                  if (btnEl.parentElement !== toolbar) {
+                    toolbar.insertBefore(btnEl, toolbar.firstChild);
+                  }
+                }
+                
+                return true;
+              } catch (_) { return false; }
+            })();
+            if (!okDirect) return false;
+            injectPageBridge();
+            return true;
           } else if (kind === 'gemini') {
             // Gemini 兜底：全局查找 leading-actions-wrapper 容器，并插入按钮
             const okDirect = (function tryDirectGeminiMount() {
@@ -1836,6 +2176,14 @@
           return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 &&
                  rect.left < window.innerWidth && rect.top < window.innerHeight;
         }
+        // Claude: contenteditable div 可能在初始渲染时尺寸较小，放宽判定
+        if (host.includes('claude.ai')) {
+          const style = window.getComputedStyle(el);
+          if (style.visibility === 'hidden' || style.display === 'none') return false;
+          // 放宽尺寸阈值，避免 Vue 动态渲染阶段被误过滤
+          return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 &&
+                 rect.left < window.innerWidth && rect.top < window.innerHeight;
+        }
         // Gemini: Angular Material 输入框可能在初始渲染时尺寸较小，放宽判定
         if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
           const style = window.getComputedStyle(el);
@@ -1890,7 +2238,14 @@
         const host = location.hostname.toLowerCase();
         const siteExtra = [];
         if (host.includes('claude.ai')) {
-          siteExtra.push('div[contenteditable="true"].ProseMirror', 'textarea');
+          // Claude 最新版本（2025）：使用 contenteditable div，位于 input-composer 容器内
+          siteExtra.push(
+            'div[data-testid="input-composer"] div[contenteditable="true"]',
+            'div[data-testid="input-composer"] div.relative.flex.flex-col div[contenteditable="true"]',
+            'div[contenteditable="true"].ProseMirror',
+            'div[contenteditable="true"]',
+            'textarea'
+          );
         } else if (host.includes('moonshot.cn') || host.includes('kimi.moonshot.cn') || host.includes('kimi.com')) {
           siteExtra.push('div[contenteditable="true"][data-lexical-editor]', 'div[contenteditable="true"]');
         } else if (host.includes('x.ai') || host.includes('grok')) {
@@ -1964,6 +2319,18 @@
             const visibleCount = Array.from(nodes).filter(isVisible).length;
             // 仅在 Gemini 站点输出一次概要日志（采样：每 3s 内最多一次，可由上层节流）
             console.log(`[LC][Gemini] 候选输入框(初筛): ${allBeforeFilter.length}，并集后: ${afterUnion.length}，可见: ${visibleCount}`);
+          }
+        } catch (_) {}
+        // Claude：调试可见性与命中情况（便于排障）
+        try {
+          if (host.includes('claude.ai')) {
+            const allBeforeFilter = Array.from(nodes);
+            const extraAll = queryAllDeep(['div[data-testid="input-composer"] div[contenteditable="true"]', 'div[contenteditable="true"]', 'textarea'], document);
+            extraAll.forEach(n => nodes.add(n));
+            const afterUnion = Array.from(nodes);
+            const visibleCount = Array.from(nodes).filter(isVisible).length;
+            // 仅在 Claude 站点输出一次概要日志（采样：每 3s 内最多一次，可由上层节流）
+            console.log(`[LC][Claude] 候选输入框(初筛): ${allBeforeFilter.length}，并集后: ${afterUnion.length}，可见: ${visibleCount}`);
           }
         } catch (_) {}
         // 兜底：页面上最后一个 textarea/可编辑框
@@ -2255,7 +2622,69 @@
 
         // contenteditable（Kimi: Lexical；豆包：部分场景下使用 CE 或 textarea；Grok: Tiptap/ProseMirror）
         if (target && (target.getAttribute && (target.getAttribute('contenteditable') === 'true' || target.isContentEditable))) {
-          try { target.focus && target.focus(); } catch (_) {}
+          // Claude: 使用安全方式替换内容，避免触发自动发送
+          const isClaude = hostLower.includes('claude.ai');
+          if (isClaude) {
+            try {
+              // 方案 A + B + C：暂停事件监听、失焦、安全替换、恢复焦点
+              const prevActive = document.activeElement;
+              
+              // 1. 失焦，让 Claude 不会自动发送
+              target.blur && target.blur();
+              
+              // 2. 暂停事件监听（保存原始监听器）
+              const originalInput = target.oninput;
+              const originalChange = target.onchange;
+              target.oninput = null;
+              target.onchange = null;
+              
+              // 3. 启用全局事件拦截
+              suppressInputEvents = true;
+              
+              // 4. 安全替换内容（不触发任何事件）
+              // 使用 innerText 而不是 textContent，确保 Vue 能正确更新
+              target.innerText = text;
+              
+              // 5. 如果 contenteditable 有 value 属性，也更新它（某些 Vue 实现会用到）
+              try {
+                const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), 'value');
+                if (descriptor && descriptor.set) {
+                  descriptor.set.call(target, text);
+                }
+              } catch (_) {}
+              
+              // 6. 光标移至末尾（不触发事件）
+              const sel = window.getSelection && window.getSelection();
+              if (sel) {
+                const range = document.createRange();
+                range.selectNodeContents(target);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+              
+              // 7. 恢复事件监听
+              target.oninput = originalInput;
+              target.onchange = originalChange;
+              
+              // 8. 禁用全局事件拦截
+              suppressInputEvents = false;
+              
+              // 9. 恢复焦点（如果需要）
+              if (prevActive && prevActive !== target) {
+                setTimeout(() => {
+                  try {
+                    prevActive.focus && prevActive.focus();
+                  } catch (_) {}
+                }, 0);
+              }
+              
+              return;
+            } catch (_) {
+              // 如果出错，确保恢复状态
+              suppressInputEvents = false;
+            }
+          }
 
           // Grok (Tiptap/ProseMirror): 使用 innerHTML 方式，确保编辑器正确更新
           const isGrok = hostLower.includes('x.ai') || hostLower.includes('grok');
@@ -2293,7 +2722,7 @@
             try { target.textContent = text; } catch (_) {}
           }
 
-          // 触发站点监听
+        // 触发站点监听
           try { target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text })); } catch (_) {
             try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(__) {}
           }
@@ -2303,13 +2732,13 @@
           try {
             const sel = window.getSelection && window.getSelection();
             if (sel) {
-              const range = document.createRange();
+            const range = document.createRange();
               range.selectNodeContents(target);
-              range.collapse(false);
-              sel.removeAllRanges();
-              sel.addRange(range);
-            }
-          } catch (_) {}
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } catch (_) {}
           return;
         }
 
@@ -2441,12 +2870,18 @@
       }
 
       async function onOptimizeClick(e) {
+        // 保存原内容（在函数作用域，错误处理中也能访问）
+        let savedContent = '';
+        let targetEl = null;
+        
         try {
-          // 双保险：阻断默认与冒泡，避免触发站点发送逻辑（豆包/Kimi 等）
+          // 双保险：阻断默认与冒泡，避免触发站点发送逻辑（豆包/Kimi/Claude 等）
           try { e && e.preventDefault && e.preventDefault(); } catch(_) {}
           try { e && e.stopPropagation && e.stopPropagation(); } catch(_) {}
           try { e && e.stopImmediatePropagation && e.stopImmediatePropagation(); } catch(_) {}
+          
           currentTriggerBtn = (e && (e.currentTarget || e.target)) ? (e.currentTarget || e.target) : document.getElementById('lc-optimize-btn-inline');
+          
           // 1) 首选全局策略
           targetEl = pickChatInput();
           // 2) 兜底：从按钮出发就近查找
@@ -2463,8 +2898,16 @@
             console.warn('[LC] 未找到可写入的输入框，取消本次优化。');
             return;
           }
+          
+          // 保存原内容（重要：防止失败时丢失）
           const text = (readTextFrom(targetEl) || '').trim();
+          savedContent = text; // 保存原内容到函数作用域
           console.log('[LC] Original text length:', text.length);
+          
+          if (!text) {
+            console.warn('[LC] 输入框为空，取消本次优化。');
+            return;
+          }
           setBtnLoadingOn(currentTriggerBtn, true);
           optimizing = true;
 
@@ -2502,31 +2945,42 @@
           console.log('[LC] Extracted optimized length:', optimized ? optimized.length : 0);
 
           if (typeof optimized === 'string' && optimized.trim()) {
+            // 安全替换内容（不会触发 Claude 的自动发送）
             writeTextTo(targetEl, String(optimized).trim());
             hasWrittenOptimized = true;
-              // 非豆包/Kimi：默认自动触发一次原生发送以驱动内部状态
-              try {
-                const kind = (typeof getHostCategory === 'function') ? getHostCategory() : '';
-                if (kind !== 'doubao' && kind !== 'kimi') {
-                  tryClickSiteSend();
-                } else {
-                  // 在豆包与 Kimi 上，严格不触发任何站点发送逻辑
-                }
-              } catch(_) {}
+            
+            // 严格不触发站点发送逻辑的站点：豆包、Kimi、Claude
+            // Claude 会在内容替换时自动发送，所以绝对不能触发发送
+            try {
+              const kind = (typeof getHostCategory === 'function') ? getHostCategory() : '';
+              if (kind !== 'doubao' && kind !== 'kimi' && kind !== 'claude') {
+                // 其他站点：默认自动触发一次原生发送以驱动内部状态
+                tryClickSiteSend();
+              } else {
+                // 在豆包、Kimi、Claude 上，严格不触发任何站点发送逻辑
+                console.log('[LC] 站点', kind, '不触发自动发送');
+              }
+            } catch(_) {}
           } else {
-            // 未返回有效优化结果：保留原文（若原文为空则不改动）
-            if (text) writeTextTo(targetEl, text);
-            console.warn('[LC] 未获得优化结果，保持原文。');
+            // 未返回有效优化结果：恢复原内容
+            if (savedContent) {
+              writeTextTo(targetEl, savedContent);
+            }
+            console.warn('[LC] 未获得优化结果，已恢复原文。');
           }
 
           setBtnLoadingOn(currentTriggerBtn, false);
           optimizing = false;
-        } catch (_) {
+        } catch (err) {
           optimizing = false;
           setBtnLoadingOn(currentTriggerBtn, false);
-          // 出错时回滚原始文本
-          try { if (targetEl) writeTextTo(targetEl, readTextFrom(targetEl) || ''); } catch(_) {}
-          console.error('[LC] onOptimizeClick error:', _);
+          // 出错时恢复原内容
+          try {
+            if (targetEl && savedContent) {
+              writeTextTo(targetEl, savedContent);
+            }
+          } catch(_) {}
+          console.error('[LC] onOptimizeClick error:', err);
         }
       }
 
