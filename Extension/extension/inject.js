@@ -1096,6 +1096,10 @@
             ];
           case 'gemini':
             return [
+              // Gemini: 使用包含上传按钮和工具箱的容器（leading-actions-wrapper）
+              'div.leading-actions-wrapper.ui-ready-fade-in',
+              'div.leading-actions-wrapper',
+              // 兜底：发送按钮的父容器
               'button[aria-label*="Send" i]::parent'
             ];
           case 'kimi':
@@ -1350,6 +1354,121 @@
             if (btnEl.parentElement !== bar) {
               bar.appendChild(btnEl);
             }
+          } else if (kind === 'gemini') {
+            // Gemini: 将按钮插入到 leading-actions-wrapper 容器中，放在工具按钮之前
+            // 注意：使用安全的 DOM 操作，避免破坏 Angular 的渲染结构
+            const toolBtn = bar.querySelector('button.toolbox-drawer-button') || bar.querySelector('.toolbox-drawer-button');
+            if (toolBtn && toolBtn.parentElement) {
+              // 检查按钮是否已经有正确的 Material Design 结构
+              const hasCorrectStructure = btnEl.querySelector('.mat-mdc-button-persistent-ripple') && 
+                                         btnEl.querySelector('.mdc-button__label') &&
+                                         btnEl.querySelector('.mat-mdc-button-touch-target');
+              
+              if (!hasCorrectStructure) {
+                // 安全地清空按钮内容：只移除我们添加的元素，不影响 Angular 管理的元素
+                const existingChildren = Array.from(btnEl.children);
+                existingChildren.forEach(child => {
+                  // 只移除我们可能添加的元素，保留 Angular 管理的元素
+                  if (child.classList && (
+                    child.classList.contains('mat-mdc-button-persistent-ripple') ||
+                    child.classList.contains('mdc-button__label') ||
+                    child.classList.contains('mat-focus-indicator') ||
+                    child.classList.contains('mat-mdc-button-touch-target') ||
+                    child.classList.contains('mat-ripple') ||
+                    child.tagName === 'IMG' ||
+                    child.tagName === 'MAT-ICON'
+                  )) {
+                    try { child.remove(); } catch(_) {}
+                  }
+                });
+                
+                // 调整按钮样式以匹配 Gemini 的 Material Design UI
+                btnEl.style.cssText = '';
+                btnEl.className = 'mdc-button mat-mdc-button-base mat-mdc-button mat-unthemed';
+                btnEl.setAttribute('mat-button', '');
+                btnEl.setAttribute('type', 'button');
+                btnEl.setAttribute('aria-label', '优化提示词');
+                btnEl.style.marginLeft = '6px';
+                
+                // 使用 createElement + appendChild 安全构建 Material Design 结构
+                const ripple = document.createElement('span');
+                ripple.className = 'mat-mdc-button-persistent-ripple mdc-button__ripple';
+                btnEl.appendChild(ripple);
+                
+                // 使用图标
+                const logoImg = document.createElement('img');
+                logoImg.src = logoUrl;
+                logoImg.alt = 'LifeContext';
+                logoImg.style.cssText = 'width: 24px; height: 24px; display: block;';
+                logoImg.onerror = () => {
+                  // 如果图片加载失败，使用 Material Icon 作为回退
+                  try {
+                    const matIcon = document.createElement('mat-icon');
+                    matIcon.setAttribute('role', 'img');
+                    matIcon.className = 'mat-icon notranslate gds-icon-l google-symbols mat-ligature-font mat-icon-no-color';
+                    matIcon.setAttribute('aria-hidden', 'true');
+                    matIcon.setAttribute('data-mat-icon-type', 'font');
+                    matIcon.setAttribute('data-mat-icon-name', 'auto_awesome');
+                    matIcon.setAttribute('fonticon', 'auto_awesome');
+                    if (logoImg.parentElement === btnEl) {
+                      btnEl.replaceChild(matIcon, logoImg);
+                    } else {
+                      const label = btnEl.querySelector('.mdc-button__label');
+                      if (label) {
+                        btnEl.insertBefore(matIcon, label);
+                      } else {
+                        btnEl.appendChild(matIcon);
+                      }
+                    }
+                  } catch(_) {}
+                };
+                btnEl.appendChild(logoImg);
+                
+                const label = document.createElement('span');
+                label.className = 'mdc-button__label';
+                label.textContent = '';
+                btnEl.appendChild(label);
+                
+                const focusIndicator = document.createElement('span');
+                focusIndicator.className = 'mat-focus-indicator';
+                btnEl.appendChild(focusIndicator);
+                
+                const touchTarget = document.createElement('span');
+                touchTarget.className = 'mat-mdc-button-touch-target';
+                btnEl.appendChild(touchTarget);
+                
+                const ripple2 = document.createElement('span');
+                ripple2.className = 'mat-ripple mat-mdc-button-ripple';
+                btnEl.appendChild(ripple2);
+              }
+              
+              btnEl.title = '优化提示词（LifeContext）';
+              
+              // 将按钮插入到工具按钮之前（确保不影响原有按钮）
+              const toolBtnContainer = toolBtn.closest('.toolbox-drawer-button-container') || toolBtn.closest('.toolbox-drawer') || toolBtn.parentElement;
+              if (toolBtnContainer && toolBtnContainer.parentElement === bar) {
+                // 确保按钮不在错误的位置
+                if (btnEl.parentElement !== bar || btnEl.nextSibling !== toolBtnContainer) {
+                  // 如果按钮已经在 bar 中但位置不对，先移除再插入
+                  if (btnEl.parentElement === bar) {
+                    btnEl.remove();
+                  }
+                  bar.insertBefore(btnEl, toolBtnContainer);
+                }
+              } else if (toolBtn.parentElement === bar) {
+                if (btnEl.parentElement !== bar || btnEl.nextSibling !== toolBtn) {
+                  if (btnEl.parentElement === bar) {
+                    btnEl.remove();
+                  }
+                  bar.insertBefore(btnEl, toolBtn);
+                }
+              }
+              return true;
+            }
+            // 兜底：放到 bar 末尾
+            if (btnEl.parentElement !== bar) {
+              bar.appendChild(btnEl);
+            }
           } else if (kind === 'perplexity') {
             // Perplexity: 将按钮插入到容器最左边（第一个按钮之前）
             const firstBtn = bar.querySelector('button[data-testid="sources-switcher-button"]') || bar.querySelector('button[aria-label="选择模型"]') || bar.firstElementChild;
@@ -1518,6 +1637,81 @@
             if (!okDirect) return false;
             injectPageBridge();
             return true;
+          } else if (kind === 'gemini') {
+            // Gemini 兜底：全局查找 leading-actions-wrapper 容器，并插入按钮
+            const okDirect = (function tryDirectGeminiMount() {
+              try {
+                const btnEl = ensureInlineBtn();
+                const controlsContainer = document.querySelector('div.leading-actions-wrapper.ui-ready-fade-in') || 
+                                         document.querySelector('div.leading-actions-wrapper');
+                if (!controlsContainer) return false;
+                const toolBtn = controlsContainer.querySelector('button.toolbox-drawer-button') || 
+                               controlsContainer.querySelector('.toolbox-drawer-button');
+                if (!toolBtn) return false;
+                // 调整按钮样式以匹配 Gemini 的 Material Design UI
+                btnEl.style.cssText = '';
+                btnEl.className = 'mdc-button mat-mdc-button-base mat-mdc-button mat-unthemed';
+                btnEl.setAttribute('mat-button', '');
+                btnEl.setAttribute('type', 'button');
+                btnEl.setAttribute('aria-label', '优化提示词');
+                btnEl.style.marginLeft = '6px';
+                // 设置按钮内容：使用 Material Design 结构
+                btnEl.innerHTML = '';
+                const ripple = document.createElement('span');
+                ripple.className = 'mat-mdc-button-persistent-ripple mdc-button__ripple';
+                btnEl.appendChild(ripple);
+                // 使用图标
+                const logoImg = document.createElement('img');
+                logoImg.src = logoUrl;
+                logoImg.alt = 'LifeContext';
+                logoImg.style.cssText = 'width: 24px; height: 24px; display: block;';
+                logoImg.onerror = () => {
+                  // 如果图片加载失败，使用 Material Icon 作为回退
+                  const matIcon = document.createElement('mat-icon');
+                  matIcon.setAttribute('role', 'img');
+                  matIcon.className = 'mat-icon notranslate gds-icon-l google-symbols mat-ligature-font mat-icon-no-color';
+                  matIcon.setAttribute('aria-hidden', 'true');
+                  matIcon.setAttribute('data-mat-icon-type', 'font');
+                  matIcon.setAttribute('data-mat-icon-name', 'auto_awesome');
+                  matIcon.setAttribute('fonticon', 'auto_awesome');
+                  if (logoImg.parentElement === btnEl) {
+                    btnEl.replaceChild(matIcon, logoImg);
+                  } else {
+                    btnEl.insertBefore(matIcon, btnEl.querySelector('.mdc-button__label') || null);
+                  }
+                };
+                btnEl.appendChild(logoImg);
+                const label = document.createElement('span');
+                label.className = 'mdc-button__label';
+                label.textContent = '优化';
+                btnEl.appendChild(label);
+                const focusIndicator = document.createElement('span');
+                focusIndicator.className = 'mat-focus-indicator';
+                btnEl.appendChild(focusIndicator);
+                const touchTarget = document.createElement('span');
+                touchTarget.className = 'mat-mdc-button-touch-target';
+                btnEl.appendChild(touchTarget);
+                const ripple2 = document.createElement('span');
+                ripple2.className = 'mat-ripple mat-mdc-button-ripple';
+                btnEl.appendChild(ripple2);
+                btnEl.title = '优化提示词（LifeContext）';
+                // 将按钮插入到工具按钮之前
+                const toolBtnContainer = toolBtn.closest('.toolbox-drawer-button-container') || toolBtn.closest('.toolbox-drawer') || toolBtn.parentElement;
+                if (toolBtnContainer && toolBtnContainer.parentElement === controlsContainer) {
+                  if (btnEl.parentElement !== controlsContainer || btnEl.nextSibling !== toolBtnContainer) {
+                    controlsContainer.insertBefore(btnEl, toolBtnContainer);
+                  }
+                } else if (toolBtn.parentElement === controlsContainer) {
+                  if (btnEl.parentElement !== controlsContainer || btnEl.nextSibling !== toolBtn) {
+                    controlsContainer.insertBefore(btnEl, toolBtn);
+                  }
+                }
+                return true;
+              } catch (_) { return false; }
+            })();
+            if (!okDirect) return false;
+            injectPageBridge();
+            return true;
           } else if (kind === 'perplexity') {
             // Perplexity 兜底：全局查找操作按钮容器，并插入按钮到最左边
             const okDirect = (function tryDirectPerplexityMount() {
@@ -1642,6 +1836,14 @@
           return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 &&
                  rect.left < window.innerWidth && rect.top < window.innerHeight;
         }
+        // Gemini: Angular Material 输入框可能在初始渲染时尺寸较小，放宽判定
+        if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
+          const style = window.getComputedStyle(el);
+          if (style.visibility === 'hidden' || style.display === 'none') return false;
+          // 放宽尺寸阈值，避免 Angular 动态渲染阶段被误过滤
+          return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 &&
+                 rect.left < window.innerWidth && rect.top < window.innerHeight;
+        }
         const style = window.getComputedStyle(el);
         if (style.visibility === 'hidden' || style.display === 'none' || Number(style.opacity) === 0) return false;
         return rect.width > 200 && rect.height > 30 && rect.bottom > 0 && rect.right > 0 &&
@@ -1716,8 +1918,18 @@
             'textarea'
           );
         } else if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
-          // Gemini 可能在 open shadow 内
-          siteExtra.push('textarea', 'div[role="textbox"][contenteditable="true"]', 'textarea[aria-label], div[contenteditable="true"][aria-label]');
+          // Gemini: Angular Material 输入框，可能是 textarea 或 contenteditable div
+          siteExtra.push(
+            'textarea[aria-label]',
+            'textarea[placeholder]',
+            'textarea',
+            'div[role="textbox"][contenteditable="true"]',
+            'div[contenteditable="true"][aria-label]',
+            'div[contenteditable="true"]',
+            'div[role="textbox"]',
+            'div[contenteditable="plaintext-only"]',
+            'div[contenteditable][role="textbox"]'
+          );
         } else if (host.includes('perplexity.ai')) {
           // Perplexity: 通常使用 textarea 或 contenteditable div
           siteExtra.push(
@@ -1740,6 +1952,18 @@
             const afterUnion = Array.from(nodes);
             // 仅在豆包站点输出一次概要日志（采样：每 3s 内最多一次，可由上层节流）
             console.log(`[LC][Doubao] 候选输入框(初筛): ${allBeforeFilter.length}，并集后: ${afterUnion.length}`);
+          }
+        } catch (_) {}
+        // Gemini：调试可见性与命中情况（便于排障）
+        try {
+          if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
+            const allBeforeFilter = Array.from(nodes);
+            const extraAll = queryAllDeep(['textarea', 'div[contenteditable="true"]', 'div[role="textbox"]'], document);
+            extraAll.forEach(n => nodes.add(n));
+            const afterUnion = Array.from(nodes);
+            const visibleCount = Array.from(nodes).filter(isVisible).length;
+            // 仅在 Gemini 站点输出一次概要日志（采样：每 3s 内最多一次，可由上层节流）
+            console.log(`[LC][Gemini] 候选输入框(初筛): ${allBeforeFilter.length}，并集后: ${afterUnion.length}，可见: ${visibleCount}`);
           }
         } catch (_) {}
         // 兜底：页面上最后一个 textarea/可编辑框
