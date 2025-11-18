@@ -2928,6 +2928,9 @@
       function writeTextTo(el, text) {
         if (!el) return;
         const hostLower = (location.hostname || '').toLowerCase();
+        const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge|Edg/.test(navigator.userAgent);
+        const isKimi = hostLower.includes('moonshot.cn') || hostLower.includes('kimi.moonshot.cn') || hostLower.includes('kimi.com');
+        const isPerplexity = hostLower.includes('perplexity.ai');
 
         // 若传入的是容器，尝试寻找内部可编辑节点
         let target = el;
@@ -2958,6 +2961,63 @@
           }
         }
 
+        // Chrome 中 Perplexity (textarea) 的特殊处理：使用原生 setter + 模拟真实用户输入
+        if (isChrome && isPerplexity && target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) {
+          try {
+            // 1. 聚焦元素
+            target.focus && target.focus();
+            
+            // 2. 选中所有现有内容（模拟用户 Ctrl+A）
+            if (typeof target.selectionStart === 'number' && typeof target.selectionEnd === 'number') {
+              target.selectionStart = 0;
+              target.selectionEnd = (target.value || '').length;
+            }
+            
+            // 3. 使用原生 setter 设置值
+            setNativeValue(target, text);
+            
+            // 4. 触发 beforeinput 事件（模拟真实输入流程）
+            try {
+              target.dispatchEvent(new InputEvent('beforeinput', { 
+                bubbles: true, 
+                cancelable: true,
+                inputType: 'insertReplacementText',
+                data: text,
+                dataTransfer: null
+              }));
+            } catch (_) {}
+            
+            // 5. 触发 input 事件（使用 insertReplacementText 类型，表示替换操作）
+            try {
+              target.dispatchEvent(new InputEvent('input', { 
+                bubbles: true, 
+                cancelable: false,
+                inputType: 'insertReplacementText',
+                data: text,
+                dataTransfer: null
+              }));
+            } catch (_) {
+              try { 
+                target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
+              } catch(__) {
+                try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(___) {}
+              }
+            }
+            
+            // 6. 触发 change 事件
+            try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+            
+            // 7. 光标移至末尾
+            if (typeof target.selectionStart === 'number') {
+              target.selectionStart = target.selectionEnd = (target.value || '').length;
+            }
+            
+            return;
+          } catch (_) {
+            // 如果出错，回退到标准处理
+          }
+        }
+
         // 针对不同类型分别处理
         if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) {
           try {
@@ -2965,7 +3025,7 @@
           } catch (_) {}
           setNativeValue(target, text);
           try {
-            // 更像“粘贴”的输入类型，提升兼容性
+            // 更像"粘贴"的输入类型，提升兼容性
             target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
           } catch (_) {
             try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(__) {}
@@ -3065,6 +3125,122 @@
               }
               return;
             } catch (_) {}
+          }
+
+          // Chrome 中 Kimi (contenteditable + Lexical) 的特殊处理：模拟真实用户输入
+          if (isChrome && isKimi) {
+            try {
+              // 1. 聚焦元素
+              target.focus && target.focus();
+              
+              // 2. 获取当前选择范围
+              const sel = window.getSelection && window.getSelection();
+              if (!sel) {
+                // 如果没有 Selection API，回退到通用处理
+                throw new Error('No Selection API');
+              }
+              
+              // 3. 选中所有现有内容（模拟用户 Ctrl+A）
+              const range = document.createRange();
+              range.selectNodeContents(target);
+              sel.removeAllRanges();
+              sel.addRange(range);
+              
+              // 4. 删除选中的内容（模拟用户删除操作）
+              try {
+                range.deleteContents();
+                // 删除后，range 会自动收缩到删除点，保持选中状态
+              } catch (_) {
+                // 如果 deleteContents 失败，尝试直接清空
+                target.textContent = '';
+                // 重新创建 range
+                const newRange = document.createRange();
+                newRange.selectNodeContents(target);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+              }
+              
+              // 5. 创建文本节点并插入（模拟用户输入）
+              const textNode = document.createTextNode(text);
+              let insertSuccess = false;
+              try {
+                // 尝试获取当前 range
+                let currentRange;
+                if (sel.rangeCount > 0) {
+                  currentRange = sel.getRangeAt(0);
+                } else {
+                  // 如果没有 range，创建一个新的
+                  currentRange = document.createRange();
+                  currentRange.selectNodeContents(target);
+                  currentRange.collapse(false);
+                }
+                currentRange.insertNode(textNode);
+                insertSuccess = true;
+              } catch (_) {
+                // 如果插入失败，直接设置文本内容
+                target.textContent = text;
+                // 重新创建 range 用于光标定位
+                const newRange = document.createRange();
+                newRange.selectNodeContents(target);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+              }
+              
+              // 6. 将光标移至文本末尾（仅在成功插入文本节点时执行）
+              if (insertSuccess) {
+                try {
+                  const finalRange = document.createRange();
+                  finalRange.setStartAfter(textNode);
+                  finalRange.collapse(true);
+                  sel.removeAllRanges();
+                  sel.addRange(finalRange);
+                } catch (_) {
+                  // 如果设置光标失败，使用简单的方式
+                  const simpleRange = document.createRange();
+                  simpleRange.selectNodeContents(target);
+                  simpleRange.collapse(false);
+                  sel.removeAllRanges();
+                  sel.addRange(simpleRange);
+                }
+              }
+              
+              // 7. 触发 beforeinput 事件（模拟真实输入流程）
+              try {
+                target.dispatchEvent(new InputEvent('beforeinput', { 
+                  bubbles: true, 
+                  cancelable: true,
+                  inputType: 'insertReplacementText',
+                  data: text,
+                  dataTransfer: null
+                }));
+              } catch (_) {}
+              
+              // 8. 触发 input 事件（使用 insertReplacementText 类型，表示替换操作）
+              try {
+                target.dispatchEvent(new InputEvent('input', { 
+                  bubbles: true, 
+                  cancelable: false,
+                  inputType: 'insertReplacementText',
+                  data: text,
+                  dataTransfer: null
+                }));
+              } catch (_) {
+                try { 
+                  target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+                } catch(__) {
+                  try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(___) {}
+                }
+              }
+              
+              // 9. 触发 change 事件
+              try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+              
+              return;
+            } catch (_) {
+              // 如果出错，回退到通用处理
+            }
           }
 
           // 其他站点：优先使用 execCommand 以兼容富文本编辑器的内部状态（Lexical/Slate/ProseMirror 等）
