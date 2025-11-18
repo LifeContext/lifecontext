@@ -635,11 +635,6 @@ async def optimize_user_prompt(
         optimization_reason = result_json.get("optimization_reason", "")
         confidence = result_json.get("confidence", 0.5)
         
-        # 如果置信度低，使用原问题
-        if confidence < 0.5:
-            logger.info(f"Prompt optimization confidence too low ({confidence}), using original query")
-            optimized_query = original_query
-            optimization_reason = "原问题已足够清晰，无需优化"
         
         logger.info(f"Prompt optimized: '{original_query}' -> '{optimized_query}' (confidence: {confidence})")
         
