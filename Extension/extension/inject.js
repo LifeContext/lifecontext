@@ -1074,6 +1074,7 @@
         if (h.includes('gemini.google.com') || h.includes('ai.google.com') || h.includes('aistudio.google.com')) return 'gemini';
         if (h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com')) return 'kimi';
         if (h.includes('x.ai') || h.includes('grok')) return 'grok';
+        if (h.includes('perplexity.ai')) return 'perplexity';
         return '';
       }
       function getControlsBarSelectors(kind) {
@@ -1111,6 +1112,14 @@
               'button[type="submit"]::parent',
               // 最后兜底：包含输入框的容器
               'div.tiptap.ProseMirror::parent'
+            ];
+          case 'perplexity':
+            return [
+              // Perplexity: 使用包含所有操作按钮的容器（flex items-center justify-self-end）
+              'div.flex.items-center.justify-self-end.col-start-3.row-start-2',
+              'div.flex.items-center.justify-self-end:has(button[data-testid="sources-switcher-button"])',
+              // 兜底：包含附件按钮的容器
+              'div:has(button[data-testid="attach-files-button"])::parent'
             ];
           default:
             return common;
@@ -1341,6 +1350,64 @@
             if (btnEl.parentElement !== bar) {
               bar.appendChild(btnEl);
             }
+          } else if (kind === 'perplexity') {
+            // Perplexity: 将按钮插入到容器最左边（第一个按钮之前）
+            const firstBtn = bar.querySelector('button[data-testid="sources-switcher-button"]') || bar.querySelector('button[aria-label="选择模型"]') || bar.firstElementChild;
+            if (firstBtn) {
+              // 创建一个 span 包裹按钮，保持结构一致
+              let btnWrapper = btnEl.parentElement;
+              if (!btnWrapper || btnWrapper.tagName !== 'SPAN' || btnWrapper.parentElement !== bar) {
+                if (btnWrapper && btnWrapper !== bar) {
+                  btnEl.remove();
+                }
+                btnWrapper = document.createElement('span');
+                btnWrapper.appendChild(btnEl);
+              }
+              // 调整按钮样式以匹配 Perplexity 的 UI
+              btnEl.style.cssText = '';
+              btnEl.className = 'focus-visible:bg-subtle hover:bg-subtle text-quiet hover:text-foreground dark:hover:bg-subtle font-sans focus:outline-none outline-none outline-transparent transition duration-300 ease-out select-none items-center relative group/button font-semimedium justify-center text-center items-center rounded-lg cursor-pointer active:scale-[0.97] active:duration-150 active:ease-outExpo origin-center whitespace-nowrap inline-flex text-sm h-8 aspect-[9/8]';
+              btnEl.setAttribute('type', 'button');
+              btnEl.setAttribute('aria-label', '优化提示词');
+              // 设置按钮内容：使用图标
+              const logoImg = document.createElement('img');
+              logoImg.src = logoUrl;
+              logoImg.style.cssText = 'width: 16px; height: 16px; display: block;';
+              logoImg.onerror = () => {
+                // 如果图片加载失败，使用 SVG 图标作为回退
+                btnEl.innerHTML = `
+                  <div class="flex items-center min-w-0 gap-two justify-center">
+                    <div class="flex shrink-0 items-center justify-center size-4">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                        <path d="M2 17l10 5 10-5"></path>
+                        <path d="M2 12l10 5 10-5"></path>
+                      </svg>
+                    </div>
+                  </div>
+                `;
+              };
+              if (!btnEl.querySelector('img')) {
+                btnEl.innerHTML = '';
+                const innerDiv = document.createElement('div');
+                innerDiv.className = 'flex items-center min-w-0 gap-two justify-center';
+                const iconDiv = document.createElement('div');
+                iconDiv.className = 'flex shrink-0 items-center justify-center size-4';
+                iconDiv.appendChild(logoImg);
+                innerDiv.appendChild(iconDiv);
+                btnEl.appendChild(innerDiv);
+              }
+              btnEl.title = '优化提示词（LifeContext）';
+              // 将按钮插入到第一个按钮之前（按钮可能在 span 中）
+              const firstBtnWrapper = firstBtn.closest('span') || firstBtn;
+              if (btnWrapper.parentElement !== bar || btnWrapper.nextSibling !== firstBtnWrapper) {
+                bar.insertBefore(btnWrapper, firstBtnWrapper);
+              }
+              return true;
+            }
+            // 兜底：放到 bar 末尾
+            if (btnEl.parentElement !== bar) {
+              bar.appendChild(btnEl);
+            }
           } else {
             // 其他站点：优先跟在语音/听写按钮后
             const mic = bar.querySelector('button[data-testid="composer-voice-button"], button[aria-label*="Voice" i], button[aria-label*="Microphone" i], button[aria-label*="语音" i], button[aria-label*="听写" i]');
@@ -1451,6 +1518,71 @@
             if (!okDirect) return false;
             injectPageBridge();
             return true;
+          } else if (kind === 'perplexity') {
+            // Perplexity 兜底：全局查找操作按钮容器，并插入按钮到最左边
+            const okDirect = (function tryDirectPerplexityMount() {
+              try {
+                const btnEl = ensureInlineBtn();
+                const controlsContainer = document.querySelector('div.flex.items-center.justify-self-end.col-start-3.row-start-2') || 
+                                         document.querySelector('div.flex.items-center.justify-self-end:has(button[data-testid="sources-switcher-button"])');
+                if (!controlsContainer) return false;
+                const firstBtn = controlsContainer.querySelector('button[data-testid="sources-switcher-button"]') || 
+                                controlsContainer.querySelector('button[aria-label="选择模型"]') || 
+                                controlsContainer.firstElementChild;
+                if (!firstBtn) return false;
+                // 创建一个 span 包裹按钮，保持结构一致
+                let btnWrapper = btnEl.parentElement;
+                if (!btnWrapper || btnWrapper.tagName !== 'SPAN' || btnWrapper.parentElement !== controlsContainer) {
+                  if (btnWrapper && btnWrapper !== controlsContainer) {
+                    btnEl.remove();
+                  }
+                  btnWrapper = document.createElement('span');
+                  btnWrapper.appendChild(btnEl);
+                }
+                // 调整按钮样式以匹配 Perplexity 的 UI
+                btnEl.style.cssText = '';
+                btnEl.className = 'focus-visible:bg-subtle hover:bg-subtle text-quiet hover:text-foreground dark:hover:bg-subtle font-sans focus:outline-none outline-none outline-transparent transition duration-300 ease-out select-none items-center relative group/button font-semimedium justify-center text-center items-center rounded-lg cursor-pointer active:scale-[0.97] active:duration-150 active:ease-outExpo origin-center whitespace-nowrap inline-flex text-sm h-8 aspect-[9/8]';
+                btnEl.setAttribute('type', 'button');
+                btnEl.setAttribute('aria-label', '优化提示词');
+                // 设置按钮内容：使用图标
+                const logoImg = document.createElement('img');
+                logoImg.src = logoUrl;
+                logoImg.style.cssText = 'width: 16px; height: 16px; display: block;';
+                logoImg.onerror = () => {
+                  btnEl.innerHTML = `
+                    <div class="flex items-center min-w-0 gap-two justify-center">
+                      <div class="flex shrink-0 items-center justify-center size-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                          <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                          <path d="M2 17l10 5 10-5"></path>
+                          <path d="M2 12l10 5 10-5"></path>
+                        </svg>
+                      </div>
+                    </div>
+                  `;
+                };
+                if (!btnEl.querySelector('img')) {
+                  btnEl.innerHTML = '';
+                  const innerDiv = document.createElement('div');
+                  innerDiv.className = 'flex items-center min-w-0 gap-two justify-center';
+                  const iconDiv = document.createElement('div');
+                  iconDiv.className = 'flex shrink-0 items-center justify-center size-4';
+                  iconDiv.appendChild(logoImg);
+                  innerDiv.appendChild(iconDiv);
+                  btnEl.appendChild(innerDiv);
+                }
+                btnEl.title = '优化提示词（LifeContext）';
+                // 将按钮插入到第一个按钮之前
+                const firstBtnWrapper = firstBtn.closest('span') || firstBtn;
+                if (btnWrapper.parentElement !== controlsContainer || btnWrapper.nextSibling !== firstBtnWrapper) {
+                  controlsContainer.insertBefore(btnWrapper, firstBtnWrapper);
+                }
+                return true;
+              } catch (_) { return false; }
+            })();
+            if (!okDirect) return false;
+            injectPageBridge();
+            return true;
           }
           return false;
         }
@@ -1495,7 +1627,8 @@
           h.includes('claude.ai') ||
           h.includes('doubao.com') || h.includes('douba.ai') ||
           h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com') ||
-          h.includes('x.ai') || h.includes('grok')
+          h.includes('x.ai') || h.includes('grok') ||
+          h.includes('perplexity.ai')
         );
       }
 
@@ -1585,6 +1718,16 @@
         } else if (host.includes('gemini.google.com') || host.includes('ai.google.com') || host.includes('aistudio.google.com')) {
           // Gemini 可能在 open shadow 内
           siteExtra.push('textarea', 'div[role="textbox"][contenteditable="true"]', 'textarea[aria-label], div[contenteditable="true"][aria-label]');
+        } else if (host.includes('perplexity.ai')) {
+          // Perplexity: 通常使用 textarea 或 contenteditable div
+          siteExtra.push(
+            'textarea[placeholder]',
+            'textarea[aria-label]',
+            'textarea',
+            'div[contenteditable="true"][role="textbox"]',
+            'div[contenteditable="true"]',
+            'div[role="textbox"]'
+          );
         }
         const selectors = [...new Set([...baseSelectors, ...siteExtra])];
         const nodes = new Set(queryAllDeep(selectors, document));
