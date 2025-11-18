@@ -262,7 +262,11 @@ async def process_query_with_strategy(
         
         if optimization_result.get("success"):
             optimized_query = optimization_result.get("optimized_query", query)
-            logger.info(f"Prompt optimization successful: confidence={optimization_result.get('confidence', 0)}")
+            optimization_reason = optimization_result.get("optimization_reason", "")
+            logger.info(f"Prompt optimization successful")
+            logger.info(f"Using optimized prompt: {optimized_query}")
+            if optimization_reason:
+                logger.info(f"Optimization reason: {optimization_reason}")
         else:
             logger.warning(f"Prompt optimization failed: {optimization_result.get('error', 'unknown error')}")
     
@@ -296,6 +300,8 @@ async def process_query_with_strategy(
         ])
         # 使用优化后的查询（如果启用了优化）
         final_query = optimized_query if optimize_prompt else query
+        if optimize_prompt and final_query != query:
+            logger.info(f"Final query using optimized prompt: {final_query}")
         user_message = f"""用户问题: {final_query}
 
 相关上下文信息:
@@ -373,8 +379,7 @@ async def process_query_with_strategy(
             "enabled": True,
             "original_query": optimization_result.get("original_query", query),
             "optimized_query": optimization_result.get("optimized_query", query),
-            "optimization_reason": optimization_result.get("optimization_reason", ""),
-            "confidence": optimization_result.get("confidence", 0.0)
+            "optimization_reason": optimization_result.get("optimization_reason", "")
         }
     
     return result
@@ -629,21 +634,28 @@ async def optimize_user_prompt(
         
         # 解析结果
         result_text = response.choices[0].message.content.strip()
+        
+        # 打印模型的原始输出（用于调试）
+        logger.info(f"LLM raw response for prompt optimization:")
+        logger.info(f"  Raw output: {result_text}")
+        
         result_json = json.loads(result_text)
         
         optimized_query = result_json.get("optimized_query", original_query)
         optimization_reason = result_json.get("optimization_reason", "")
-        confidence = result_json.get("confidence", 0.5)
         
-        
-        logger.info(f"Prompt optimized: '{original_query}' -> '{optimized_query}' (confidence: {confidence})")
+        logger.info(f"Prompt optimized: '{original_query}' -> '{optimized_query}'")
+        logger.info(f"Optimized prompt details:")
+        logger.info(f"  Original: {original_query}")
+        logger.info(f"  Optimized: {optimized_query}")
+        if optimization_reason:
+            logger.info(f"  Reason: {optimization_reason}")
         
         return {
             "success": True,
             "original_query": original_query,
             "optimized_query": optimized_query,
-            "optimization_reason": optimization_reason,
-            "confidence": confidence
+            "optimization_reason": optimization_reason
         }
         
     except json.JSONDecodeError as e:
@@ -1035,7 +1047,6 @@ def chat_stream():
                         "original_query": opt_info.get("original_query", query),
                         "optimized_query": opt_info.get("optimized_query", query),
                         "optimization_reason": opt_info.get("optimization_reason", ""),
-                        "confidence": opt_info.get("confidence", 0.0),
                         "workflow_id": workflow_id,
                         "timestamp": datetime.now().isoformat()
                     }
@@ -1446,8 +1457,7 @@ async def optimize_prompt_simple(prompt: str, url: str) -> Dict[str, Any]:
 
 **返回JSON格式**:
 {
-    "optimized_query": "优化后的提示词",
-    "confidence": 0.85
+    "optimized_query": "优化后的提示词"
 }"""
         
         user_prompt = f"""原始提示词：{prompt}
@@ -1471,16 +1481,20 @@ async def optimize_prompt_simple(prompt: str, url: str) -> Dict[str, Any]:
         
         # 解析结果
         result_text = response.choices[0].message.content.strip()
+        
+        # 打印模型的原始输出（用于调试）
+        logger.info(f"LLM raw response for prompt optimization:")
+        logger.info(f"  Raw output: {result_text}")
+        
         result_json = json.loads(result_text)
         
         optimized_prompt = result_json.get("optimized_query", prompt)
-        confidence = result_json.get("confidence", 0.5)
         
-        # 置信度过低，使用原提示词
-        if confidence < 0.5:
-            optimized_prompt = prompt
-        
-        logger.info(f"Prompt optimization completed: confidence={confidence}")
+        logger.info(f"Prompt optimization completed")
+        logger.info(f"Optimized prompt details:")
+        logger.info(f"  Original prompt: {prompt}")
+        logger.info(f"  Optimized prompt: {optimized_prompt}")
+        logger.info(f"  URL: {url}")
         
         return {
             "success": True,
