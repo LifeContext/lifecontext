@@ -10,7 +10,7 @@
 [![微信群](https://img.shields.io/badge/WeChat-Join_Us-brightgreen?logo=wechat&style=flat-square)](https://github.com/LifeContext/lifecontext/blob/main/src/wechat.jpg?raw=true)
 [![飞书群](https://img.shields.io/badge/Feishu-Join_Us-blue?logo=lark&style=flat-square)](https://github.com/LifeContext/lifecontext/blob/main/src/feishu.jpg?raw=true)
 [![Discord](https://img.shields.io/badge/Discord-Join_Us-7289DA?logo=discord&style=flat-square)](https://discord.gg/sb8Xg8xR)
-[![Follow on X](https://img.shields.io/badge/Follow_%40LifeContext2025-000000?logo=x&style=flat-square)](https://x.com/LifeContext)
+[![Follow on X](https://img.shields.io/badge/Follow_%40LifeContext2025-000000?logo=x&style=flat-square)](https://x.com/LifeContext2025)
 
 
 
