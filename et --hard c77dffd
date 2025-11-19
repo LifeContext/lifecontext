@@ -1,0 +1,199 @@
+[33m2a2e67f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m)[m HEAD@{0}: rebase (finish): returning to refs/heads/dev
+[33m2a2e67f[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mdev[m[33m, [m[1;31morigin/dev[m[33m)[m HEAD@{1}: rebase (continue): perplexity bug fixed
+[33mf1b8633[m HEAD@{2}: pull origin dev --rebase (start): checkout f1b8633e9fdbc2b1723d9502bdd83a0592e66fd2
+[33mc77dffd[m HEAD@{3}: commit: perplexity bug fixed
+[33ma51d79d[m HEAD@{4}: commit: deepseek bug fixed
+[33m11264b4[m HEAD@{5}: commit: kimi and perpleity bug fixed
+[33m2eaa3d9[m HEAD@{6}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m2eaa3d9[m HEAD@{7}: pull origin dev --rebase (pick): added loading animation for prompt optimization button
+[33md844879[m HEAD@{8}: pull origin dev --rebase (start): checkout d844879734b4f0799d38fbbd0e57b15b8f2004ff
+[33m2afd6d4[m HEAD@{9}: commit: added loading animation for prompt optimization button
+[33m47ac7ac[m HEAD@{10}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m47ac7ac[m HEAD@{11}: pull origin dev --rebase (pick): deepseek optimized_prompt button updated
+[33m24e9171[m HEAD@{12}: pull origin dev --rebase (start): checkout 24e9171bd6d0e9065603d6c839dcd3d5c3488b0a
+[33m379eae9[m HEAD@{13}: commit: deepseek optimized_prompt button updated
+[33m46f00b1[m HEAD@{14}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m46f00b1[m HEAD@{15}: pull origin dev --rebase (pick): Claude optimized_prompt button updated
+[33mf01adb8[m HEAD@{16}: pull origin dev --rebase (start): checkout f01adb8007abfc26115fa2f2cf20bd210b173131
+[33meef91aa[m HEAD@{17}: commit: Claude optimized_prompt button updated
+[33m36e5e28[m HEAD@{18}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m36e5e28[m HEAD@{19}: pull origin dev --rebase (pick): Gemini optimized_prompt button updated
+[33meb533cf[m HEAD@{20}: pull origin dev --rebase (start): checkout eb533cff7ec59fe37dd1d03b2b88f24338f57c7a
+[33mb2a22e5[m HEAD@{21}: commit: Gemini optimized_prompt button updated
+[33m6ac1de1[m HEAD@{22}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m6ac1de1[m HEAD@{23}: pull origin dev --rebase (pick): perplexity optimized_prompt button updated
+[33mddc0b75[m HEAD@{24}: pull origin dev --rebase (start): checkout ddc0b75061a52b53b95b36a8588d4f6e9dc5919e
+[33m250efab[m HEAD@{25}: commit: perplexity optimized_prompt button updated
+[33m2e31915[m HEAD@{26}: commit: grok optimized_prompt button updated
+[33mdec1e26[m HEAD@{27}: commit: doubao chatgpt and kimi optimized_prompt button updated
+[33md65d52c[m HEAD@{28}: reset: moving to HEAD
+[33md65d52c[m HEAD@{29}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33md65d52c[m HEAD@{30}: pull origin dev --rebase (pick): extension updated
+[33me3bfc6e[m HEAD@{31}: pull origin dev --rebase (start): checkout e3bfc6ed540be1e1e4521ecb844d1ae1f0f44e4d
+[33mde813ef[m HEAD@{32}: reset: moving to HEAD
+[33mde813ef[m HEAD@{33}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33mde813ef[m HEAD@{34}: pull origin dev --rebase (pick): extension updated
+[33m10a48c2[m HEAD@{35}: pull origin dev --rebase (start): checkout 10a48c2af52f5b9c4104e84ab4722e8b52339a33
+[33mc8e3ab8[m HEAD@{36}: commit: extension updated
+[33md5c972c[m HEAD@{37}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33md5c972c[m HEAD@{38}: pull origin dev --rebase (pick): extension updated
+[33m552a3b8[m HEAD@{39}: pull origin dev --rebase (pick): update the optimization button for prompt words on doubao and kimi web pages
+[33mcb77149[m[33m ([m[1;31mupstream/dev[m[33m)[m HEAD@{40}: pull origin dev --rebase (start): checkout cb771497f0a558350be15f2dc5edeffb46f243c1
+[33m2eee34f[m HEAD@{41}: commit: extension updated
+[33m951c662[m HEAD@{42}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m951c662[m HEAD@{43}: pull origin dev --rebase (pick): update the optimization button for prompt words on doubao and kimi web pages
+[33m37f937c[m[33m ([m[1;31mupstream/main[m[33m, [m[1;31mupstream/HEAD[m[33m, [m[1;31morigin/main[m[33m, [m[1;31morigin/HEAD[m[33m)[m HEAD@{44}: pull origin dev --rebase (start): checkout 37f937ce8babd784102411bee8b8bc5c87a8d3ab
+[33m5dacba6[m HEAD@{45}: commit: update the optimization button for prompt words on doubao and kimi web pages
+[33m0f3a83b[m HEAD@{46}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m0f3a83b[m HEAD@{47}: pull origin dev --rebase (pick): update the optimization button for prompt words on Chatgpt and Grok web pages
+[33m1bee632[m HEAD@{48}: pull origin dev --rebase (start): checkout 1bee6326b783b03300234038af4dc1e5cc470887
+[33mca0ccd3[m HEAD@{49}: commit: update the optimization button for prompt words on Chatgpt and Grok web pages
+[33m2be4ca5[m HEAD@{50}: commit: blacklist bug fixed
+[33m8376030[m HEAD@{51}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m8376030[m HEAD@{52}: pull origin dev --rebase (pick): add prompt word optimization button
+[33ma12e1b9[m HEAD@{53}: pull origin dev --rebase (start): checkout a12e1b9dfc895a6bf01fc13ba04ad362033371fe
+[33m3409819[m HEAD@{54}: commit: add prompt word optimization button
+[33m7e35f5b[m HEAD@{55}: commit: api key issue fixed
+[33m7a651b1[m HEAD@{56}: commit: fixed extension blacklist issue
+[33maff1f8f[m HEAD@{57}: reset: moving to origin/dev
+[33m22a9e92[m HEAD@{58}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m22a9e92[m HEAD@{59}: pull origin dev --rebase (pick): blacklist finished
+[33md704d50[m HEAD@{60}: pull origin dev --rebase (start): checkout d704d508ac53287872164c161a0d55b708eb1c1c
+[33mca56d80[m HEAD@{61}: commit: blacklist finished
+[33m301b854[m HEAD@{62}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m301b854[m HEAD@{63}: pull origin dev --rebase (pick): extension bug fixed
+[33m2e78887[m HEAD@{64}: pull origin dev --rebase (start): checkout 2e7888715f41ace2d14848862bb441b5cb439b89
+[33md1a2823[m HEAD@{65}: commit: extension bug fixed
+[33m157809b[m HEAD@{66}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m157809b[m HEAD@{67}: pull origin dev --rebase (pick): extension chat massage markdown
+[33m2eff26b[m HEAD@{68}: pull origin dev --rebase (start): checkout 2eff26bb0e97bc86ca65ac935839959b5bb8f848
+[33mb6d8486[m HEAD@{69}: commit: extension chat massage markdown
+[33m08dd974[m HEAD@{70}: pull origin dev --rebase: Fast-forward
+[33md3a88fd[m HEAD@{71}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33md3a88fd[m HEAD@{72}: pull origin dev --rebase (pick): AI reply streaming output
+[33m6e44a1c[m HEAD@{73}: pull origin dev --rebase (start): checkout 6e44a1c82195cd588baf3c0cb5aa6aef00fd578b
+[33m7f990f9[m HEAD@{74}: commit: AI reply streaming output
+[33m0e71e6d[m HEAD@{75}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m0e71e6d[m HEAD@{76}: pull origin dev --rebase (pick): add extension domain blacklist
+[33me66e9fa[m HEAD@{77}: pull origin dev --rebase (start): checkout e66e9fa150becacb92bcb6efe63b5e728552a4f1
+[33m93aba26[m HEAD@{78}: commit: add extension domain blacklist
+[33m8340da6[m HEAD@{79}: commit: extension language change
+[33m94ddba5[m HEAD@{80}: commit: Logo change
+[33m4337cc7[m HEAD@{81}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m4337cc7[m HEAD@{82}: pull origin dev --rebase (pick): language
+[33meddac84[m HEAD@{83}: pull origin dev --rebase (start): checkout eddac8416b2c69932c28b78270e129c18db67ab2
+[33mc764954[m HEAD@{84}: commit: language
+[33m4f7d75e[m HEAD@{85}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m4f7d75e[m HEAD@{86}: pull origin dev --rebase (pick): chat box change
+[33m7c06f8c[m HEAD@{87}: pull origin dev --rebase (start): checkout 7c06f8cb02d9efd2011cd4cadbdbbac61c57fa8c
+[33m32002e2[m HEAD@{88}: commit: chat box change
+[33m27e5e4c[m HEAD@{89}: commit: notification bug fixed
+[33m13324a6[m HEAD@{90}: reset: moving to origin/dev
+[33md34a8d2[m HEAD@{91}: rebase (finish): returning to refs/heads/dev
+[33md34a8d2[m HEAD@{92}: rebase (continue): notification bug fixed
+[33meec0a14[m HEAD@{93}: pull origin dev --rebase (start): checkout eec0a14c8865c0c6fe7955d12e9c1750f7d60271
+[33me4e4e1d[m HEAD@{94}: commit: notification bug fixed
+[33m62b58ed[m HEAD@{95}: rebase (finish): returning to refs/heads/dev
+[33m62b58ed[m HEAD@{96}: rebase (continue): chat box bug fixed
+[33maef9d24[m HEAD@{97}: pull origin dev --rebase (start): checkout aef9d24cd06c639f3b24af965c6c99adef16a61e
+[33mbc42060[m HEAD@{98}: commit: chat box bug fixed
+[33me670e3a[m HEAD@{99}: rebase (finish): returning to refs/heads/dev
+[33me670e3a[m HEAD@{100}: rebase (continue): extension style beautification
+[33m0152a69[m HEAD@{101}: pull origin dev --rebase (start): checkout 0152a69ee97788d36f7186667a68874e735b4d1e
+[33mf617e73[m HEAD@{102}: commit: extension style beautification
+[33mb228a7f[m HEAD@{103}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33mb228a7f[m HEAD@{104}: pull origin dev --rebase (pick): fixed chat box bug
+[33m860491b[m HEAD@{105}: pull origin dev --rebase (start): checkout 860491b75808fa50ac9c50c7d37a8ae205050ece
+[33m767c4fd[m HEAD@{106}: commit: fixed chat box bug
+[33m6372659[m HEAD@{107}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m6372659[m HEAD@{108}: pull origin dev --rebase (pick): chat box style modification
+[33ma6f9d2b[m HEAD@{109}: pull origin dev --rebase (start): checkout a6f9d2b192f43d73a8e216e19418e826a824cb49
+[33m3beaec3[m HEAD@{110}: commit: chat box style modification
+[33m9497fa9[m HEAD@{111}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m9497fa9[m HEAD@{112}: pull origin dev --rebase (pick): floating ball change
+[33mb3be5e9[m HEAD@{113}: pull origin dev --rebase (pick): extension style beautification
+[33m785261c[m HEAD@{114}: pull origin dev --rebase (start): checkout 785261c205d27914a1ddc8559812cf19f0003faa
+[33mc96c53d[m HEAD@{115}: commit: floating ball change
+[33m2e1e0bb[m HEAD@{116}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m2e1e0bb[m HEAD@{117}: pull origin dev --rebase (pick): extension style beautification
+[33md741a25[m HEAD@{118}: pull origin dev --rebase (start): checkout d741a250f7555d2ab23b32f778a4ad8dfcefb009
+[33me55c938[m HEAD@{119}: commit: extension style beautification
+[33mcab4e46[m HEAD@{120}: commit: floating ball display
+[33mecd3fff[m HEAD@{121}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33mecd3fff[m HEAD@{122}: pull origin dev --rebase (pick): extension style beautification
+[33m2708d6b[m HEAD@{123}: pull origin dev --rebase (start): checkout 2708d6b57b635a23a276a0cdcc5e76bdcc31701d
+[33mb9b7ee0[m HEAD@{124}: commit: extension style beautification
+[33m3b4906d[m HEAD@{125}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m3b4906d[m HEAD@{126}: pull origin dev --rebase (pick): todo display by priority
+[33m808160d[m HEAD@{127}: pull origin dev --rebase (start): checkout 808160d6ae0b69989a83681fc54e670f5793f644
+[33m23e59dd[m HEAD@{128}: pull origin dev --rebase (finish): returning to refs/heads/dev
+[33m23e59dd[m HEAD@{129}: pull origin dev --rebase (pick): todo display by priority
+[33m95f9e00[m HEAD@{130}: pull origin dev --rebase (start): checkout 95f9e0036a01bbcfb2935e3e05e9658e4ebb150d
+[33m5bc6dcc[m HEAD@{131}: commit: todo display by priority
+[33m145e694[m HEAD@{132}: commit: Configuration of notification language
+[33m909c346[m HEAD@{133}: commit: Configuration of notification language
+[33m7d46e0d[m HEAD@{134}: merge main: Merge made by the 'ort' strategy.
+[33m41d863e[m HEAD@{135}: checkout: moving from dev to dev
+[33m41d863e[m HEAD@{136}: checkout: moving from main to dev
+[33m8a482e5[m[33m ([m[1;32mmain[m[33m)[m HEAD@{137}: commit (merge): Configuration of notification language
+[33m6ace94e[m HEAD@{138}: reset: moving to HEAD
+[33m6ace94e[m HEAD@{139}: pull origin dev: updating HEAD
+[33m6ace94e[m HEAD@{140}: pull origin main: Fast-forward
+[33m3c0fc5e[m HEAD@{141}: reset: moving to HEAD
+[33m3c0fc5e[m HEAD@{142}: pull origin main --rebase (finish): returning to refs/heads/main
+[33m3c0fc5e[m HEAD@{143}: pull origin main --rebase (pick): Extension Logo size change
+[33m7926085[m HEAD@{144}: pull origin main --rebase (start): checkout 792608522df19ae0e17411ef7e51d86e7932d08f
+[33me3c3b18[m HEAD@{145}: commit: Extension Logo size change
+[33m7b72d56[m HEAD@{146}: pull origin main --rebase (finish): returning to refs/heads/main
+[33m7b72d56[m HEAD@{147}: pull origin main --rebase (pick): Initial commit
+[33m2cb1022[m HEAD@{148}: pull origin main --rebase (pick): chore: local edits snapshot before syncing upstream
+[33m2fa49d0[m HEAD@{149}: pull origin main --rebase (start): checkout 2fa49d0a7278b859b3f1b5e404994b490f3c7ec0
+[33m3575142[m HEAD@{150}: Branch: renamed refs/heads/main to refs/heads/main
+[33m3575142[m HEAD@{152}: commit: Initial commit
+[33m4fb4e04[m HEAD@{153}: rebase (finish): returning to refs/heads/main
+[33m4fb4e04[m HEAD@{154}: rebase (continue): chore: local edits snapshot before syncing upstream
+[33m3b296b8[m HEAD@{155}: pull origin main --rebase (start): checkout 3b296b878e3561d43ccc31ea22d6be887074a9d4
+[33m76ae7f7[m HEAD@{156}: rebase (finish): returning to refs/heads/main
+[33m76ae7f7[m HEAD@{157}: rebase (continue): chore: local edits snapshot before syncing upstream
+[33m3d85195[m HEAD@{158}: pull --rebase --autostash origin main (start): checkout 3d85195d9728f6d8df2028b7772f0fae30c81978
+[33m74d96b4[m HEAD@{159}: pull --rebase origin main (finish): returning to refs/heads/main
+[33m74d96b4[m HEAD@{160}: pull --rebase origin main (pick): chore: local edits snapshot before syncing upstream
+[33mb536476[m HEAD@{161}: pull --rebase origin main (start): checkout b53647627a9879f510d303514f589079b81a1355
+[33m6e3154a[m HEAD@{162}: commit: chore: local edits snapshot before syncing upstream
+[33m848c535[m HEAD@{163}: pull origin main --rebase (finish): returning to refs/heads/main
+[33m848c535[m HEAD@{164}: pull origin main --rebase (pick): Brower notification modification
+[33md5ddbf7[m HEAD@{165}: pull origin main --rebase (start): checkout d5ddbf7cbca39465b3e9cad137544878a975a44a
+[33mb875688[m HEAD@{166}: commit: Brower notification modification
+[33ma0d1c7d[m HEAD@{167}: pull origin main --rebase (finish): returning to refs/heads/main
+[33ma0d1c7d[m HEAD@{168}: pull origin main --rebase (pick): floating chat orb annotated
+[33m4647977[m HEAD@{169}: pull origin main --rebase (start): checkout 464797789684d34143c958857b832e405dbc05d1
+[33mdc9b90d[m HEAD@{170}: Branch: renamed refs/heads/main to refs/heads/main
+[33mdc9b90d[m HEAD@{172}: commit: floating chat orb annotated
+[33mc451c2a[m HEAD@{173}: pull origin main --rebase: Fast-forward
+[33m6ef6dc1[m HEAD@{174}: reset: moving to HEAD
+[33m6ef6dc1[m HEAD@{175}: pull origin main --rebase: Fast-forward
+[33mb20aa81[m HEAD@{176}: reset: moving to HEAD
+[33mb20aa81[m HEAD@{177}: pull origin main --rebase: Fast-forward
+[33m2f76e2a[m HEAD@{178}: reset: moving to HEAD
+[33m2f76e2a[m HEAD@{179}: reset: moving to HEAD
+[33m2f76e2a[m HEAD@{180}: pull origin main --rebase: Fast-forward
+[33mb2325ea[m HEAD@{181}: reset: moving to HEAD
+[33mb2325ea[m HEAD@{182}: pull origin main --rebase (finish): returning to refs/heads/main
+[33mb2325ea[m HEAD@{183}: pull origin main --rebase (start): checkout b2325ea8a2a3cf11221b4b60b6efe612367ec50a
+[33mee0f0d1[m HEAD@{184}: commit: resolve conflict in TipDetailView.vue
+[33m79eba2d[m HEAD@{185}: commit: block the main website
+[33m3eaac60[m HEAD@{186}: pull origin main --rebase: Fast-forward
+[33mddeb7c6[m HEAD@{187}: reset: moving to HEAD
+[33mddeb7c6[m HEAD@{188}: pull origin main --rebase: Fast-forward
+[33m7880073[m HEAD@{189}: reset: moving to HEAD
+[33m7880073[m HEAD@{190}: commit: new
+[33ma2df390[m HEAD@{191}: pull origin main --rebase (finish): returning to refs/heads/main
+[33ma2df390[m HEAD@{192}: pull origin main --rebase (pick): Extension update
+[33m84f0f77[m HEAD@{193}: pull origin main --rebase (start): checkout 84f0f77185f91a6afe47c528d74f17e14a2189db
+[33m6721011[m HEAD@{194}: reset: moving to HEAD
+[33m6721011[m HEAD@{195}: reset: moving to HEAD
+[33m6721011[m HEAD@{196}: rebase (finish): returning to refs/heads/main
+[33m6721011[m HEAD@{197}: rebase (continue): Extension update
+[33mfdd19c6[m HEAD@{198}: pull origin main --rebase (start): checkout fdd19c6154d69bb196f727e73c9598e8f447679a
+[33m8d39dc0[m HEAD@{199}: Branch: renamed refs/heads/master to refs/heads/main
+[33m8d39dc0[m HEAD@{201}: commit (initial): Extension update
