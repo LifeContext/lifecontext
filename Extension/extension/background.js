@@ -270,6 +270,82 @@ const I18N = {
   }
 };
 
+// ===== URL 黑名单轮询同步 =====
+// 黑名单轮询间隔（毫秒），默认 5 秒
+const BLACKLIST_POLL_INTERVAL = 5000;
+let blacklistPollTimer = null;
+
+// 从服务器获取黑名单并同步到 chrome.storage.sync
+async function syncBlacklistFromServer() {
+  try {
+    const apiUrl = await getApiUrl();
+    const resp = await fetch(`${apiUrl}/url-blacklist?limit=1000&offset=0`);
+    if (!resp.ok) {
+      console.warn('[LC] 获取黑名单失败:', resp.status);
+      return;
+    }
+    const entries = await resp.json().catch(() => []);
+    if (!Array.isArray(entries)) {
+      console.warn('[LC] 黑名单数据格式错误');
+      return;
+    }
+    
+    // 提取域名并规范化
+    const normalizeHostname = (input) => {
+      try {
+        const s = String(input || '').trim();
+        if (!s) return '';
+        try {
+          const u = new URL(s);
+          return (u.hostname || '').toLowerCase();
+        } catch (_) {
+          return s.toLowerCase();
+        }
+      } catch (_) {
+        return '';
+      }
+    };
+    
+    const hostnames = [...new Set(entries.map(e => normalizeHostname(e?.url)).filter(Boolean))];
+    
+    // 更新到 chrome.storage.sync
+    await new Promise((resolve) => {
+      chrome.storage.sync.set({ blockedDomains: hostnames }, () => {
+        console.log(`[LC] 黑名单已同步，共 ${hostnames.length} 个域名`);
+        resolve();
+      });
+    });
+  } catch (error) {
+    console.error('[LC] 同步黑名单失败:', error);
+  }
+}
+
+// 启动黑名单轮询
+function startBlacklistPolling() {
+  // 清除已有定时器
+  if (blacklistPollTimer) {
+    clearInterval(blacklistPollTimer);
+  }
+  
+  // 立即执行一次
+  syncBlacklistFromServer();
+  
+  // 设置定时轮询
+  blacklistPollTimer = setInterval(() => {
+    syncBlacklistFromServer();
+  }, BLACKLIST_POLL_INTERVAL);
+  
+  console.log('[LC] 黑名单轮询已启动，间隔:', BLACKLIST_POLL_INTERVAL, 'ms');
+}
+
+// 停止黑名单轮询
+function stopBlacklistPolling() {
+  if (blacklistPollTimer) {
+    clearInterval(blacklistPollTimer);
+    blacklistPollTimer = null;
+    console.log('[LC] 黑名单轮询已停止');
+  }
+}
 
 chrome.runtime.onInstalled.addListener(() => {
   console.log('Extension installed');
@@ -298,6 +374,9 @@ chrome.runtime.onInstalled.addListener(() => {
   
   // 初始化图标状态
   updateExtensionIcon();
+  
+  // 启动黑名单轮询
+  startBlacklistPolling();
 });
 
 // 监听定时器事件
@@ -391,6 +470,8 @@ chrome.runtime.onStartup.addListener(() => {
   ensurePromptLanguageAlarm();
   // 启动时更新图标状态
   updateExtensionIcon();
+  // 启动黑名单轮询
+  startBlacklistPolling();
 });
 
 // 监听存储变化，当 crawlEnabled 改变时更新图标
@@ -753,3 +834,6 @@ chrome.runtime.onConnect.addListener((port) => {
     }
   });
 });
+
+// 立即启动轮询（如果扩展已运行）
+startBlacklistPolling();
