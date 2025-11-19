@@ -137,37 +137,34 @@ If you still run into issues, refer to `deploy_guide.md`.
 1. LifeContext automatically and seamlessly records the information you browse on web pages.
 2. On any webpage, click the floating chat orb to open the Chatbox and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your life context.
 
-![img](src/product01.png)
-
-![img](src/product02.png)
+![Main Feature Demo](src/gif/main.gif)
 
 3. LifeContext seamlessly records all your browsing experiences and generates smart tips, to-dos, and daily reports based on them, appearing as instant notifications on the right side of the webpage you're browsing. You can also view all information on the homepage.
 
-![img](src/product03.png)
 
 - Tips are content recommendations based on your browsing information. Click the card to view detailed tip information.
 
-![img](src/product04.png)
+![Tips Feature Demo](src/gif/tips.gif)
 
 - The TodoList is automatically generated based on your activities. You can manually edit, delete, or add items.
 
-![img](src/product05.png)
+![Todo Feature Demo](src/gif/todo.gif)
 
 - Click the date in the left sidebar of the homepage to view that day's daily report details.
 The default generation time is 8:30 the next day, which you can modify in the settings.
 
-![img](src/product06.png)
+![Daily Feature Demo](src/gif/daily.gif)
 
 4. Privacy
 
 - If you don't want specific websites recorded in your life context, you can block the corresponding URL in the settings.
 If you don't want to record any browser activity, you can disable the extension.
 
-![img](src/product07.png)
+![Blacklist Feature Demo](src/gif/blacklist.gif)
 
 - You can also manage storage by selecting the Timeline page at the top left of the homepage and delete pages you don't want to keep in LifeContext.
 
-![img](src/product08.png)
+![Timeline Feature Demo](src/gif/timeline.gif)
 
 ## 🤖 Development Plan
 

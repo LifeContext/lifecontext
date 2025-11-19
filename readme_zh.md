@@ -140,37 +140,35 @@ chmod +x deploy.sh stop.sh
 1. LifeContext会自动无感地记录您在网页上浏览的信息。
 2. 在任意网页上，点击悬浮球即可打开 Chatbox，与 AI 自然对话。它能理解您正在浏览的内容，结合人生上下文提供即时回答、总结或建议。
 
-![img](src/product01.png)
-
-![img](src/product02.png)
+![main功能演示](src/gif/main.gif)
 
 3. LifeContext将无感记录您的一切浏览体验并据此生成智能提示、待办和日报，并以即时通知的形式浮现在您的浏览的网页右侧，您也可以在主页上查看所有信息
 
-![img](src/product03.png)
 
 - 提示信息是根据您的浏览的信息进行的内容推送，您可点击卡片查看详细的提示信息。
 
-![img](src/product04.png)
+![Tips功能演示](src/gif/tips.gif)
 
 - TodoList是参考您的活动自动生成，您可以手动编辑、删除或添加。
 
-![img](src/product05.png)
+![Todo功能演示](src/gif/todo.gif)
 
 - 点击主页页面左侧边栏中的日期可查看该日日报详情。
 默认生成时间为次日8:30，您可通过设置进行修改。
 
-![img](src/product06.png)
+![Daily功能演示](src/gif/daily.gif)
 
 4. 隐私问题
 
 - 如您不想将特定网站记录在您的人生上下文中，可以在设置中屏蔽对应url。
 如您不想记录任何浏览器行为可以关闭插件。
 
-![img](src/product07.png)
+
+![黑名单功能演示](src/gif/blacklist.gif)
 
 - 您也可在主页左上角选择TimeLine页面进行存储管理，删除您不想留存在LifeContext的页面
 
-![img](src/product08.png)
+![Timeline功能演示](src/gif/timeline.gif)
 
 ## 🤖 开发计划
 
