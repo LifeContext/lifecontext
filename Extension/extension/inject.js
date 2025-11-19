@@ -2616,20 +2616,32 @@
         if (!btn) return;
         if (on) {
           btn.disabled = true;
-          btn.style.opacity = '.7';
+          btn.style.opacity = '1';
           btn.style.cursor = 'not-allowed';
+          // 隐藏图标，保留圆圈背景
+          btn.style.background = '#ffffff';
           btn.innerHTML = `
             <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
-                         background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
+                         background: #ffffff;
                          position:relative;">
-              <span style="position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
-                           border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
-                           animation:lc-spin .8s linear infinite;"></span>
+              <span style="position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;
+                           border:3px solid rgba(14,165,233,0.2);border-top-color:#0ea5e9;
+                           border-radius:50%;
+                           animation:lc-spin .6s linear infinite;"></span>
             </span>`;
         } else {
           btn.disabled = false;
           btn.style.opacity = '.95';
           btn.style.cursor = 'pointer';
+          // 恢复图标背景
+          const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+            ? chrome.runtime.getURL('logo.png')
+            : '';
+          if (logoUrl) {
+            btn.style.background = `#ffffff url('${logoUrl}') center/70% no-repeat`;
+          } else {
+            btn.style.background = '#ffffff';
+          }
           btn.innerHTML = '';
         }
       }
@@ -2639,7 +2651,16 @@
         if (document.getElementById('lc-spin-keyframes')) return;
         const style = document.createElement('style');
         style.id = 'lc-spin-keyframes';
-        style.textContent = '@keyframes lc-spin{from{transform:rotate(0)}to{transform:rotate(360deg)}}';
+        style.textContent = `
+          @keyframes lc-spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+          }
+          @keyframes lc-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.02); }
+          }
+        `;
         document.head.appendChild(style);
       }
       
@@ -2673,7 +2694,7 @@
             
             // 设置加载状态
             el.disabled = true;
-            el.style.opacity = '0.7';
+            el.style.opacity = '1';
             el.style.cursor = 'not-allowed';
             
             // 检查是否为圆形按钮
@@ -2683,21 +2704,38 @@
             
             // 显示加载动画
             if (isCircular) {
-              // 圆形按钮：显示旋转的圆圈动画
+              // 圆形按钮：隐藏图标，保留圆圈背景，显示转圈动画
+              // 移除背景图片，只保留白色背景
+              const originalBg = buttonOriginalContent.get(el);
+              if (originalBg && originalBg.background) {
+                // 从原始背景中提取颜色，如果没有则使用白色
+                const bgColor = originalBg.background.includes('url') 
+                  ? '#ffffff' 
+                  : (originalBg.background.match(/^#?\w+/) || ['#ffffff'])[0];
+                el.style.background = bgColor;
+              } else {
+                el.style.background = '#ffffff';
+              }
+              el.style.backgroundImage = 'none';
               el.innerHTML = `
                 <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
-                             background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
+                             background: inherit;
                              position:relative;">
-                  <span style="position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
-                               border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
-                               animation:lc-spin .8s linear infinite;"></span>
+                  <span style="position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;
+                               border:3px solid rgba(14,165,233,0.2);border-top-color:#0ea5e9;
+                               border-radius:50%;
+                               animation:lc-spin .6s linear infinite;"></span>
                 </span>`;
             } else {
-              // 非圆形按钮：显示简单的旋转图标
+              // 非圆形按钮：显示简单的旋转图标（更明显的样式）
               el.innerHTML = `
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;">
-                  <span style="width:16px;height:16px;border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
-                               animation:lc-spin .8s linear infinite;"></span>
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;
+                             background: linear-gradient(135deg, rgba(14,165,233,0.1), rgba(59,130,246,0.15));
+                             animation:lc-pulse 1.5s ease-in-out infinite;">
+                  <span style="width:24px;height:24px;border:3px solid rgba(14,165,233,0.3);border-top-color:#0ea5e9;border-right-color:#3b82f6;
+                               border-radius:50%;
+                               animation:lc-spin .6s linear infinite;
+                               box-shadow: 0 0 8px rgba(14,165,233,0.5);"></span>
                 </span>`;
             }
           } else {
@@ -3447,12 +3485,51 @@
                 type: 'OPTIMIZE_PROMPT',
                 prompt: text,
                 url: pageUrl
-              }, (r) => resolve(r));
+              }, (r) => {
+                // 检查 chrome.runtime.lastError（扩展上下文失效时会设置）
+                if (chrome.runtime.lastError) {
+                  const errorMsg = chrome.runtime.lastError.message || String(chrome.runtime.lastError);
+                  if (errorMsg.includes('Extension context invalidated') || errorMsg.includes('message port closed')) {
+                    resolve({ 
+                      ok: false, 
+                      error: 'Extension context invalidated',
+                      contextInvalidated: true 
+                    });
+                  } else {
+                    resolve({ ok: false, error: errorMsg });
+                  }
+                } else {
+                  resolve(r || { ok: false, error: 'No response' });
+                }
+              });
             } catch (err) {
-              resolve({ ok: false, error: String(err) });
+              const errorMsg = String(err);
+              if (errorMsg.includes('Extension context invalidated') || errorMsg.includes('message port closed')) {
+                resolve({ 
+                  ok: false, 
+                  error: 'Extension context invalidated',
+                  contextInvalidated: true 
+                });
+              } else {
+                resolve({ ok: false, error: errorMsg });
+              }
             }
           });
           console.log('[LC] OPTIMIZE_PROMPT resp:', resp);
+
+          // 检查扩展上下文是否失效
+          if (resp && resp.contextInvalidated) {
+            console.error('[LC] 扩展程序上下文已失效，请刷新页面后重试。');
+            // 恢复原内容
+            if (savedContent && targetEl) {
+              writeTextTo(targetEl, savedContent);
+            }
+            // 可选：显示用户提示（如果需要）
+            // alert('扩展程序已更新，请刷新页面后重试优化功能。');
+            setBtnLoadingOn(currentTriggerBtn, false);
+            optimizing = false;
+            return;
+          }
 
           // 兼容后端返回结构：
           // { ok:true, status:200, data: { code:200, data: { optimized_prompt: '...' }, message:'success' } }
@@ -3494,7 +3571,8 @@
             if (savedContent) {
               writeTextTo(targetEl, savedContent);
             }
-            console.warn('[LC] 未获得优化结果，已恢复原文。');
+            const errorMsg = resp && resp.error ? resp.error : '未知错误';
+            console.warn('[LC] 未获得优化结果，已恢复原文。错误:', errorMsg);
           }
 
           setBtnLoadingOn(currentTriggerBtn, false);

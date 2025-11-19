@@ -1367,11 +1367,12 @@ def optimize_prompt_api():
         url = data['url'].strip()
         
         # 快速检查：问候语或过短直接返回
-        if len(prompt) < 3 or prompt.lower() in ['你好', '在吗', 'hello', 'hi', 'hey']:
-            return convert_resp(data={
-                "success": True,
-                "optimized_prompt": prompt
-            })
+        # 已注释：现在任何时候都会进行优化，不再跳过问候语或过短提示词
+        # if len(prompt) < 3 or prompt.lower() in ['你好', '在吗', 'hello', 'hi', 'hey']:
+        #     return convert_resp(data={
+        #         "success": True,
+        #         "optimized_prompt": prompt
+        #     })
         
         logger.info(f"Optimizing prompt for URL: {url}, prompt: '{prompt[:50]}...'")
         

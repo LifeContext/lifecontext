@@ -326,9 +326,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           body: JSON.stringify(payload)
         });
         const data = await resp.json().catch(() => null);
-        sendResponse({ ok: resp.ok, status: resp.status, data });
+        try {
+          sendResponse({ ok: resp.ok, status: resp.status, data });
+        } catch (sendError) {
+          // Extension context invalidated - 扩展程序被重新加载
+          // 这种情况下 sendResponse 会失败，但我们已经获取到了数据
+          // 记录错误但不抛出，因为数据已经获取成功
+          console.warn('[LC Background] sendResponse failed (context invalidated):', sendError);
+        }
       } catch (e) {
-        sendResponse({ ok: false, error: String(e) });
+        try {
+          sendResponse({ ok: false, error: String(e) });
+        } catch (sendError) {
+          // Extension context invalidated
+          console.warn('[LC Background] sendResponse failed (context invalidated):', sendError);
+        }
       }
     })();
     return true; // 异步响应
