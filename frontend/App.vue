@@ -54,7 +54,8 @@
               :on-select-report="handleViewReport"
               :is-loading="isLoadingReports"
               :error="errorLoadingReports"
-              :on-refresh="loadReports"
+              :on-refresh="() => loadReports()"
+              :on-date-change="handleReportDateChange"
             />
           </div>
         </div>
@@ -94,12 +95,13 @@
             :on-close="() => handleCloseDetailView()"
           />
         </div>
-        <div v-if="viewingReport" :class="exitingView === 'reportDetail' ? 'animate-view-out' : 'animate-view-in'">
+        <div v-if="viewingReport" :class="exitingView === 'reportDetail' ? 'animate-view-out' : 'animate-view-in'" class="h-full max-h-full">
           <ReportDetailView 
             :reports="reports"
             :selected-report="viewingReport" 
             :on-close="() => handleCloseDetailView()" 
             :on-navigate="handleNavigateReport"
+            :on-select-report="handleViewReport"
           />
         </div>
       </div>
@@ -138,17 +140,6 @@ const route = useRoute();
 
 const { t, locale } = useI18n();
 
-const REPORT_DETAIL_ICONS = {
-  chevronLeft: 'M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z',
-  chevronRight: 'M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z',
-  barChart: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
-  fileText: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
-  listCheck: 'M14 10H2v2h12v-2zm0-4H2v2h12V6zM2 16h8v-2H2v2zm19.5-4.5L23 13l-6.99 7-4.51-4.5L13 14l3.01 3L21.5 11.5z',
-  shieldAlert: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14h2v2h-2v-2zm0-8h2v6h-2V7z',
-  close: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
-};
-
-
 type ActiveView = 'dashboard' | 'timeline' | 'chat' | 'tipDetail' | 'reportDetail';
 
 // Reactive state
@@ -162,6 +153,7 @@ const reports = ref<DailyReport[]>([]); // 初始化为空数组，从API加载
 const selectedDashboardReport = ref<DailyReport | null>(null);
 const isLoadingReports = ref(true); // 添加加载状态
 const errorLoadingReports = ref<string | null>(null); // 错误状态
+const selectedReportDate = ref<string>(new Date().toISOString().split('T')[0]);
 const todos = ref<TodoItem[]>([]); // 初始化为空数组，从API加载
 const isLoadingTodos = ref(true); // 添加加载状态
 const errorLoadingTodos = ref<string | null>(null); // 错误状态
@@ -191,23 +183,27 @@ const today = computed(() => {
   });
 });
 
+const resolveReportDate = (dateValue?: string) => {
+  if (dateValue) return dateValue;
+  if (selectedReportDate.value) return selectedReportDate.value;
+  return new Date().toISOString().split('T')[0];
+};
+
 // 加载Reports数据的方法
-const loadReports = async () => {
+const loadReports = async (dateValue?: string) => {
   try {
     isLoadingReports.value = true;
     errorLoadingReports.value = null;
-    const reportsData = await reportService.getReports();
-    reports.value = reportsData.data.cards;
-    // 设置默认选中的报告
-    if (reportsData.length > 0 && !selectedDashboardReport.value) {
-      selectedDashboardReport.value = reportsData[0];
-    }
+    const targetDate = resolveReportDate(dateValue);
+    const reportsData = await reportService.getReports(targetDate);
+    selectedReportDate.value = targetDate;
+    const cards = reportsData?.data?.cards ?? reportsData ?? [];
+    reports.value = cards;
   } catch (error) {
     console.error('Failed to load reports:', error);
     errorLoadingReports.value = t('errors.loadReports');
     // 使用备用数据
     reports.value = dailyReports;
-    selectedDashboardReport.value = dailyReports[0];
   } finally {
     isLoadingReports.value = false;
   }
@@ -246,6 +242,10 @@ const loadTips = async () => {
 // Methods
 const handleToggleDailyPanel = () => {
   isDailyPanelCollapsed.value = !isDailyPanelCollapsed.value;
+};
+
+const handleReportDateChange = (dateValue: string) => {
+  loadReports(dateValue);
 };
 
 // 添加直接操作Todo的API方法

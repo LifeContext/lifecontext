@@ -5,9 +5,10 @@ export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 // Daily Report API服务类
 export class ReportService {
   // 获取所有Daily Reports
-  async getReports(): Promise<DailyReport[]> {
+  async getReports(date?: string): Promise<DailyReport[]> {
     try {
-      const response = await fetch(`/api/generation/daily-feed`);
+      const targetDate = date ?? new Date().toISOString().split('T')[0];
+      const response = await fetch(`/api/generation/daily-feed?date=${targetDate}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch reports: ${response.statusText}`);
       }
