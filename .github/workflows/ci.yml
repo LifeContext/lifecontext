@@ -136,7 +136,7 @@ jobs:
       - name: Run tests
         working-directory: ./frontend
         run: |
-          npm test 2>/dev/null || echo "⚠️  No tests defined"
+          npm test || echo "⚠️  No tests defined"
         continue-on-error: true
       
       - name: Upload build artifacts
