@@ -71,6 +71,53 @@ Shaped by your life. Empower yourself. Interact with the world.
 - **Office Application Integration**  
   Support integration with common office applications (such as documents, spreadsheets, emails, etc.), automatically sync and analyze your office data to help AI better understand your work context.
 
+## 🌄 Scenario Introduction
+
+### 1️⃣ Automatic Browsing Record
+
+LifeContext automatically and seamlessly records the information you browse on web pages, including page titles, URLs, text content, etc., providing a data foundation for subsequent intelligent analysis.
+
+### 2️⃣ Floating Chat Assistant
+
+On any webpage, click the floating orb to open a chat window and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your browsing history.
+
+![Main Feature Demo](src/gif/main.gif)
+
+### 3️⃣ Proactive Smart Content Push
+
+LifeContext automatically generates smart tips, todos, and daily feeds based on your browsing experiences, and displays them through browser notifications or on the homepage, so important information finds you proactively.
+
+#### 💡 Smart Tips
+
+Based on your browsing records, the system proactively pushes personalized smart tip cards. Click the card to view detailed content.
+
+![Tips Feature Demo](src/gif/tips.gif)
+
+#### ✅ Todo Items
+
+The system automatically generates todo suggestions based on your activities. You can manually edit, complete, or delete these tasks on the homepage.
+
+![Todo Feature Demo](src/gif/todo.gif)
+
+#### 📰 Daily Feed
+
+Click the date in the left sidebar of the homepage to view that day's feed information, including activity summaries, news recommendations, knowledge cards, etc. The default generation time is 8:30 the next day, which you can modify in the settings.
+
+![Daily Feature Demo](src/gif/daily.gif)
+
+### 4️⃣ Privacy Protection
+
+#### 🚫 URL Blacklist
+
+If you don't want specific websites recorded in your life context, you can block the corresponding URL in the extension settings, supporting one-click add/remove. If you don't want to record any browser activity, you can disable the extension at any time.
+
+![Blacklist Feature Demo](src/gif/blacklist.gif)
+
+#### 🗂️ Timeline Management
+
+You can select the Timeline page at the top left of the homepage to manage storage, view, search, or delete page records you don't want to keep in LifeContext.
+
+![Timeline Feature Demo](src/gif/timeline.gif)
 
 ## 🚀 Quick Start
 
@@ -159,54 +206,6 @@ Having issues? Check out `deploy_guide.md` for a step-by-step walkthrough.
 🎉 Open the browser and visit [http://localhost:3000/](http://localhost:3000/)  
 
 If you still run into issues, refer to `deploy_guide.md`.
-
-## 🌄 Scenario Introduction
-
-### 1️⃣ Automatic Browsing Record
-
-LifeContext automatically and seamlessly records the information you browse on web pages, including page titles, URLs, text content, etc., providing a data foundation for subsequent intelligent analysis.
-
-### 2️⃣ Floating Chat Assistant
-
-On any webpage, click the floating orb to open a chat window and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your browsing history.
-
-![Main Feature Demo](src/gif/main.gif)
-
-### 3️⃣ Proactive Smart Content Push
-
-LifeContext automatically generates smart tips, todos, and daily feeds based on your browsing experiences, and displays them through browser notifications or on the homepage, so important information finds you proactively.
-
-#### 💡 Smart Tips
-
-Based on your browsing records, the system proactively pushes personalized smart tip cards. Click the card to view detailed content.
-
-![Tips Feature Demo](src/gif/tips.gif)
-
-#### ✅ Todo Items
-
-The system automatically generates todo suggestions based on your activities. You can manually edit, complete, or delete these tasks on the homepage.
-
-![Todo Feature Demo](src/gif/todo.gif)
-
-#### 📰 Daily Feed
-
-Click the date in the left sidebar of the homepage to view that day's feed information, including activity summaries, news recommendations, knowledge cards, etc. The default generation time is 8:30 the next day, which you can modify in the settings.
-
-![Daily Feature Demo](src/gif/daily.gif)
-
-### 4️⃣ Privacy Protection
-
-#### 🚫 URL Blacklist
-
-If you don't want specific websites recorded in your life context, you can block the corresponding URL in the extension settings, supporting one-click add/remove. If you don't want to record any browser activity, you can disable the extension at any time.
-
-![Blacklist Feature Demo](src/gif/blacklist.gif)
-
-#### 🗂️ Timeline Management
-
-You can select the Timeline page at the top left of the homepage to manage storage, view, search, or delete page records you don't want to keep in LifeContext.
-
-![Timeline Feature Demo](src/gif/timeline.gif)
 
 ## 🤖 Development Plan
 
