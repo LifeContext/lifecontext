@@ -2,6 +2,26 @@
   if (window.__my_floating_chat_injected__) return;
   window.__my_floating_chat_injected__ = true;
 
+  // 全局事件拦截器：防止 Claude 在替换输入框内容时自动触发发送
+  // 当 suppressInputEvents 为 true 时，拦截所有 input/change 事件
+  let suppressInputEvents = false;
+  try {
+    window.addEventListener('input', (e) => {
+      if (suppressInputEvents) {
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, { capture: true });
+    window.addEventListener('change', (e) => {
+      if (suppressInputEvents) {
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    }, { capture: true });
+  } catch (_) {}
+
   // 悬浮球与聊天框功能暂时禁用（保留全部代码以便后续恢复）。
   // 如需恢复，请删除/注释掉下方的 return 语句。
   //return;
@@ -1075,6 +1095,7 @@
         if (h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com')) return 'kimi';
         if (h.includes('x.ai') || h.includes('grok')) return 'grok';
         if (h.includes('perplexity.ai')) return 'perplexity';
+        if (h.includes('deepseek.com')) return 'deepseek';
         return '';
       }
       function getControlsBarSelectors(kind) {
@@ -1086,7 +1107,9 @@
             ];
           case 'claude':
             return [
-              'button[aria-label*="Attach" i]::parent'
+              // Claude: 使用最新的输入栏工具栏（2025 最新结构）
+              'div[data-testid="input-composer"] > div.flex.items-center',
+              'div[data-testid="input-composer"] div.flex.items-center.gap-2'
             ];
           case 'doubao':
             return [
@@ -1354,6 +1377,165 @@
             if (btnEl.parentElement !== bar) {
               bar.appendChild(btnEl);
             }
+          } else if (kind === 'claude') {
+            // Claude: 使用最新的输入栏工具栏（2025 最新结构）
+            // 安全区域：div[data-testid="input-composer"] > div.flex.items-center
+            // 绝对不能插入到 Vue 管控区域（如 Extended thinking 按钮的父容器）
+            
+            // 确保 bar 是安全的工具栏区域
+            if (!bar) return false;
+            
+            // 检查是否已经插入过（防止重复插入）
+            if (bar.querySelector('[data-lc-btn]') !== null) {
+              // 如果按钮已经在 bar 中，确保位置正确
+              if (btnEl.parentElement === bar) return true;
+            }
+            
+            // 确保 bar 不包含 Vue 管控的按钮（安全检测）
+            if (bar.querySelector('button[aria-label="Extended thinking"]')) {
+              // 这是 Vue 管控区域，不能插入，查找正确的工具栏
+              const toolbar = document.querySelector('div[data-testid="input-composer"] > div.flex.items-center');
+              if (!toolbar || toolbar.querySelector('button[aria-label="Extended thinking"]')) {
+                return false; // 找不到安全区域，放弃
+              }
+              bar = toolbar; // 使用正确的工具栏
+            }
+            
+            // 查找左侧按钮组（通常包含 +、设置、历史等按钮）
+            // 尝试找到左侧按钮组的最后一个按钮，将我们的按钮插入到它之后
+            const leftButtons = bar.querySelectorAll('button[aria-label*="Attach" i], button[aria-label*="Open" i], button[aria-label*="menu" i]');
+            let insertAfter = null;
+            
+            if (leftButtons.length > 0) {
+              // 找到左侧按钮组的最后一个按钮
+              insertAfter = leftButtons[leftButtons.length - 1];
+            }
+            
+            // 配置按钮样式（匹配 Claude 的按钮风格）
+            btnEl.setAttribute('data-lc-btn', '1');
+            btnEl.setAttribute('type', 'button');
+            btnEl.setAttribute('aria-label', '优化提示词');
+            btnEl.title = '优化提示词（LifeContext）';
+            
+            // 匹配 Claude 按钮的样式：方形、圆角、深色背景、白色图标
+            btnEl.style.cssText = `
+              width: 32px;
+              height: 32px;
+              min-width: 32px;
+              border-radius: 8px;
+              border: none;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              cursor: pointer;
+              background: rgba(255, 255, 255, 0.05);
+              transition: all 0.15s ease;
+              margin: 0 4px;
+              padding: 0;
+              flex-shrink: 0;
+            `;
+            
+            // 防止触发 Claude 的发送逻辑：使用 pointer-events 方案
+            // 将按钮设置为 pointer-events: none，让内部元素处理点击
+            // 这样 Claude 的全局监听器不会监听到 button 元素的事件
+            btnEl.style.pointerEvents = 'none';
+            
+            // 清空并重建按钮内容
+            btnEl.innerHTML = '';
+            
+            // 创建内部容器，用于处理点击事件
+            const innerContainer = document.createElement('div');
+            innerContainer.style.cssText = `
+              pointer-events: auto;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 100%;
+              height: 100%;
+              cursor: pointer;
+            `;
+            
+            // 添加 hover 效果（在内部容器上）
+            innerContainer.addEventListener('mouseenter', () => {
+              btnEl.style.background = 'rgba(255, 255, 255, 0.1)';
+              btnEl.style.transform = 'scale(1.05)';
+            });
+            innerContainer.addEventListener('mouseleave', () => {
+              btnEl.style.background = 'rgba(255, 255, 255, 0.05)';
+              btnEl.style.transform = 'scale(1)';
+            });
+            
+            // 创建图标（使用原本的样式）
+            const logoImg = document.createElement('img');
+            logoImg.src = logoUrl;
+            logoImg.alt = 'LifeContext';
+            logoImg.style.cssText = 'width: 18px; height: 18px; display: block;';
+            logoImg.onerror = () => {
+              try {
+                // 如果图片加载失败，使用 SVG 图标作为回退
+                const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                svg.setAttribute('width', '18');
+                svg.setAttribute('height', '18');
+                svg.setAttribute('viewBox', '0 0 24 24');
+                svg.setAttribute('fill', 'none');
+                svg.setAttribute('stroke', 'currentColor');
+                svg.setAttribute('stroke-width', '2');
+                svg.style.cssText = 'width: 18px; height: 18px;';
+                const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                path.setAttribute('d', 'M12 2L2 7l10 5 10-5-10-5z');
+                svg.appendChild(path);
+                if (logoImg.parentElement === innerContainer) {
+                  innerContainer.replaceChild(svg, logoImg);
+                } else {
+                  innerContainer.appendChild(svg);
+                }
+              } catch(_) {
+                // 最后的回退：使用文本
+                innerContainer.textContent = 'LC';
+                innerContainer.style.fontSize = '11px';
+                innerContainer.style.fontWeight = '600';
+              }
+            };
+            
+            // 在内部容器上绑定点击事件，阻止冒泡
+            innerContainer.addEventListener('click', (e) => {
+              try {
+                e.preventDefault && e.preventDefault();
+                e.stopPropagation && e.stopPropagation();
+                e.stopImmediatePropagation && e.stopImmediatePropagation();
+              } catch(_) {}
+              onOptimizeClick(e);
+            });
+            
+            // 为内部容器添加其他可能的事件阻止
+            ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach((t) => {
+              innerContainer.addEventListener(t, (e) => {
+                try {
+                  e.preventDefault && e.preventDefault();
+                  e.stopPropagation && e.stopPropagation();
+                  e.stopImmediatePropagation && e.stopImmediatePropagation();
+                } catch(_) {}
+              }, { capture: true, passive: false });
+            });
+            
+            innerContainer.appendChild(logoImg);
+            btnEl.appendChild(innerContainer);
+            
+            // 插入按钮到合适的位置
+            if (insertAfter && insertAfter.nextSibling) {
+              // 插入到左侧按钮组的最后一个按钮之后
+              bar.insertBefore(btnEl, insertAfter.nextSibling);
+            } else if (insertAfter) {
+              // 如果没有下一个兄弟节点，追加到按钮之后
+              insertAfter.parentElement.insertBefore(btnEl, insertAfter.nextSibling);
+            } else {
+              // 兜底：插入到工具栏的开头（左侧）
+              if (btnEl.parentElement !== bar) {
+                bar.insertBefore(btnEl, bar.firstChild);
+              }
+            }
+            
+            return true;
           } else if (kind === 'gemini') {
             // Gemini: 将按钮插入到 leading-actions-wrapper 容器中，放在工具按钮之前
             // 注意：使用安全的 DOM 操作，避免破坏 Angular 的渲染结构
@@ -1637,6 +1819,165 @@
             if (!okDirect) return false;
             injectPageBridge();
             return true;
+          } else if (kind === 'claude') {
+            // Claude 兜底：使用最新的输入栏工具栏（2025 最新结构）
+            const okDirect = (function tryDirectClaudeMount() {
+              try {
+                const btnEl = ensureInlineBtn();
+                // Claude 最新的输入栏工具栏（安全区域）
+                const toolbar = document.querySelector('div[data-testid="input-composer"] > div.flex.items-center');
+                if (!toolbar) return false; // Claude 还没渲染完成
+                
+                // 防止插入到 Vue 管控区域（必须只插入 toolbar）
+                if (toolbar.querySelector('[data-lc-btn]') !== null) {
+                  // 如果按钮已经在 toolbar 中，确保位置正确
+                  if (btnEl.parentElement === toolbar) return true;
+                }
+                
+                // 确保 toolbar 不包含 Vue 管控的按钮（安全检测）
+                if (toolbar.querySelector('button[aria-label="Extended thinking"]')) {
+                  return false; // 这是 Vue 管控区域，不能插入
+                }
+                
+                // 查找左侧按钮组（通常包含 +、设置、历史等按钮）
+                const leftButtons = toolbar.querySelectorAll('button[aria-label*="Attach" i], button[aria-label*="Open" i], button[aria-label*="menu" i]');
+                let insertAfter = null;
+                
+                if (leftButtons.length > 0) {
+                  // 找到左侧按钮组的最后一个按钮
+                  insertAfter = leftButtons[leftButtons.length - 1];
+                }
+                
+                // 配置按钮样式（匹配 Claude 的按钮风格）
+                btnEl.setAttribute('data-lc-btn', '1');
+                btnEl.setAttribute('type', 'button');
+                btnEl.setAttribute('aria-label', '优化提示词');
+                btnEl.title = '优化提示词（LifeContext）';
+                
+                // 匹配 Claude 按钮的样式：方形、圆角、深色背景、白色图标
+                btnEl.style.cssText = `
+                  width: 32px;
+                  height: 32px;
+                  min-width: 32px;
+                  border-radius: 8px;
+                  border: none;
+                  display: inline-flex;
+                  align-items: center;
+                  justify-content: center;
+                  cursor: pointer;
+                  background: rgba(255, 255, 255, 0.05);
+                  transition: all 0.15s ease;
+                  margin: 0 4px;
+                  padding: 0;
+                  flex-shrink: 0;
+                `;
+                
+                // 防止触发 Claude 的发送逻辑：使用 pointer-events 方案
+                // 将按钮设置为 pointer-events: none，让内部元素处理点击
+                // 这样 Claude 的全局监听器不会监听到 button 元素的事件
+                btnEl.style.pointerEvents = 'none';
+                
+                // 清空并重建按钮内容
+                btnEl.innerHTML = '';
+                
+                // 创建内部容器，用于处理点击事件
+                const innerContainer = document.createElement('div');
+                innerContainer.style.cssText = `
+                  pointer-events: auto;
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  width: 100%;
+                  height: 100%;
+                  cursor: pointer;
+                `;
+                
+                // 添加 hover 效果（在内部容器上）
+                innerContainer.addEventListener('mouseenter', () => {
+                  btnEl.style.background = 'rgba(255, 255, 255, 0.1)';
+                  btnEl.style.transform = 'scale(1.05)';
+                });
+                innerContainer.addEventListener('mouseleave', () => {
+                  btnEl.style.background = 'rgba(255, 255, 255, 0.05)';
+                  btnEl.style.transform = 'scale(1)';
+                });
+                
+                // 创建图标（使用原本的样式）
+                const logoImg = document.createElement('img');
+                logoImg.src = logoUrl;
+                logoImg.alt = 'LifeContext';
+                logoImg.style.cssText = 'width: 18px; height: 18px; display: block;';
+                logoImg.onerror = () => {
+                  try {
+                    // 如果图片加载失败，使用 SVG 图标作为回退
+                    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                    svg.setAttribute('width', '18');
+                    svg.setAttribute('height', '18');
+                    svg.setAttribute('viewBox', '0 0 24 24');
+                    svg.setAttribute('fill', 'none');
+                    svg.setAttribute('stroke', 'currentColor');
+                    svg.setAttribute('stroke-width', '2');
+                    svg.style.cssText = 'width: 18px; height: 18px;';
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', 'M12 2L2 7l10 5 10-5-10-5z');
+                    svg.appendChild(path);
+                    if (logoImg.parentElement === innerContainer) {
+                      innerContainer.replaceChild(svg, logoImg);
+                    } else {
+                      innerContainer.appendChild(svg);
+                    }
+                  } catch(_) {
+                    // 最后的回退：使用文本
+                    innerContainer.textContent = 'LC';
+                    innerContainer.style.fontSize = '11px';
+                    innerContainer.style.fontWeight = '600';
+                  }
+                };
+                
+                // 在内部容器上绑定点击事件，阻止冒泡
+                innerContainer.addEventListener('click', (e) => {
+                  try {
+                    e.preventDefault && e.preventDefault();
+                    e.stopPropagation && e.stopPropagation();
+                    e.stopImmediatePropagation && e.stopImmediatePropagation();
+                  } catch(_) {}
+                  onOptimizeClick(e);
+                });
+                
+                // 为内部容器添加其他可能的事件阻止
+                ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'touchstart', 'touchend'].forEach((t) => {
+                  innerContainer.addEventListener(t, (e) => {
+                    try {
+                      e.preventDefault && e.preventDefault();
+                      e.stopPropagation && e.stopPropagation();
+                      e.stopImmediatePropagation && e.stopImmediatePropagation();
+                    } catch(_) {}
+                  }, { capture: true, passive: false });
+                });
+                
+                innerContainer.appendChild(logoImg);
+                btnEl.appendChild(innerContainer);
+                
+                // 插入按钮到合适的位置
+                if (insertAfter && insertAfter.nextSibling) {
+                  // 插入到左侧按钮组的最后一个按钮之后
+                  toolbar.insertBefore(btnEl, insertAfter.nextSibling);
+                } else if (insertAfter) {
+                  // 如果没有下一个兄弟节点，追加到按钮之后
+                  insertAfter.parentElement.insertBefore(btnEl, insertAfter.nextSibling);
+                } else {
+                  // 兜底：插入到工具栏的开头（左侧）
+                  if (btnEl.parentElement !== toolbar) {
+                    toolbar.insertBefore(btnEl, toolbar.firstChild);
+                  }
+                }
+                
+                return true;
+              } catch (_) { return false; }
+            })();
+            if (!okDirect) return false;
+            injectPageBridge();
+            return true;
           } else if (kind === 'gemini') {
             // Gemini 兜底：全局查找 leading-actions-wrapper 容器，并插入按钮
             const okDirect = (function tryDirectGeminiMount() {
@@ -1800,17 +2141,236 @@
       let optimizerPort = null;
       let optimizing = false;
       let hasWrittenOptimized = false;
+      // 存储按钮的原始内容，用于恢复（需要在 return 前定义，供 setBtnLoadingOn 使用）
+      const buttonOriginalContent = new WeakMap();
       // 监听来自 Page Context 的点击消息 -> 触发真正的扩展逻辑
       try {
         window.addEventListener('message', (evt) => {
           try {
-            if (evt && evt.source === window && evt.data && evt.data.source === 'lc-page' && evt.data.type === 'LC_OPTIMIZE_CLICK') {
+            console.log('[LC] Message received:', evt.data, 'source:', evt.source);
+            // 检查消息来源和类型
+            if (evt && evt.data && evt.data.source === 'lc-page' && evt.data.type === 'LC_OPTIMIZE_CLICK') {
+              console.log('[LC] Processing LC_OPTIMIZE_CLICK message');
               try { currentTriggerBtn = document.getElementById('lc-optimize-btn-inline'); } catch(_) {}
-              onOptimizeClick(new Event('lc-optimize'));
+              if (typeof onOptimizeClick === 'function') {
+                console.log('[LC] Calling onOptimizeClick');
+                onOptimizeClick(new Event('lc-optimize'));
+              } else {
+                console.error('[LC] onOptimizeClick is not a function');
+              }
             }
-          } catch(_) {}
+          } catch(err) {
+            console.error('[LC] Error in message handler:', err);
+          }
         }, false);
-      } catch(_) {}
+      } catch(err) {
+        console.error('[LC] Error setting up message listener:', err);
+      }
+      
+      // DeepSeek 特殊处理：将提示词优化按钮插入到"联网搜索"按钮右边
+      function initDeepSeekInlineButton() {
+        try {
+          const host = (location.hostname || '').toLowerCase();
+          if (!host.includes('deepseek.com')) return;
+          
+          // 获取 logo URL（与其他站点一致）
+          const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+            ? chrome.runtime.getURL('logo.png')
+            : '';
+          
+          let inlineBtn = null;
+          let inserted = false;
+          
+          // 创建优化函数，通过消息机制触发
+          function triggerOptimize() {
+            try {
+              console.log('[LC] triggerOptimize called');
+              // 通过消息机制触发（消息监听器会调用 onOptimizeClick）
+              window.postMessage({
+                source: 'lc-page',
+                type: 'LC_OPTIMIZE_CLICK'
+              }, '*');
+            } catch (err) {
+              console.error('[LC] Error in triggerOptimize:', err);
+            }
+          }
+          
+          function findNetworkSearchButton() {
+            // 查找包含"联网搜索"文本的按钮
+            // 使用简化的查询函数（DeepSeek 通常不需要处理 Shadow DOM）
+            function queryButtons(root = document) {
+              const results = [];
+              function walk(node) {
+                if (!node) return;
+                try {
+                  node.querySelectorAll && node.querySelectorAll('button').forEach((e) => {
+                    if (!results.includes(e)) results.push(e);
+                  });
+                } catch (_) {}
+                // 遍历子元素
+                try {
+                  node.children && Array.from(node.children).forEach((c) => walk(c));
+                } catch (_) {}
+              }
+              walk(root);
+              return results;
+            }
+            
+            const buttons = queryButtons(document);
+            for (const btn of buttons) {
+              const text = (btn.textContent || '').trim();
+              if (text.includes('联网搜索') || text.includes('联网')) {
+                return btn;
+              }
+            }
+            return null;
+          }
+          
+          function createOptimizeButton() {
+            if (inlineBtn) return inlineBtn;
+            
+            const networkBtn = findNetworkSearchButton();
+            if (!networkBtn) return null;
+            
+            // 创建与其他 AI 网站一致的圆形白色按钮样式
+            inlineBtn = document.createElement('button');
+            inlineBtn.id = 'lc-optimize-btn-inline';
+            inlineBtn.type = 'button';
+            inlineBtn.setAttribute('aria-disabled', 'false');
+            inlineBtn.setAttribute('role', 'button');
+            inlineBtn.tabIndex = 0;
+            
+            // 使用与其他站点一致的样式：圆形白色按钮，带 logo
+            inlineBtn.style.cssText = `
+              width: 34px;
+              height: 34px;
+              display: inline-flex;
+              align-items: center;
+              justify-content: center;
+              border-radius: 50%;
+              border: none;
+              background: #ffffff url('${logoUrl}') center/70% no-repeat;
+              box-shadow: 0 6px 16px rgba(0,0,0,.2);
+              cursor: pointer;
+              transition: transform .15s ease, opacity .15s ease;
+              margin-left: 6px;
+              margin-right: 6px;
+              padding: 0;
+              flex-shrink: 0;
+              opacity: .95;
+            `;
+            
+            inlineBtn.title = '优化提示词（LifeContext）';
+            
+            // 如果 logo 加载失败，使用 SVG 图标作为回退
+            const logoImg = document.createElement('img');
+            logoImg.src = logoUrl;
+            logoImg.style.cssText = 'width: 70%; height: 70%; display: block; object-fit: contain;';
+            logoImg.onerror = () => {
+              // 如果图片加载失败，使用 SVG 图标作为回退
+              inlineBtn.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: #3b82f6;">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
+                  <path d="M2 17l10 5 10-5"></path>
+                  <path d="M2 12l10 5 10-5"></path>
+                </svg>
+              `;
+            };
+            if (!inlineBtn.querySelector('img')) {
+              inlineBtn.appendChild(logoImg);
+            }
+            
+            // 添加悬停效果
+            inlineBtn.addEventListener('mouseenter', () => {
+              inlineBtn.style.transform = 'scale(1.05)';
+            });
+            inlineBtn.addEventListener('mouseleave', () => {
+              inlineBtn.style.transform = 'scale(1)';
+            });
+            
+            // 添加点击事件（在 swallow 之前，使用 capture 阶段确保优先执行）
+            inlineBtn.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              e.stopImmediatePropagation();
+              console.log('[LC] DeepSeek button clicked');
+              // 直接调用优化函数
+              triggerOptimize();
+            }, { capture: true });
+            
+            // 防止站点委托的发送事件被触发（但不阻止 click，因为 click 已经在 capture 阶段处理）
+            try {
+              const swallow = (evt) => {
+                // 如果是 click 事件，不阻止（因为已经在上面处理了）
+                if (evt.type === 'click') return;
+                try { evt.preventDefault && evt.preventDefault(); } catch(_) {}
+                try { evt.stopPropagation && evt.stopPropagation(); } catch(_) {}
+                try { evt.stopImmediatePropagation && evt.stopImmediatePropagation(); } catch(_) {}
+              };
+              ['pointerdown','pointerup','mousedown','mouseup','touchstart','touchend'].forEach((t) => {
+                inlineBtn.addEventListener(t, swallow, { capture: true });
+              });
+            } catch(_) {}
+            
+            return inlineBtn;
+          }
+          
+          function insertButton() {
+            if (inserted && inlineBtn && inlineBtn.parentElement) return;
+            
+            const networkBtn = findNetworkSearchButton();
+            if (!networkBtn) return;
+            
+            const container = networkBtn.parentElement;
+            if (!container) return;
+            
+            const btn = createOptimizeButton();
+            if (!btn) return;
+            
+            // 插入到"联网搜索"按钮之后
+            if (networkBtn.nextSibling) {
+              container.insertBefore(btn, networkBtn.nextSibling);
+            } else {
+              container.appendChild(btn);
+            }
+            
+            inserted = true;
+          }
+          
+          // 初始尝试插入
+          setTimeout(() => {
+            insertButton();
+          }, 500);
+          
+          // 监听 DOM 变化，确保按钮始终存在
+          const observer = new MutationObserver(() => {
+            if (!inserted || !inlineBtn || !inlineBtn.parentElement) {
+              inserted = false;
+              insertButton();
+            }
+          });
+          
+          observer.observe(document.body, {
+            childList: true,
+            subtree: true
+          });
+          
+          // 定期检查（作为兜底）
+          setInterval(() => {
+            if (!inserted || !inlineBtn || !inlineBtn.parentElement) {
+              inserted = false;
+              insertButton();
+            }
+          }, 2000);
+          
+        } catch (e) {
+          console.warn('[LC] DeepSeek inline button init failed:', e);
+        }
+      }
+      
+      // 初始化 DeepSeek 内嵌按钮
+      try { initDeepSeekInlineButton(); } catch (_) {}
+      
       return;  // 仅采用内嵌注入策略，阻断旧的浮动定位逻辑
 
       function isSupportedAISite(host) {
@@ -1822,7 +2382,8 @@
           h.includes('doubao.com') || h.includes('douba.ai') ||
           h.includes('moonshot.cn') || h.includes('kimi.moonshot.cn') || h.includes('kimi.com') ||
           h.includes('x.ai') || h.includes('grok') ||
-          h.includes('perplexity.ai')
+          h.includes('perplexity.ai') ||
+          h.includes('deepseek.com')
         );
       }
 
@@ -1833,6 +2394,14 @@
         // 豆包页面在输入框加载/重排时可能短暂设置 opacity/transform，导致误判不可见
         if (host.includes('doubao.com') || host.includes('douba.ai')) {
           // 放宽尺寸阈值，避免初次渲染/动画阶段被误过滤
+          return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 &&
+                 rect.left < window.innerWidth && rect.top < window.innerHeight;
+        }
+        // Claude: contenteditable div 可能在初始渲染时尺寸较小，放宽判定
+        if (host.includes('claude.ai')) {
+          const style = window.getComputedStyle(el);
+          if (style.visibility === 'hidden' || style.display === 'none') return false;
+          // 放宽尺寸阈值，避免 Vue 动态渲染阶段被误过滤
           return rect.width > 10 && rect.height > 10 && rect.bottom > 0 && rect.right > 0 &&
                  rect.left < window.innerWidth && rect.top < window.innerHeight;
         }
@@ -1890,7 +2459,14 @@
         const host = location.hostname.toLowerCase();
         const siteExtra = [];
         if (host.includes('claude.ai')) {
-          siteExtra.push('div[contenteditable="true"].ProseMirror', 'textarea');
+          // Claude 最新版本（2025）：使用 contenteditable div，位于 input-composer 容器内
+          siteExtra.push(
+            'div[data-testid="input-composer"] div[contenteditable="true"]',
+            'div[data-testid="input-composer"] div.relative.flex.flex-col div[contenteditable="true"]',
+            'div[contenteditable="true"].ProseMirror',
+            'div[contenteditable="true"]',
+            'textarea'
+          );
         } else if (host.includes('moonshot.cn') || host.includes('kimi.moonshot.cn') || host.includes('kimi.com')) {
           siteExtra.push('div[contenteditable="true"][data-lexical-editor]', 'div[contenteditable="true"]');
         } else if (host.includes('x.ai') || host.includes('grok')) {
@@ -1964,6 +2540,18 @@
             const visibleCount = Array.from(nodes).filter(isVisible).length;
             // 仅在 Gemini 站点输出一次概要日志（采样：每 3s 内最多一次，可由上层节流）
             console.log(`[LC][Gemini] 候选输入框(初筛): ${allBeforeFilter.length}，并集后: ${afterUnion.length}，可见: ${visibleCount}`);
+          }
+        } catch (_) {}
+        // Claude：调试可见性与命中情况（便于排障）
+        try {
+          if (host.includes('claude.ai')) {
+            const allBeforeFilter = Array.from(nodes);
+            const extraAll = queryAllDeep(['div[data-testid="input-composer"] div[contenteditable="true"]', 'div[contenteditable="true"]', 'textarea'], document);
+            extraAll.forEach(n => nodes.add(n));
+            const afterUnion = Array.from(nodes);
+            const visibleCount = Array.from(nodes).filter(isVisible).length;
+            // 仅在 Claude 站点输出一次概要日志（采样：每 3s 内最多一次，可由上层节流）
+            console.log(`[LC][Claude] 候选输入框(初筛): ${allBeforeFilter.length}，并集后: ${afterUnion.length}，可见: ${visibleCount}`);
           }
         } catch (_) {}
         // 兜底：页面上最后一个 textarea/可编辑框
@@ -2045,20 +2633,234 @@
           btn.innerHTML = '';
         }
       }
-      // 针对任意按钮元素设置/取消“加载中”状态
+      
+      // 确保 CSS 动画已定义
+      function ensureSpinAnimation() {
+        if (document.getElementById('lc-spin-keyframes')) return;
+        const style = document.createElement('style');
+        style.id = 'lc-spin-keyframes';
+        style.textContent = `
+          @keyframes lc-spin {
+            from { transform: rotate(0); }
+            to { transform: rotate(360deg); }
+          }
+          .lc-btn-hidden > *:not(.lc-spinner) {
+            opacity: 0 !important;
+            visibility: hidden !important;
+          }
+        `;
+        document.head.appendChild(style);
+      }
+      
+      // 针对任意按钮元素设置/取消"加载中"状态（带加载动画）
       function setBtnLoadingOn(el, on) {
         try {
           if (!el) return;
+          
+          // 确保动画已定义
+          ensureSpinAnimation();
+          
+          // 检测是否为 Perplexity 按钮（通过检查内部结构）
+          const hostLower = (location.hostname || '').toLowerCase();
+          const isPerplexity = hostLower.includes('perplexity.ai');
+          const isPerplexityBtn = isPerplexity && (
+            el.querySelector('.flex.items-center.min-w-0.gap-two') ||
+            el.querySelector('.flex.shrink-0.items-center.justify-center.size-4') ||
+            el.getAttribute('aria-label') === '优化提示词'
+          );
+          
           if (on) {
+            // 保存原始内容（如果还没有保存）
+            if (!buttonOriginalContent.has(el)) {
+              const computedStyle = window.getComputedStyle(el);
+              const original = {
+                innerHTML: el.innerHTML,
+                className: el.className,
+                background: el.style.background || computedStyle.background,
+                backgroundImage: el.style.backgroundImage || computedStyle.backgroundImage,
+                opacity: el.style.opacity || computedStyle.opacity,
+                cursor: el.style.cursor || computedStyle.cursor,
+                position: el.style.position || computedStyle.position,
+                // 保存所有子元素（特别是图片元素）
+                children: Array.from(el.children).map(child => ({
+                  tagName: child.tagName,
+                  src: child.src || child.getAttribute('src') || '',
+                  outerHTML: child.outerHTML,
+                  className: child.className
+                }))
+              };
+              buttonOriginalContent.set(el, original);
+            }
+            
+            // 设置加载状态
             el.disabled = true;
             el.style.opacity = '0.7';
             el.style.cursor = 'not-allowed';
+            
+            // 检查是否为圆形按钮
+            const computedStyle = window.getComputedStyle(el);
+            const borderRadius = el.style.borderRadius || computedStyle.borderRadius;
+            const isCircular = borderRadius === '50%' || borderRadius.includes('50%');
+            
+            // 显示加载动画
+            if (isPerplexityBtn) {
+              // Perplexity 按钮：使用绝对定位的 spinner，放在按钮最外层，避免被容器裁剪
+              // 检查是否已经有 spinner
+              let spinner = el.querySelector('.lc-spinner');
+              if (!spinner) {
+                // 创建 spinner 元素
+                spinner = document.createElement('span');
+                spinner.className = 'lc-spinner';
+                // 设置 spinner 样式：绝对定位在按钮中心
+                spinner.style.cssText = `
+                  position: absolute;
+                  left: 50%;
+                  top: 50%;
+                  width: 16px;
+                  height: 16px;
+                  margin-left: -8px;
+                  margin-top: -8px;
+                  border: 2px solid rgba(0,0,0,.2);
+                  border-top-color: #0ea5e9;
+                  border-radius: 50%;
+                  animation: lc-spin .8s linear infinite;
+                  z-index: 99999;
+                  pointer-events: none;
+                  box-sizing: border-box;
+                `;
+                // 确保按钮有相对定位
+                const currentPosition = window.getComputedStyle(el).position;
+                if (currentPosition === 'static') {
+                  el.style.position = 'relative';
+                }
+                // 将 spinner 直接插入到按钮最外层（不插入到内部容器）
+                el.appendChild(spinner);
+              } else {
+                // 如果 spinner 已存在，确保它可见
+                spinner.style.display = 'block';
+                spinner.style.opacity = '1';
+                spinner.style.visibility = 'visible';
+              }
+              // 使用 class 隐藏原内容，而不是逐个修改子元素的 style
+              el.classList.add('lc-btn-hidden');
+            } else if (isCircular) {
+              // 圆形按钮：显示旋转的圆圈动画
+              el.innerHTML = `
+                <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
+                             background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
+                             position:relative;">
+                  <span style="position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+                               border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
+                               animation:lc-spin .8s linear infinite;"></span>
+                </span>`;
+            } else {
+              // 非圆形按钮：显示简单的旋转图标
+              el.innerHTML = `
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;">
+                  <span style="width:16px;height:16px;border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
+                               animation:lc-spin .8s linear infinite;"></span>
+                </span>`;
+            }
           } else {
+            // 恢复原始内容
+            if (isPerplexityBtn) {
+              // Perplexity 按钮：移除 spinner，移除隐藏 class，恢复原内容可见性
+              const spinner = el.querySelector('.lc-spinner');
+              if (spinner) {
+                spinner.remove();
+              }
+              // 移除隐藏 class，CSS 规则会自动恢复原内容的可见性
+              el.classList.remove('lc-btn-hidden');
+              // 恢复 position（如果之前设置了）
+              const original = buttonOriginalContent.get(el);
+              if (original && original.position) {
+                el.style.position = original.position;
+              } else {
+                // 如果没有保存 position，尝试恢复为默认值
+                const computedPosition = window.getComputedStyle(el).position;
+                if (computedPosition === 'relative' && !el.style.position) {
+                  el.style.position = '';
+                }
+              }
+            } else {
+              // 其他按钮：使用原有的恢复逻辑
+              const original = buttonOriginalContent.get(el);
+              if (original) {
+                // 恢复 innerHTML（包括所有子元素）
+                el.innerHTML = original.innerHTML;
+                
+                // 恢复背景样式
+                if (original.background && original.background !== 'none' && original.background !== 'rgba(0, 0, 0, 0)') {
+                  el.style.background = original.background;
+                } else if (original.backgroundImage && original.backgroundImage !== 'none') {
+                  el.style.backgroundImage = original.backgroundImage;
+                }
+                
+                // 恢复 opacity 和 cursor
+                el.style.opacity = original.opacity || '';
+                el.style.cursor = original.cursor || '';
+                
+                // 如果原始内容中有图片，确保图片正确加载和显示
+                if (original.children && original.children.length > 0) {
+                  original.children.forEach(childInfo => {
+                    if (childInfo.tagName === 'IMG' && childInfo.src) {
+                      const img = el.querySelector('img');
+                      if (img) {
+                        // 确保图片 src 正确
+                        if (img.src !== childInfo.src) {
+                          img.src = childInfo.src;
+                        }
+                        // 确保图片样式正确
+                        const originalImg = childInfo.outerHTML.match(/style="([^"]*)"/);
+                        if (originalImg && originalImg[1]) {
+                          img.style.cssText = originalImg[1];
+                        }
+                      } else {
+                        // 如果图片不存在，尝试重新创建
+                        const newImg = document.createElement('img');
+                        newImg.src = childInfo.src;
+                        if (childInfo.outerHTML.includes('style=')) {
+                          const styleMatch = childInfo.outerHTML.match(/style="([^"]*)"/);
+                          if (styleMatch && styleMatch[1]) {
+                            newImg.style.cssText = styleMatch[1];
+                          }
+                        }
+                        el.appendChild(newImg);
+                      }
+                    }
+                  });
+                }
+                
+                buttonOriginalContent.delete(el);
+              } else {
+                // 如果没有保存的原始内容，尝试恢复为默认样式
+                const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+                  ? chrome.runtime.getURL('logo.png')
+                  : '';
+                if (logoUrl) {
+                  el.innerHTML = '';
+                  el.style.background = `#ffffff url('${logoUrl}') center/70% no-repeat`;
+                } else {
+                  el.innerHTML = '';
+                }
+                el.style.opacity = '';
+                el.style.cursor = '';
+              }
+            }
+            
             el.disabled = false;
-            el.style.opacity = '';
-            el.style.cursor = '';
           }
-        } catch (_) {}
+        } catch (err) {
+          console.error('[LC] Error in setBtnLoadingOn:', err);
+          // 出错时至少恢复基本状态
+          try {
+            if (!on) {
+              el.disabled = false;
+              el.style.opacity = '';
+              el.style.cursor = '';
+            }
+          } catch (_) {}
+        }
       }
 
       // 读取元素的易读标签（辅助识别“听写/语音/麦克风”按钮）
@@ -2201,6 +3003,9 @@
       function writeTextTo(el, text) {
         if (!el) return;
         const hostLower = (location.hostname || '').toLowerCase();
+        const isChrome = /Chrome/.test(navigator.userAgent) && !/Edge|Edg/.test(navigator.userAgent);
+        const isKimi = hostLower.includes('moonshot.cn') || hostLower.includes('kimi.moonshot.cn') || hostLower.includes('kimi.com');
+        const isPerplexity = hostLower.includes('perplexity.ai');
 
         // 若传入的是容器，尝试寻找内部可编辑节点
         let target = el;
@@ -2231,6 +3036,203 @@
           }
         }
 
+        // Perplexity 的特殊处理：对所有浏览器都使用原生 setter + 模拟真实用户输入
+        if (isPerplexity && target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) {
+          try {
+            // 1. 聚焦元素
+            target.focus && target.focus();
+            
+            // 2. 选中所有现有内容（模拟用户 Ctrl+A）
+            if (typeof target.selectionStart === 'number' && typeof target.selectionEnd === 'number') {
+              target.selectionStart = 0;
+              target.selectionEnd = (target.value || '').length;
+            }
+            
+            // 3. 使用原生 setter 设置值
+            setNativeValue(target, text);
+            
+            // 4. 触发 beforeinput 事件（模拟真实输入流程）
+            try {
+              target.dispatchEvent(new InputEvent('beforeinput', { 
+                bubbles: true, 
+                cancelable: true,
+                inputType: 'insertReplacementText',
+                data: text,
+                dataTransfer: null
+              }));
+            } catch (_) {}
+            
+            // 5. 触发 input 事件（使用 insertReplacementText 类型，表示替换操作）
+            try {
+              target.dispatchEvent(new InputEvent('input', { 
+                bubbles: true, 
+                cancelable: false,
+                inputType: 'insertReplacementText',
+                data: text,
+                dataTransfer: null
+              }));
+            } catch (_) {
+              try { 
+                target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
+              } catch(__) {
+                try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(___) {}
+              }
+            }
+            
+            // 6. 触发 change 事件
+            try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+            
+            // 7. 再次触发 input 事件确保 React 受控组件更新（某些情况下需要多次触发）
+            setTimeout(() => {
+              try {
+                target.dispatchEvent(new InputEvent('input', { 
+                  bubbles: true, 
+                  cancelable: false,
+                  inputType: 'insertReplacementText',
+                  data: text,
+                  dataTransfer: null
+                }));
+              } catch (_) {}
+            }, 0);
+            
+            // 8. 光标移至末尾
+            if (typeof target.selectionStart === 'number') {
+              target.selectionStart = target.selectionEnd = (target.value || '').length;
+            }
+            
+            return;
+          } catch (_) {
+            // 如果出错，回退到标准处理
+          }
+        }
+        
+        // Perplexity contenteditable 的特殊处理
+        if (isPerplexity && target && (target.getAttribute && (target.getAttribute('contenteditable') === 'true' || target.isContentEditable))) {
+          try {
+            // 1. 聚焦元素
+            target.focus && target.focus();
+            
+            // 2. 获取当前选择范围
+            const sel = window.getSelection && window.getSelection();
+            if (!sel) {
+              throw new Error('No Selection API');
+            }
+            
+            // 3. 选中所有现有内容（模拟用户 Ctrl+A）
+            const range = document.createRange();
+            range.selectNodeContents(target);
+            sel.removeAllRanges();
+            sel.addRange(range);
+            
+            // 4. 删除选中的内容（模拟用户删除操作）
+            try {
+              range.deleteContents();
+            } catch (_) {
+              // 如果 deleteContents 失败，尝试直接清空
+              target.textContent = '';
+              // 重新创建 range
+              const newRange = document.createRange();
+              newRange.selectNodeContents(target);
+              newRange.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+            }
+            
+            // 5. 创建文本节点并插入（模拟用户输入）
+            const textNode = document.createTextNode(text);
+            let insertSuccess = false;
+            try {
+              // 尝试获取当前 range
+              let currentRange;
+              if (sel.rangeCount > 0) {
+                currentRange = sel.getRangeAt(0);
+              } else {
+                // 如果没有 range，创建一个新的
+                currentRange = document.createRange();
+                currentRange.selectNodeContents(target);
+                currentRange.collapse(false);
+              }
+              currentRange.insertNode(textNode);
+              insertSuccess = true;
+            } catch (_) {
+              // 如果插入失败，直接设置文本内容
+              target.textContent = text;
+              // 重新创建 range 用于光标定位
+              const newRange = document.createRange();
+              newRange.selectNodeContents(target);
+              newRange.collapse(false);
+              sel.removeAllRanges();
+              sel.addRange(newRange);
+            }
+            
+            // 6. 将光标移至文本末尾（仅在成功插入文本节点时执行）
+            if (insertSuccess) {
+              try {
+                const finalRange = document.createRange();
+                finalRange.setStartAfter(textNode);
+                finalRange.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(finalRange);
+              } catch (_) {
+                // 如果设置光标失败，使用简单的方式
+                const simpleRange = document.createRange();
+                simpleRange.selectNodeContents(target);
+                simpleRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(simpleRange);
+              }
+            }
+            
+            // 7. 触发 beforeinput 事件（模拟真实输入流程）
+            try {
+              target.dispatchEvent(new InputEvent('beforeinput', { 
+                bubbles: true, 
+                cancelable: true,
+                inputType: 'insertReplacementText',
+                data: text,
+                dataTransfer: null
+              }));
+            } catch (_) {}
+            
+            // 8. 触发 input 事件（使用 insertReplacementText 类型，表示替换操作）
+            try {
+              target.dispatchEvent(new InputEvent('input', { 
+                bubbles: true, 
+                cancelable: false,
+                inputType: 'insertReplacementText',
+                data: text,
+                dataTransfer: null
+              }));
+            } catch (_) {
+              try { 
+                target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+              } catch(__) {
+                try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(___) {}
+              }
+            }
+            
+            // 9. 触发 change 事件
+            try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+            
+            // 10. 再次触发 input 事件确保 React 受控组件更新
+            setTimeout(() => {
+              try {
+                target.dispatchEvent(new InputEvent('input', { 
+                  bubbles: true, 
+                  cancelable: false,
+                  inputType: 'insertReplacementText',
+                  data: text,
+                  dataTransfer: null
+                }));
+              } catch (_) {}
+            }, 0);
+            
+            return;
+          } catch (_) {
+            // 如果出错，回退到通用处理
+          }
+        }
+
         // 针对不同类型分别处理
         if (target && (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT')) {
           try {
@@ -2238,7 +3240,7 @@
           } catch (_) {}
           setNativeValue(target, text);
           try {
-            // 更像“粘贴”的输入类型，提升兼容性
+            // 更像"粘贴"的输入类型，提升兼容性
             target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text }));
           } catch (_) {
             try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(__) {}
@@ -2255,7 +3257,69 @@
 
         // contenteditable（Kimi: Lexical；豆包：部分场景下使用 CE 或 textarea；Grok: Tiptap/ProseMirror）
         if (target && (target.getAttribute && (target.getAttribute('contenteditable') === 'true' || target.isContentEditable))) {
-          try { target.focus && target.focus(); } catch (_) {}
+          // Claude: 使用安全方式替换内容，避免触发自动发送
+          const isClaude = hostLower.includes('claude.ai');
+          if (isClaude) {
+            try {
+              // 方案 A + B + C：暂停事件监听、失焦、安全替换、恢复焦点
+              const prevActive = document.activeElement;
+              
+              // 1. 失焦，让 Claude 不会自动发送
+              target.blur && target.blur();
+              
+              // 2. 暂停事件监听（保存原始监听器）
+              const originalInput = target.oninput;
+              const originalChange = target.onchange;
+              target.oninput = null;
+              target.onchange = null;
+              
+              // 3. 启用全局事件拦截
+              suppressInputEvents = true;
+              
+              // 4. 安全替换内容（不触发任何事件）
+              // 使用 innerText 而不是 textContent，确保 Vue 能正确更新
+              target.innerText = text;
+              
+              // 5. 如果 contenteditable 有 value 属性，也更新它（某些 Vue 实现会用到）
+              try {
+                const descriptor = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(target), 'value');
+                if (descriptor && descriptor.set) {
+                  descriptor.set.call(target, text);
+                }
+              } catch (_) {}
+              
+              // 6. 光标移至末尾（不触发事件）
+              const sel = window.getSelection && window.getSelection();
+              if (sel) {
+                const range = document.createRange();
+                range.selectNodeContents(target);
+                range.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(range);
+              }
+              
+              // 7. 恢复事件监听
+              target.oninput = originalInput;
+              target.onchange = originalChange;
+              
+              // 8. 禁用全局事件拦截
+              suppressInputEvents = false;
+              
+              // 9. 恢复焦点（如果需要）
+              if (prevActive && prevActive !== target) {
+                setTimeout(() => {
+                  try {
+                    prevActive.focus && prevActive.focus();
+                  } catch (_) {}
+                }, 0);
+              }
+              
+              return;
+            } catch (_) {
+              // 如果出错，确保恢复状态
+              suppressInputEvents = false;
+            }
+          }
 
           // Grok (Tiptap/ProseMirror): 使用 innerHTML 方式，确保编辑器正确更新
           const isGrok = hostLower.includes('x.ai') || hostLower.includes('grok');
@@ -2278,6 +3342,122 @@
             } catch (_) {}
           }
 
+          // Chrome 中 Kimi (contenteditable + Lexical) 的特殊处理：模拟真实用户输入
+          if (isChrome && isKimi) {
+            try {
+              // 1. 聚焦元素
+              target.focus && target.focus();
+              
+              // 2. 获取当前选择范围
+              const sel = window.getSelection && window.getSelection();
+              if (!sel) {
+                // 如果没有 Selection API，回退到通用处理
+                throw new Error('No Selection API');
+              }
+              
+              // 3. 选中所有现有内容（模拟用户 Ctrl+A）
+              const range = document.createRange();
+              range.selectNodeContents(target);
+              sel.removeAllRanges();
+              sel.addRange(range);
+              
+              // 4. 删除选中的内容（模拟用户删除操作）
+              try {
+                range.deleteContents();
+                // 删除后，range 会自动收缩到删除点，保持选中状态
+              } catch (_) {
+                // 如果 deleteContents 失败，尝试直接清空
+                target.textContent = '';
+                // 重新创建 range
+                const newRange = document.createRange();
+                newRange.selectNodeContents(target);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+              }
+              
+              // 5. 创建文本节点并插入（模拟用户输入）
+              const textNode = document.createTextNode(text);
+              let insertSuccess = false;
+              try {
+                // 尝试获取当前 range
+                let currentRange;
+                if (sel.rangeCount > 0) {
+                  currentRange = sel.getRangeAt(0);
+                } else {
+                  // 如果没有 range，创建一个新的
+                  currentRange = document.createRange();
+                  currentRange.selectNodeContents(target);
+                  currentRange.collapse(false);
+                }
+                currentRange.insertNode(textNode);
+                insertSuccess = true;
+              } catch (_) {
+                // 如果插入失败，直接设置文本内容
+                target.textContent = text;
+                // 重新创建 range 用于光标定位
+                const newRange = document.createRange();
+                newRange.selectNodeContents(target);
+                newRange.collapse(false);
+                sel.removeAllRanges();
+                sel.addRange(newRange);
+              }
+              
+              // 6. 将光标移至文本末尾（仅在成功插入文本节点时执行）
+              if (insertSuccess) {
+                try {
+                  const finalRange = document.createRange();
+                  finalRange.setStartAfter(textNode);
+                  finalRange.collapse(true);
+                  sel.removeAllRanges();
+                  sel.addRange(finalRange);
+                } catch (_) {
+                  // 如果设置光标失败，使用简单的方式
+                  const simpleRange = document.createRange();
+                  simpleRange.selectNodeContents(target);
+                  simpleRange.collapse(false);
+                  sel.removeAllRanges();
+                  sel.addRange(simpleRange);
+                }
+              }
+              
+              // 7. 触发 beforeinput 事件（模拟真实输入流程）
+              try {
+                target.dispatchEvent(new InputEvent('beforeinput', { 
+                  bubbles: true, 
+                  cancelable: true,
+                  inputType: 'insertReplacementText',
+                  data: text,
+                  dataTransfer: null
+                }));
+              } catch (_) {}
+              
+              // 8. 触发 input 事件（使用 insertReplacementText 类型，表示替换操作）
+              try {
+                target.dispatchEvent(new InputEvent('input', { 
+                  bubbles: true, 
+                  cancelable: false,
+                  inputType: 'insertReplacementText',
+                  data: text,
+                  dataTransfer: null
+                }));
+              } catch (_) {
+                try { 
+                  target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertText', data: text }));
+                } catch(__) {
+                  try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(___) {}
+                }
+              }
+              
+              // 9. 触发 change 事件
+              try { target.dispatchEvent(new Event('change', { bubbles: true })); } catch(_) {}
+              
+              return;
+            } catch (_) {
+              // 如果出错，回退到通用处理
+            }
+          }
+
           // 其他站点：优先使用 execCommand 以兼容富文本编辑器的内部状态（Lexical/Slate/ProseMirror 等）
           let ok = false;
           try {
@@ -2293,7 +3473,7 @@
             try { target.textContent = text; } catch (_) {}
           }
 
-          // 触发站点监听
+        // 触发站点监听
           try { target.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: text })); } catch (_) {
             try { target.dispatchEvent(new Event('input', { bubbles: true })); } catch(__) {}
           }
@@ -2303,13 +3483,13 @@
           try {
             const sel = window.getSelection && window.getSelection();
             if (sel) {
-              const range = document.createRange();
+            const range = document.createRange();
               range.selectNodeContents(target);
-              range.collapse(false);
-              sel.removeAllRanges();
-              sel.addRange(range);
-            }
-          } catch (_) {}
+            range.collapse(false);
+            sel.removeAllRanges();
+            sel.addRange(range);
+          }
+        } catch (_) {}
           return;
         }
 
@@ -2441,12 +3621,18 @@
       }
 
       async function onOptimizeClick(e) {
+        // 保存原内容（在函数作用域，错误处理中也能访问）
+        let savedContent = '';
+        let targetEl = null;
+        
         try {
-          // 双保险：阻断默认与冒泡，避免触发站点发送逻辑（豆包/Kimi 等）
+          // 双保险：阻断默认与冒泡，避免触发站点发送逻辑（豆包/Kimi/Claude 等）
           try { e && e.preventDefault && e.preventDefault(); } catch(_) {}
           try { e && e.stopPropagation && e.stopPropagation(); } catch(_) {}
           try { e && e.stopImmediatePropagation && e.stopImmediatePropagation(); } catch(_) {}
+          
           currentTriggerBtn = (e && (e.currentTarget || e.target)) ? (e.currentTarget || e.target) : document.getElementById('lc-optimize-btn-inline');
+          
           // 1) 首选全局策略
           targetEl = pickChatInput();
           // 2) 兜底：从按钮出发就近查找
@@ -2463,8 +3649,16 @@
             console.warn('[LC] 未找到可写入的输入框，取消本次优化。');
             return;
           }
+          
+          // 保存原内容（重要：防止失败时丢失）
           const text = (readTextFrom(targetEl) || '').trim();
+          savedContent = text; // 保存原内容到函数作用域
           console.log('[LC] Original text length:', text.length);
+          
+          if (!text) {
+            console.warn('[LC] 输入框为空，取消本次优化。');
+            return;
+          }
           setBtnLoadingOn(currentTriggerBtn, true);
           optimizing = true;
 
@@ -2502,31 +3696,42 @@
           console.log('[LC] Extracted optimized length:', optimized ? optimized.length : 0);
 
           if (typeof optimized === 'string' && optimized.trim()) {
+            // 安全替换内容（不会触发 Claude 的自动发送）
             writeTextTo(targetEl, String(optimized).trim());
             hasWrittenOptimized = true;
-              // 非豆包/Kimi：默认自动触发一次原生发送以驱动内部状态
-              try {
-                const kind = (typeof getHostCategory === 'function') ? getHostCategory() : '';
-                if (kind !== 'doubao' && kind !== 'kimi') {
-                  tryClickSiteSend();
-                } else {
-                  // 在豆包与 Kimi 上，严格不触发任何站点发送逻辑
-                }
-              } catch(_) {}
+            
+            // 严格不触发站点发送逻辑的站点：豆包、Kimi、Claude
+            // Claude 会在内容替换时自动发送，所以绝对不能触发发送
+            try {
+              const kind = (typeof getHostCategory === 'function') ? getHostCategory() : '';
+              if (kind !== 'doubao' && kind !== 'kimi' && kind !== 'claude') {
+                // 其他站点：默认自动触发一次原生发送以驱动内部状态
+             tryClickSiteSend();
           } else {
-            // 未返回有效优化结果：保留原文（若原文为空则不改动）
-            if (text) writeTextTo(targetEl, text);
-            console.warn('[LC] 未获得优化结果，保持原文。');
+                // 在豆包、Kimi、Claude 上，严格不触发任何站点发送逻辑
+                console.log('[LC] 站点', kind, '不触发自动发送');
+              }
+            } catch(_) {}
+          } else {
+            // 未返回有效优化结果：恢复原内容
+            if (savedContent) {
+              writeTextTo(targetEl, savedContent);
+            }
+            console.warn('[LC] 未获得优化结果，已恢复原文。');
           }
 
           setBtnLoadingOn(currentTriggerBtn, false);
           optimizing = false;
-        } catch (_) {
+        } catch (err) {
           optimizing = false;
           setBtnLoadingOn(currentTriggerBtn, false);
-          // 出错时回滚原始文本
-          try { if (targetEl) writeTextTo(targetEl, readTextFrom(targetEl) || ''); } catch(_) {}
-          console.error('[LC] onOptimizeClick error:', _);
+          // 出错时恢复原内容
+          try {
+            if (targetEl && savedContent) {
+              writeTextTo(targetEl, savedContent);
+            }
+          } catch(_) {}
+          console.error('[LC] onOptimizeClick error:', err);
         }
       }
 

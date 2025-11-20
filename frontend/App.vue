@@ -18,7 +18,54 @@
                 {{ t('app.subtitle') }}
               </p>
             </div>
-            <div class="flex items-end pb-0.5">
+            <div class="flex flex-col items-end pb-0.5 gap-2 pr-4 translate-y-2">
+              <div 
+                class="relative"
+                @mouseleave="scheduleLinkPopoverHide"
+              >
+                <div 
+                  ref="linkButtonRef"
+                  class="flex items-center overflow-hidden rounded-full shadow border border-slate-200 dark:border-slate-700 h-8"
+                >
+                  <div class="px-4 h-full flex items-center bg-blue-700 text-white text-sm font-semibold tracking-wide">
+                    LifeContext.Link
+                  </div>
+                  <button
+                    class="w-8 h-8 flex items-center justify-center bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
+                    @mouseenter="showLinkPopoverPanel"
+                    @focus="showLinkPopoverPanel"
+                    @click="handleLinkButtonClick"
+                  >
+                    <img src="/link_logo.png" alt="link" class="h-4 w-4 object-contain" />
+                  </button>
+                </div>
+                <Teleport to="body">
+                  <transition name="fade">
+                    <div
+                      v-if="showLinkPopover"
+                      :style="linkPopoverStyle"
+                      class="fixed w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg p-4 space-y-2 text-sm text-slate-600 dark:text-slate-300 z-[9999]"
+                    >
+                      <p>
+                        你的 Life 已压缩进这枚 Link，复制即可与 LLM 或朋友分享你的数字故事。
+                      </p>
+                      <div class="text-xs text-blue-600 dark:text-blue-300 break-all font-medium">
+                        {{ lifeContextLink }}
+                      </div>
+                      <button
+                        class="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                        @click="handleLinkButtonClick"
+                      >
+                        {{ copyButtonText }}
+                      </button>
+                      <p class="text-xs text-green-600 dark:text-green-300 flex items-center gap-2 flex-nowrap whitespace-nowrap" v-if="copyState === 'copied'">
+                        <span>链接已复制，可直接粘贴使用。</span>
+                        <span class="text-slate-500 dark:text-slate-400">Coming soon！</span>
+                      </p>
+                    </div>
+                  </transition>
+                </Teleport>
+              </div>
               <span class="text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 {{ today }}
               </span>
@@ -170,8 +217,24 @@ const activeChatSessionId = ref<number | null>(5);
 
 const isChatWindowOpen = ref(false);
 const currentDate = ref(new Date());
+const lifeContextLink = ref('https://lifecontext.link/demo');
+const copyState = ref<'idle' | 'copied'>('idle');
+const showLinkPopover = ref(false);
+const copyButtonText = computed(() => (copyState.value === 'copied' ? '已复制' : '复制链接'));
+const linkButtonRef = ref<HTMLElement | null>(null);
 
 // Computed
+const linkPopoverStyle = computed(() => {
+  if (!linkButtonRef.value || !showLinkPopover.value) {
+    return {};
+  }
+  const rect = linkButtonRef.value.getBoundingClientRect();
+  return {
+    right: `${window.innerWidth - rect.right}px`,
+    top: `${rect.bottom + 12}px`,
+  };
+});
+
 const today = computed(() => {
   const activeLocale = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
   return currentDate.value.toLocaleString(activeLocale, {
@@ -246,6 +309,45 @@ const handleToggleDailyPanel = () => {
 
 const handleReportDateChange = (dateValue: string) => {
   loadReports(dateValue);
+};
+
+let copyFeedbackTimer: number | undefined;
+let linkPopoverHideTimer: number | undefined;
+
+const showLinkPopoverPanel = () => {
+  if (linkPopoverHideTimer) {
+    clearTimeout(linkPopoverHideTimer);
+  }
+  showLinkPopover.value = true;
+};
+
+const scheduleLinkPopoverHide = () => {
+  if (linkPopoverHideTimer) {
+    clearTimeout(linkPopoverHideTimer);
+  }
+  linkPopoverHideTimer = window.setTimeout(() => {
+    showLinkPopover.value = false;
+  }, 200);
+};
+
+const copyLifeContextLink = async () => {
+  try {
+    await navigator.clipboard.writeText(lifeContextLink.value);
+    copyState.value = 'copied';
+    if (copyFeedbackTimer) {
+      clearTimeout(copyFeedbackTimer);
+    }
+    copyFeedbackTimer = window.setTimeout(() => {
+      copyState.value = 'idle';
+    }, 2000);
+  } catch (error) {
+    console.error('Failed to copy LifeContext link:', error);
+  }
+};
+
+const handleLinkButtonClick = async () => {
+  await copyLifeContextLink();
+  showLinkPopover.value = true;
 };
 
 // 添加直接操作Todo的API方法
@@ -508,6 +610,12 @@ onMounted(() => {
 onUnmounted(() => {
   if (timer) {
     clearInterval(timer);
+  }
+  if (copyFeedbackTimer) {
+    clearTimeout(copyFeedbackTimer);
+  }
+  if (linkPopoverHideTimer) {
+    clearTimeout(linkPopoverHideTimer);
   }
   
   // 停止事件轮询

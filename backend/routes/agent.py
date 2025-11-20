@@ -256,13 +256,17 @@ async def process_query_with_strategy(
     optimized_query = query  # 默认使用原查询
     optimization_result = None
     
-    if optimize_prompt and context.items:
-        logger.info(f"Optimizing user prompt based on context")
+    if optimize_prompt:
+        logger.info(f"Optimizing user prompt (context items: {len(context.items)})")
         optimization_result = await optimize_user_prompt(query, context, session_id)
         
         if optimization_result.get("success"):
             optimized_query = optimization_result.get("optimized_query", query)
-            logger.info(f"Prompt optimization successful: confidence={optimization_result.get('confidence', 0)}")
+            optimization_reason = optimization_result.get("optimization_reason", "")
+            logger.info(f"Prompt optimization successful")
+            logger.info(f"Using optimized prompt: {optimized_query}")
+            if optimization_reason:
+                logger.info(f"Optimization reason: {optimization_reason}")
         else:
             logger.warning(f"Prompt optimization failed: {optimization_result.get('error', 'unknown error')}")
     
@@ -296,6 +300,8 @@ async def process_query_with_strategy(
         ])
         # 使用优化后的查询（如果启用了优化）
         final_query = optimized_query if optimize_prompt else query
+        if optimize_prompt and final_query != query:
+            logger.info(f"Final query using optimized prompt: {final_query}")
         user_message = f"""用户问题: {final_query}
 
 相关上下文信息:
@@ -373,8 +379,7 @@ async def process_query_with_strategy(
             "enabled": True,
             "original_query": optimization_result.get("original_query", query),
             "optimized_query": optimization_result.get("optimized_query", query),
-            "optimization_reason": optimization_result.get("optimization_reason", ""),
-            "confidence": optimization_result.get("confidence", 0.0)
+            "optimization_reason": optimization_result.get("optimization_reason", "")
         }
     
     return result
@@ -629,26 +634,28 @@ async def optimize_user_prompt(
         
         # 解析结果
         result_text = response.choices[0].message.content.strip()
+        
+        # 打印模型的原始输出（用于调试）
+        logger.info(f"LLM raw response for prompt optimization:")
+        logger.info(f"  Raw output: {result_text}")
+        
         result_json = json.loads(result_text)
         
         optimized_query = result_json.get("optimized_query", original_query)
         optimization_reason = result_json.get("optimization_reason", "")
-        confidence = result_json.get("confidence", 0.5)
         
-        # 如果置信度低，使用原问题
-        if confidence < 0.5:
-            logger.info(f"Prompt optimization confidence too low ({confidence}), using original query")
-            optimized_query = original_query
-            optimization_reason = "原问题已足够清晰，无需优化"
-        
-        logger.info(f"Prompt optimized: '{original_query}' -> '{optimized_query}' (confidence: {confidence})")
+        logger.info(f"Prompt optimized: '{original_query}' -> '{optimized_query}'")
+        logger.info(f"Optimized prompt details:")
+        logger.info(f"  Original: {original_query}")
+        logger.info(f"  Optimized: {optimized_query}")
+        if optimization_reason:
+            logger.info(f"  Reason: {optimization_reason}")
         
         return {
             "success": True,
             "original_query": original_query,
             "optimized_query": optimized_query,
-            "optimization_reason": optimization_reason,
-            "confidence": confidence
+            "optimization_reason": optimization_reason
         }
         
     except json.JSONDecodeError as e:
@@ -1040,7 +1047,6 @@ def chat_stream():
                         "original_query": opt_info.get("original_query", query),
                         "optimized_query": opt_info.get("optimized_query", query),
                         "optimization_reason": opt_info.get("optimization_reason", ""),
-                        "confidence": opt_info.get("confidence", 0.0),
                         "workflow_id": workflow_id,
                         "timestamp": datetime.now().isoformat()
                     }
@@ -1424,13 +1430,9 @@ async def optimize_prompt_simple(prompt: str, url: str) -> Dict[str, Any]:
             except Exception as e:
                 logger.warning(f"Failed to retrieve page context: {e}")
         
-        # 如果没有页面内容，直接返回原提示词
+        # 如果没有页面内容，仍然进行优化（可以基于提示词本身进行结构化、澄清等优化）
         if not page_content:
-            logger.info("No page content found, returning original prompt")
-            return {
-                "success": True,
-                "optimized_prompt": prompt
-            }
+            logger.info("No page content found, will optimize prompt without page context")
         
         # 截断过长内容（保留前2000字符）
         if len(page_content) > 2000:
@@ -1441,26 +1443,47 @@ async def optimize_prompt_simple(prompt: str, url: str) -> Dict[str, Any]:
         prompts = get_current_prompts()
         base_optimization = prompts.get("prompt_optimization", {})
         
-        system_prompt = base_optimization.get("system", "") + """
+        # 根据是否有页面内容调整提示词
+        if page_content:
+            system_prompt = base_optimization.get("system", "") + """
 
 **针对当前场景的额外要求**:
-1. 仅基于提供的页面内容优化提示词
+1. 优先基于提供的页面内容优化提示词
 2. 如果提示词与页面内容高度相关，补充具体细节
-3. 如果提示词与页面内容关联不强，保持原样
+3. 如果提示词与页面内容关联不强，基于提示词本身进行结构化、澄清等优化
 4. 返回的 optimized_query 应该是可以直接使用的提示词
 
 **返回JSON格式**:
 {
-    "optimized_query": "优化后的提示词",
-    "confidence": 0.85
+    "optimized_query": "优化后的提示词"
 }"""
-        
-        user_prompt = f"""原始提示词：{prompt}
+            user_prompt = f"""原始提示词：{prompt}
 
 当前页面内容：
 {page_content}
 
-请基于页面内容优化这个提示词。如果提示词与页面内容无关，或页面内容不足以优化，请返回原提示词。"""
+请基于页面内容和提示词本身优化这个提示词。如果提示词与页面内容高度相关，补充具体细节；如果关联不强，基于提示词本身进行结构化、澄清等优化。"""
+        else:
+            system_prompt = base_optimization.get("system", "") + """
+
+**针对当前场景的额外要求**:
+1. 基于提示词本身进行优化（结构化、澄清模糊、补充隐含信息等）
+2. 如果提示词已经很清晰，可以进行微调使其更专业、更结构化
+3. 返回的 optimized_query 应该是可以直接使用的提示词
+
+**返回JSON格式**:
+{
+    "optimized_query": "优化后的提示词"
+}"""
+            user_prompt = f"""原始提示词：{prompt}
+
+请基于提示词本身进行优化，包括：
+- 结构化组织（意图、条件、期望输出）
+- 澄清模糊表达
+- 补充隐含信息
+- 改进表达方式
+
+如果提示词已经很清晰，可以进行微调使其更专业、更结构化。"""
         
         # ========== 步骤 3: 调用 LLM 优化 ==========
         response = client.chat.completions.create(
@@ -1476,16 +1499,20 @@ async def optimize_prompt_simple(prompt: str, url: str) -> Dict[str, Any]:
         
         # 解析结果
         result_text = response.choices[0].message.content.strip()
+        
+        # 打印模型的原始输出（用于调试）
+        logger.info(f"LLM raw response for prompt optimization:")
+        logger.info(f"  Raw output: {result_text}")
+        
         result_json = json.loads(result_text)
         
         optimized_prompt = result_json.get("optimized_query", prompt)
-        confidence = result_json.get("confidence", 0.5)
         
-        # 置信度过低，使用原提示词
-        if confidence < 0.5:
-            optimized_prompt = prompt
-        
-        logger.info(f"Prompt optimization completed: confidence={confidence}")
+        logger.info(f"Prompt optimization completed")
+        logger.info(f"Optimized prompt details:")
+        logger.info(f"  Original prompt: {prompt}")
+        logger.info(f"  Optimized prompt: {optimized_prompt}")
+        logger.info(f"  URL: {url}")
         
         return {
             "success": True,
