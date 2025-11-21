@@ -2647,26 +2647,34 @@
 
       function setBtnLoading(on) {
         if (!btn) return;
+        // 确保动画已定义
+        ensureSpinAnimation();
         if (on) {
           btn.disabled = true;
           btn.style.opacity = '1';
           btn.style.cursor = 'not-allowed';
-          // 隐藏图标，保留圆圈背景
-          btn.style.background = '#ffffff';
+          // 添加淡蓝色渐变背景和边框，使加载状态更明显
+          btn.style.background = 'linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.2))';
+          btn.style.border = '1px solid rgba(14, 165, 233, 0.3)';
+          btn.style.boxShadow = '0 0 12px rgba(14, 165, 233, 0.3), 0 0 20px rgba(14, 165, 233, 0.15)';
           btn.innerHTML = `
             <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
-                         background: #ffffff;
+                         background: inherit;
                          position:relative;">
-              <span style="position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;
-                           border:3px solid rgba(14,165,233,0.2);border-top-color:#0ea5e9;
+              <span style="position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;
+                           border:4px solid rgba(14, 165, 233, 0.25);
+                           border-top-color:#0ea5e9;
+                           border-right-color:#3b82f6;
                            border-radius:50%;
-                           animation:lc-spin .6s linear infinite;"></span>
+                           animation:lc-spin .7s linear infinite;
+                           box-shadow: 0 0 10px rgba(14, 165, 233, 0.5), 0 0 15px rgba(14, 165, 233, 0.3);
+                           box-sizing:border-box;"></span>
             </span>`;
         } else {
           btn.disabled = false;
           btn.style.opacity = '.95';
           btn.style.cursor = 'pointer';
-          // 恢复图标背景
+          // 恢复图标背景和样式
           const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
             ? chrome.runtime.getURL('logo.png')
             : '';
@@ -2675,6 +2683,8 @@
           } else {
             btn.style.background = '#ffffff';
           }
+          btn.style.border = '';
+          btn.style.boxShadow = '';
           btn.innerHTML = '';
         }
       }
@@ -2691,11 +2701,20 @@
           }
           @keyframes lc-pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.85; transform: scale(1.02); }
+            50% { opacity: 0.85; transform: scale(1.05); }
+          }
+          @keyframes lc-glow {
+            0%, 100% { box-shadow: 0 0 8px rgba(14, 165, 233, 0.4), 0 0 12px rgba(14, 165, 233, 0.2); }
+            50% { box-shadow: 0 0 12px rgba(14, 165, 233, 0.6), 0 0 18px rgba(14, 165, 233, 0.3); }
           }
           .lc-btn-hidden > *:not(.lc-spinner) {
             opacity: 0 !important;
             visibility: hidden !important;
+          }
+          .lc-loading-btn {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(59, 130, 246, 0.15)) !important;
+            border: 1px solid rgba(14, 165, 233, 0.3) !important;
+            animation: lc-pulse 2s ease-in-out infinite !important;
           }
         `;
         document.head.appendChild(style);
@@ -2746,6 +2765,9 @@
             el.style.opacity = '1';
             el.style.cursor = 'not-allowed';
             
+            // 添加加载状态类，用于应用统一的加载样式
+            el.classList.add('lc-loading-btn');
+            
             // 检查是否为圆形按钮
             const computedStyle = window.getComputedStyle(el);
             const borderRadius = el.style.borderRadius || computedStyle.borderRadius;
@@ -2760,22 +2782,24 @@
                 // 创建 spinner 元素
                 spinner = document.createElement('span');
                 spinner.className = 'lc-spinner';
-                // 设置 spinner 样式：绝对定位在按钮中心
+                // 设置 spinner 样式：绝对定位在按钮中心，使用蓝色主题
                 spinner.style.cssText = `
                   position: absolute;
                   left: 50%;
                   top: 50%;
-                  width: 16px;
-                  height: 16px;
-                  margin-left: -8px;
-                  margin-top: -8px;
-                  border: 2px solid rgba(0,0,0,.2);
+                  width: 24px;
+                  height: 24px;
+                  margin-left: -12px;
+                  margin-top: -12px;
+                  border: 4px solid rgba(14, 165, 233, 0.2);
                   border-top-color: #0ea5e9;
+                  border-right-color: #3b82f6;
                   border-radius: 50%;
-                  animation: lc-spin .8s linear infinite;
+                  animation: lc-spin .7s linear infinite;
                   z-index: 99999;
                   pointer-events: none;
                   box-sizing: border-box;
+                  box-shadow: 0 0 10px rgba(14, 165, 233, 0.4), 0 0 15px rgba(14, 165, 233, 0.2);
                 `;
                 // 确保按钮有相对定位
                 const currentPosition = window.getComputedStyle(el).position;
@@ -2793,41 +2817,48 @@
               // 使用 class 隐藏原内容，而不是逐个修改子元素的 style
               el.classList.add('lc-btn-hidden');
             } else if (isCircular) {
-              // 圆形按钮：隐藏图标，保留圆圈背景，显示转圈动画
-              // 移除背景图片，只保留白色背景
-              const originalBg = buttonOriginalContent.get(el);
-              if (originalBg && originalBg.background) {
-                // 从原始背景中提取颜色，如果没有则使用白色
-                const bgColor = originalBg.background.includes('url') 
-                  ? '#ffffff' 
-                  : (originalBg.background.match(/^#?\w+/) || ['#ffffff'])[0];
-                el.style.background = bgColor;
-              } else {
-                el.style.background = '#ffffff';
-              }
+              // 圆形按钮：隐藏图标，显示蓝色转圈动画，添加淡蓝色背景
+              // 移除背景图片，添加淡蓝色渐变背景
+              el.style.background = 'linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.2))';
               el.style.backgroundImage = 'none';
+              el.style.border = '1px solid rgba(14, 165, 233, 0.3)';
+              el.style.boxShadow = '0 0 12px rgba(14, 165, 233, 0.3), 0 0 20px rgba(14, 165, 233, 0.15)';
               el.innerHTML = `
                 <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
                              background: inherit;
                              position:relative;">
-                  <span style="position:absolute;left:50%;top:50%;width:20px;height:20px;margin:-10px 0 0 -10px;
-                               border:3px solid rgba(14,165,233,0.2);border-top-color:#0ea5e9;
+                  <span style="position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;
+                               border:4px solid rgba(14, 165, 233, 0.25);
+                               border-top-color:#0ea5e9;
+                               border-right-color:#3b82f6;
                                border-radius:50%;
-                               animation:lc-spin .6s linear infinite;"></span>
+                               animation:lc-spin .7s linear infinite;
+                               box-shadow: 0 0 10px rgba(14, 165, 233, 0.5), 0 0 15px rgba(14, 165, 233, 0.3);
+                               box-sizing:border-box;"></span>
                 </span>`;
             } else {
-              // 非圆形按钮：显示简单的旋转图标（更明显的样式）
+              // 非圆形按钮：显示明显的蓝色旋转动画，带渐变背景和发光效果
               el.innerHTML = `
                 <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;
-                             background: linear-gradient(135deg, rgba(14,165,233,0.1), rgba(59,130,246,0.15));
-                             animation:lc-pulse 1.5s ease-in-out infinite;">
-                  <span style="width:24px;height:24px;border:3px solid rgba(14,165,233,0.3);border-top-color:#0ea5e9;border-right-color:#3b82f6;
+                             background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.2));
+                             border-radius: 6px;
+                             position:relative;
+                             animation:lc-pulse 2s ease-in-out infinite;">
+                  <span style="width:28px;height:28px;
+                               border:4px solid rgba(14, 165, 233, 0.3);
+                               border-top-color:#0ea5e9;
+                               border-right-color:#3b82f6;
+                               border-bottom-color:#0284c7;
                                border-radius:50%;
-                               animation:lc-spin .6s linear infinite;
-                               box-shadow: 0 0 8px rgba(14,165,233,0.5);"></span>
+                               animation:lc-spin .7s linear infinite;
+                               box-shadow: 0 0 12px rgba(14, 165, 233, 0.6), 0 0 20px rgba(14, 165, 233, 0.3);
+                               box-sizing:border-box;"></span>
                 </span>`;
             }
           } else {
+            // 移除加载状态类
+            el.classList.remove('lc-loading-btn');
+            
             // 恢复原始内容
             if (isPerplexityBtn) {
               // Perplexity 按钮：移除 spinner，移除隐藏 class，恢复原内容可见性
@@ -2848,6 +2879,9 @@
                   el.style.position = '';
                 }
               }
+              // 恢复边框和阴影
+              el.style.border = '';
+              el.style.boxShadow = '';
             } else {
               // 其他按钮：使用原有的恢复逻辑
               const original = buttonOriginalContent.get(el);
@@ -2860,7 +2894,14 @@
                   el.style.background = original.background;
                 } else if (original.backgroundImage && original.backgroundImage !== 'none') {
                   el.style.backgroundImage = original.backgroundImage;
+                } else {
+                  el.style.background = '';
+                  el.style.backgroundImage = '';
                 }
+                
+                // 恢复边框和阴影
+                el.style.border = '';
+                el.style.boxShadow = '';
                 
                 // 恢复 opacity 和 cursor
                 el.style.opacity = original.opacity || '';
