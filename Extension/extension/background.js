@@ -531,6 +531,20 @@ async function showEventNotification(event) {
     console.warn('通知 API 不可用或未授予权限，跳过通知。');
     return;
   }
+  
+  // 检查是否为手动生成的 todo，如果是则跳过通知
+  if (event.type === 'todo') {
+    const isManual = event.data?.generated_by === 'manual' || 
+                     (event.data?.message && (
+                       String(event.data.message).includes('手动创建') || 
+                       String(event.data.message).includes('手动生成')
+                     ));
+    if (isManual) {
+      console.log('[LC] 跳过手动生成的 todo 通知:', event.data?.title || event.data?.message);
+      return;
+    }
+  }
+  
   const notificationId = `event_${event.id || Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const locale = getLocale();
   const t = I18N[locale] || I18N.en;
