@@ -1082,6 +1082,22 @@
     try {
       // 仅在主流 AI 网站生效
       if (!isSupportedAISite(location.hostname)) return;
+      // ==============================
+      //   新增：排除非聊天页面的路径
+      // ==============================
+      const blockedPathKeywords = [
+        '/settings', '/setting', '/account', '/accounts', '/profile', '/profiles',
+        '/index', '/introducing', '/about', '/help', '/support',
+        '/privacy', '/terms', '/billing', '/subscription', '/pricing',
+        '/login', '/signin', '/signup', '/register', '/logout'
+      ];
+      const path = location.pathname.toLowerCase();
+      for (const keyword of blockedPathKeywords) {
+        if (path.includes(keyword)) {
+          console.log('[LC] 当前路径被排除，不注入优化按钮：', path);
+          return;
+        }
+      }
       const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
         ? chrome.runtime.getURL('logo.png')
         : '';
@@ -2172,6 +2188,23 @@
         try {
           const host = (location.hostname || '').toLowerCase();
           if (!host.includes('deepseek.com')) return;
+          
+          // ==============================
+          //   排除非聊天页面的路径
+          // ==============================
+          const blockedPathKeywords = [
+            '/settings', '/setting', '/account', '/accounts', '/profile', '/profiles',
+            '/index', '/introducing', '/about', '/help', '/support',
+            '/privacy', '/terms', '/billing', '/subscription', '/pricing',
+            '/login', '/signin', '/signup', '/register', '/logout'
+          ];
+          const path = location.pathname.toLowerCase();
+          for (const keyword of blockedPathKeywords) {
+            if (path.includes(keyword)) {
+              console.log('[LC] 当前路径被排除，不注入优化按钮：', path);
+              return;
+            }
+          }
           
           // 获取 logo URL（与其他站点一致）
           const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
