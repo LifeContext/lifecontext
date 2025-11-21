@@ -12,12 +12,17 @@
 [![Discord](https://img.shields.io/badge/Discord-Join_Us-7289DA?logo=discord&style=flat-square)](https://discord.gg/sb8Xg8xR)
 [![Follow on X](https://img.shields.io/badge/Follow_%40LifeContext2025-000000?logo=x&style=flat-square)](https://x.com/LifeContext2025)
 
+---
 
+**Navigation** | [Core Features](#-core-features) | [Scenario Introduction](#-scenario-introduction) | [Quick Start](#-quick-start) | [Development Plan](#-development-plan) | [Community](#community)
+
+---
 
 [中文](readme_zh.md) / English
 
-
 ## 🌍 What is Life Context
+
+> **Open Source · Proactive · Free | Browser-based Digital Twin, the Best Alternative to ChatGPT Pulse**
 
 Shaped by your life. Empower yourself. Interact with the world.
 * Born from your unique life context, shaping a digital twin that truly understands you.
@@ -26,23 +31,93 @@ Shaped by your life. Empower yourself. Interact with the world.
 
 ## 🎯 Core Features
 
-- **Life Context Base:** Intelligently builds a comprehensive record of your life context across web, apps, and smart devices. Continuously evolves through interaction, preserving your knowledge and experiences.
-- **Context API**: Provides developers with a unified interface to store, retrieve, and manage contextual data, making cross-platform integration and expansion simpler and more efficient.
-- **Companion Insights**: Proactively understands your life context and surfaces the moments, ideas, and priorities that truly matter to you—so information finds you, not the other way around.
-- **Contextual Chat**: Understands your personal context to answer questions, recall memories, or reorganize inspiration—becoming an extension of your memory and mind.
-- **Adaptive Scenarios**: Delivers precise, context-aware responses within specific vertical domains based on your instructions, enabling truly context-driven intelligence.
-- **Task Automation**: Transforms AI from a thinker into a doer—proactively triggering and continuously executing conditional tasks based on your context, embedding intelligence into everyday life.
-- **Content Generation**: Creates documents, images, audio, video, and notes on demand—helping you capture, organize, and express ideas naturally and effortlessly.
-- **Digital Avatar**: As your own personal digital avatar, engage in endless interactions with the world.
+### Proactive Push
 
-![img](src/mindmap.png)
+- **Smart Tips**  
+  Based on your browsing history and activity data, **proactively push** personalized smart tip cards through browser notifications or homepage display, helping you discover important information.
 
-## 🧩 Current Version
+- **Todo Items**  
+  Analyze your browsing content and activity patterns to **proactively push** todo suggestions. You can view, edit, complete, or delete these tasks on the homepage.
 
-* Focuses on your core workspace — **web browser** — building a powerful and proactive intelligent presence.
-* Automatically analyzes the web pages you browse to generate your digital life context.
-* Stays out of your way while providing timely, actionable insights.
+- **Daily Feed**  
+  **Proactively push** personalized information feed cards daily, including activity summaries, todo reminders, news recommendations, knowledge cards, and more, displayed in the left panel of the homepage to help you quickly understand important information.
 
+### Intelligent Analysis
+
+- **Smart Content Analysis**  
+  Use large language models to automatically analyze web page content, extract key information, topic classification, summaries, and other metadata, providing the foundation for subsequent intelligent recommendations and generation.
+
+- **Timeline Management**  
+  View all browsing records on the timeline page of the homepage. The system automatically summarizes and categorizes your activities, supporting time filtering, content search, record deletion, and other operations to help you review and manage your digital footprint.
+
+### Interactive Tools
+
+- **Floating Chat Assistant**  
+  Click the floating orb on any webpage to open a chat window. The AI understands the current page content and combines your browsing history to answer questions, summarize information, or provide suggestions.
+
+- **Prompt Optimization**  
+  Automatically inject optimization buttons in mainstream AI websites like ChatGPT, Claude, Gemini, etc., optimizing your prompts based on current page content to help AI better understand your needs.
+
+### Privacy & Security
+
+- **Privacy Protection**  
+  Configure website domains you don't want recorded in the extension settings, supporting one-click add/remove. Protect your privacy without affecting other features. You can also close the extension or delete specific records at any time.
+
+### Coming Soon
+
+- **Web Multimodal Content Analysis**  
+  Automatically identify and analyze multimedia content such as images and videos on web pages, extract key information and generate summaries to enrich your context information base.
+
+- **Office Application Integration**  
+  Support integration with common office applications (such as documents, spreadsheets, emails, etc.), automatically sync and analyze your office data to help AI better understand your work context.
+
+## 🌄 Scenario Introduction
+
+### 1️⃣ Automatic Browsing Record
+
+LifeContext automatically and seamlessly records the information you browse on web pages, including page titles, URLs, text content, etc., providing a data foundation for subsequent intelligent analysis.
+
+### 2️⃣ Floating Chat Assistant
+
+On any webpage, click the floating orb to open a chat window and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your browsing history.
+
+![Main Feature Demo](src/gif/main.gif)
+
+### 3️⃣ Proactive Smart Content Push
+
+LifeContext automatically generates smart tips, todos, and daily feeds based on your browsing experiences, and displays them through browser notifications or on the homepage, so important information finds you proactively.
+
+#### 💡 Smart Tips
+
+Based on your browsing records, the system proactively pushes personalized smart tip cards. Click the card to view detailed content.
+
+![Tips Feature Demo](src/gif/tips.gif)
+
+#### ✅ Todo Items
+
+The system automatically generates todo suggestions based on your activities. You can manually edit, complete, or delete these tasks on the homepage.
+
+![Todo Feature Demo](src/gif/todo.gif)
+
+#### 📰 Daily Feed
+
+Click the date in the left sidebar of the homepage to view that day's feed information, including activity summaries, news recommendations, knowledge cards, etc. The default generation time is 8:30 the next day, which you can modify in the settings.
+
+![Daily Feature Demo](src/gif/daily.gif)
+
+### 4️⃣ Privacy Protection
+
+#### 🚫 URL Blacklist
+
+If you don't want specific websites recorded in your life context, you can block the corresponding URL in the extension settings, supporting one-click add/remove. If you don't want to record any browser activity, you can disable the extension at any time.
+
+![Blacklist Feature Demo](src/gif/blacklist.gif)
+
+#### 🗂️ Timeline Management
+
+You can select the Timeline page at the top left of the homepage to manage storage, view, search, or delete page records you don't want to keep in LifeContext.
+
+![Timeline Feature Demo](src/gif/timeline.gif)
 
 ## 🚀 Quick Start
 
@@ -131,40 +206,6 @@ Having issues? Check out `deploy_guide.md` for a step-by-step walkthrough.
 🎉 Open the browser and visit [http://localhost:3000/](http://localhost:3000/)  
 
 If you still run into issues, refer to `deploy_guide.md`.
-
-## 🌄 Scenario Introduction
-
-1. LifeContext automatically and seamlessly records the information you browse on web pages.
-2. On any webpage, click the floating chat orb to open the Chatbox and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your life context.
-
-![Main Feature Demo](src/gif/main.gif)
-
-3. LifeContext seamlessly records all your browsing experiences and generates smart tips, to-dos, and daily reports based on them, appearing as instant notifications on the right side of the webpage you're browsing. You can also view all information on the homepage.
-
-
-- Tips are content recommendations based on your browsing information. Click the card to view detailed tip information.
-
-![Tips Feature Demo](src/gif/tips.gif)
-
-- The TodoList is automatically generated based on your activities. You can manually edit, delete, or add items.
-
-![Todo Feature Demo](src/gif/todo.gif)
-
-- Click the date in the left sidebar of the homepage to view that day's daily report details.
-The default generation time is 8:30 the next day, which you can modify in the settings.
-
-![Daily Feature Demo](src/gif/daily.gif)
-
-4. Privacy
-
-- If you don't want specific websites recorded in your life context, you can block the corresponding URL in the settings.
-If you don't want to record any browser activity, you can disable the extension.
-
-![Blacklist Feature Demo](src/gif/blacklist.gif)
-
-- You can also manage storage by selecting the Timeline page at the top left of the homepage and delete pages you don't want to keep in LifeContext.
-
-![Timeline Feature Demo](src/gif/timeline.gif)
 
 ## 🤖 Development Plan
 
