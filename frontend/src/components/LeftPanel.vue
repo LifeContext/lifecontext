@@ -1,14 +1,70 @@
 <template>
   <div class="bg-slate-100 dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-600 p-4 flex flex-col transition-all duration-300 ease-in-out h-full max-h-screen overflow-hidden">
     <!-- 头部区域 - 只在展开状态下显示 -->
-    <div v-if="!isCollapsed" class="flex items-center justify-between mb-4">
-      <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">{{ t('dashboard.sectionTitle') }}</h2>
-      <button 
-        @click="onToggle"
-        class="p-2 rounded-lg transition-all duration-200 hover:scale-105 flex-shrink-0 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
-      >
-        <Icon path="M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z" class="h-4 w-4 transition-transform duration-200" />
-      </button>
+    <div v-if="!isCollapsed" class="mb-4">
+      <div class="flex items-center justify-between gap-3">
+        <h2 class="text-xl font-bold text-slate-900 dark:text-slate-100 flex-shrink-0">{{ t('dashboard.sectionTitle') }}</h2>
+        
+        <!-- 日期选择器 -->
+        <div class="relative date-picker-container flex-1">
+          <button
+            @click.stop="toggleDatePicker"
+            class="w-full flex items-center justify-center gap-2.5 px-2 py-2.5 bg-slate-300 dark:bg-slate-600 rounded-lg hover:bg-slate-400 dark:hover:bg-slate-500 transition-colors duration-200"
+          >
+            <Icon 
+              path="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z"
+              class="h-4 w-4 text-white"
+            />
+            <span class="text-sm font-medium text-white">{{ formatSelectedDate(selectedDate) }}</span>
+          </button>
+          
+        <!-- 日期选择下拉菜单 -->
+        <div 
+          v-if="isDatePickerOpen"
+          class="absolute top-full left-1/3 -translate-x-1/2 w-[280px] z-50"
+        >
+          <div class="bg-slate-100 dark:bg-slate-900 p-4 w-full">
+            <div class="bg-slate-100 dark:bg-slate-900 rounded-full px-4 py-3 border border-slate-300 dark:border-slate-600 shadow-inner">
+              <div class="flex items-center justify-between gap-4">
+                <button
+                  @click.stop="navigateDate(-1)"
+                  class="w-10 h-10 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-600 disabled:opacity-30 disabled:hover:bg-white dark:disabled:hover:bg-slate-700"
+                  :disabled="!canNavigatePrev"
+                >
+                  <Icon 
+                    path="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"
+                    class="h-4 w-4 text-slate-700 dark:text-white"
+                  />
+                </button>
+                
+                <div class="flex-1 text-center">
+                  <div class="text-base font-semibold whitespace-nowrap tracking-wide text-slate-900 dark:text-white">{{ formatSelectedDateFull(selectedDate) }}</div>
+                  <div class="text-[11px] uppercase tracking-[0.35em] text-slate-500 dark:text-slate-400 mt-1">{{ locale === 'zh-CN' ? '近 7 天' : 'Last 7 Days' }}</div>
+                </div>
+                
+                <button
+                  @click.stop="navigateDate(1)"
+                  class="w-10 h-10 rounded-full bg-white dark:bg-slate-700 border border-slate-300 dark:border-slate-600 flex items-center justify-center transition-colors duration-200 hover:bg-slate-100 dark:hover:bg-slate-600 disabled:opacity-30 disabled:hover:bg-white dark:disabled:hover:bg-slate-700"
+                  :disabled="!canNavigateNext"
+                >
+                  <Icon 
+                    path="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"
+                    class="h-4 w-4 text-slate-700 dark:text-white"
+                  />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+        </div>
+        
+        <button 
+          @click="onToggle"
+          class="p-2 rounded-lg transition-all duration-200 hover:scale-105 flex-shrink-0 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700"
+        >
+          <Icon path="M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z" class="h-4 w-4 transition-transform duration-200" />
+        </button>
+      </div>
     </div>
     
     <!-- 折叠状态下的简洁显示 -->
@@ -48,54 +104,37 @@
         </div>
       </div>
       
-      <!-- 折叠状态下无数据 - 只显示图标 -->
-      <div v-else-if="isCollapsed && reports.length === 0" class="py-8 flex items-center justify-center">
-        <div class="text-center">
-          <div class="text-slate-300 dark:text-slate-600 mb-2">
-            <Icon path="M19 4h-1V2h-2v2H8V2H6v2H5c-1.11 0-1.99.9-1.99 2L3 20c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V10h14v10zM9 14H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2zm-8 4H7v-2h2v2zm4 0h-2v-2h2v2zm4 0h-2v-2h2v2z" class="h-6 w-6 mx-auto" />
-          </div>
-        </div>
-      </div>
-      
       <!-- 折叠状态下的日历样式显示 -->
       <div 
         v-else-if="isCollapsed" 
-        class="py-4 transition-all duration-300 ease-in-out"
+        class="py-2 transition-all duration-300 ease-in-out"
       >
-        <div class="space-y-4">
+        <div class="flex flex-col gap-1.5">
           <div 
-            v-for="report in reports.slice(0, 13)" 
-            :key="report.id"
-            @click="() => onSelectReport(report)"
-            class="flex items-center gap-3 rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 transition-colors duration-200"
-            :class="selectedReport?.id === report.id ? 'bg-blue-50 dark:bg-blue-900/20' : ''"
+            v-for="dayInfo in last7Days" 
+            :key="dayInfo.dateStr"
+            @click="() => handleDayClick(dayInfo)"
+            class="cursor-pointer group"
           >
-            <!-- 日历图标 -->
-            <div class="flex-shrink-0 w-9 h-9 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-lg flex flex-col items-center justify-center shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-              <!-- 封面图片或日历顶部条 -->
-              <img 
-                v-if="report.cover"
-                :src="report.cover"
-                :alt="report.title"
-                class="w-full h-full object-cover"
-              />
-              <div v-else class="w-full h-1 bg-blue-500"></div>
-              <!-- 日期数字 - 如果没有封面图片则显示 -->
-              <div v-if="!report.cover" class="text-sm font-bold text-slate-700 dark:text-slate-200 leading-none">
-                {{ report.id }}
-              </div>
-              <!-- 月份缩写 - 如果没有封面图片则显示 -->
-              <div v-if="!report.cover" class="text-[9px] text-slate-500 dark:text-slate-400 uppercase font-medium leading-none">
-                {{ report.type?.substring(0, 3) || 'RPT' }}
-              </div>
+            <!-- 日历卡片 -->
+            <div 
+              class="w-full rounded-lg flex items-center justify-center py-2.5 shadow-md transition-all duration-200 relative"
+              :class="{
+                'bg-blue-500 dark:bg-blue-500 ring-blue-400 dark:ring-blue-400 ring-offset-1 ring-offset-slate-100 dark:ring-offset-slate-900': isSelectedDay(dayInfo),
+                'bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-slate-300 dark:border-slate-700': !isSelectedDay(dayInfo)
+              }"
+            >
+              <!-- 日期数字 -->
+              <span 
+                class="text-base font-bold transition-all duration-200"
+                :class="{
+                  'text-white': isSelectedDay(dayInfo),
+                  'text-slate-700 dark:text-slate-200': !isSelectedDay(dayInfo)
+                }"
+              >
+                {{ dayInfo.day }}
+              </span>
             </div>
-          </div>
-          
-          <!-- 显示更多报告的提示 -->
-          <div v-if="reports.length > 10" class="text-center pt-2">
-            <span class="text-xs text-slate-400 dark:text-slate-500">
-              {{ t('dashboard.moreReports', { count: Math.max(0, reports.length - 13) }) }}
-            </span>
           </div>
         </div>
       </div>
@@ -117,7 +156,7 @@
         class="space-y-4 transition-all duration-300 ease-in-out pr-2 pb-2"
       >
         <div 
-          v-for="(report, index) in reports" 
+          v-for="(report, index) in filteredReports" 
           :key="report.id"
           @click="() => onSelectReport(report)"
           class="report-card relative rounded-xl overflow-hidden cursor-pointer transition-all duration-200 hover:shadow-xl shadow-md"
@@ -163,26 +202,287 @@
 </template>
 
 <script setup lang="ts">
+import { ref, computed, onMounted, onUnmounted, nextTick } from 'vue';
 import Icon from './Icon.vue';
 import type { DailyReport } from '../../types';
 import { useI18n } from '../i18n';
 
 const { t, locale } = useI18n();
 
-const formatDateTime = (dateTime: string): string => {
-  if (!dateTime) return '';
-  
-  // 如果包含微秒部分，则截取到秒
-  if (dateTime.includes('.')) {
-    return dateTime.split('.')[0];
-  }
-  
-  return dateTime;
+interface Props {
+  isCollapsed: boolean;
+  onToggle: () => void;
+  reports: DailyReport[];
+  selectedReport: DailyReport | null;
+  onSelectReport: (report: DailyReport) => void;
+  isLoading?: boolean;
+  error?: string | null;
+  onRefresh?: () => void;
+  onDateChange?: (date: string) => void;
+}
+
+const props = defineProps<Props>();
+
+// 日期选择器状态
+const isDatePickerOpen = ref(false);
+const selectedDate = ref<string>('today');
+
+// 格式化日期值为 YYYY-MM-DD
+const formatDateValue = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 };
 
-const formatMonthShort = (date: Date): string => {
+// 格式化选中的日期显示
+const formatSelectedDate = (value: string): string => {
   const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
-  return date.toLocaleDateString(lang, { month: 'short' });
+  
+  if (value === 'today') {
+    const today = new Date();
+    if (lang === 'zh-CN') {
+      return `${today.getMonth() + 1}月${today.getDate()}日`;
+    } else {
+      return today.toLocaleDateString(lang, { month: 'long', day: 'numeric' });
+    }
+  } else if (value === 'yesterday') {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (lang === 'zh-CN') {
+      return `${yesterday.getMonth() + 1}月${yesterday.getDate()}日`;
+    } else {
+      return yesterday.toLocaleDateString(lang, { month: 'long', day: 'numeric' });
+    }
+  } else {
+    const date = parseDateValue(value);
+    if (lang === 'zh-CN') {
+      return `${date.getMonth() + 1}月${date.getDate()}日`;
+    } else {
+      return date.toLocaleDateString(lang, { month: 'long', day: 'numeric' });
+    }
+  }
+};
+
+// 解析日期值
+const parseDateValue = (value: string): Date => {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+};
+
+const getSelectedDateInstance = (value: string): Date => {
+  const normalize = (date: Date) => {
+    const normalized = new Date(date);
+    normalized.setHours(0, 0, 0, 0);
+    return normalized;
+  };
+  
+  if (value === 'today') {
+    return normalize(new Date());
+  }
+  
+  if (value === 'yesterday') {
+    const date = new Date();
+    date.setDate(date.getDate() - 1);
+    return normalize(date);
+  }
+  
+  return normalize(parseDateValue(value));
+};
+
+// 格式化选中的日期显示（包含年份）
+const formatSelectedDateFull = (value: string): string => {
+  const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
+  const date = getSelectedDateInstance(value);
+  
+  if (lang === 'zh-CN') {
+    return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+  }
+  
+  return date.toLocaleDateString(lang, { month: 'long', day: 'numeric', year: 'numeric' });
+};
+
+const emitDateChange = () => {
+  if (!props.onDateChange) return;
+  const apiDate = formatDateValue(getSelectedDateInstance(selectedDate.value));
+  props.onDateChange(apiDate);
+};
+
+const isSameDay = (a: Date, b: Date) => {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  );
+};
+
+const canNavigatePrev = computed(() => {
+  const today = getSelectedDateInstance('today');
+  const earliest = new Date(today);
+  earliest.setDate(today.getDate() - 6);
+  const current = getSelectedDateInstance(selectedDate.value);
+  return current > earliest;
+});
+
+const canNavigateNext = computed(() => {
+  const today = getSelectedDateInstance('today');
+  const current = getSelectedDateInstance(selectedDate.value);
+  return current < today;
+});
+
+const navigateDate = (direction: number) => {
+  const today = getSelectedDateInstance('today');
+  const earliest = new Date(today);
+  earliest.setDate(today.getDate() - 6);
+  
+  const current = getSelectedDateInstance(selectedDate.value);
+  const newDate = new Date(current);
+  newDate.setDate(current.getDate() + direction);
+  
+  if (newDate > today || newDate < earliest) {
+    return;
+  }
+  
+  const yesterday = getSelectedDateInstance('yesterday');
+  
+  if (isSameDay(newDate, today)) {
+    selectedDate.value = 'today';
+  } else if (isSameDay(newDate, yesterday)) {
+    selectedDate.value = 'yesterday';
+  } else {
+    selectedDate.value = formatDateValue(newDate);
+  }
+  emitDateChange();
+};
+
+// 切换日期选择器
+const toggleDatePicker = () => {
+  isDatePickerOpen.value = !isDatePickerOpen.value;
+};
+
+// 点击外部关闭日期选择器
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.date-picker-container')) {
+    isDatePickerOpen.value = false;
+  }
+};
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside);
+});
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
+// 根据选择的日期过滤报告
+const filteredReports = computed(() => {
+  if (!props.reports || props.reports.length === 0) return [];
+  
+  // 获取目标日期
+  let targetDate: Date;
+  if (selectedDate.value === 'today') {
+    targetDate = new Date();
+  } else if (selectedDate.value === 'yesterday') {
+    targetDate = new Date();
+    targetDate.setDate(targetDate.getDate() - 1);
+  } else {
+    targetDate = parseDateValue(selectedDate.value);
+  }
+  
+  return props.reports;
+});
+
+const last7Days = computed(() => {
+  const days: Array<{
+    date: Date;
+    dateStr: string;
+    day: number;
+    weekday: string;
+    isToday: boolean;
+    report: DailyReport | null;
+  }> = [];
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const lang = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
+
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(today);
+    date.setDate(today.getDate() - i);
+    
+    const dateStr = formatDateValue(date);
+    const day = date.getDate();
+    
+    // 获取星期缩写
+    const weekdayOptions: Intl.DateTimeFormatOptions = { weekday: 'short' };
+    let weekday = date.toLocaleDateString(lang, weekdayOptions);
+    if (lang === 'zh-CN') {
+      // 中文星期转换为更短的格式
+      const weekdays = ['日', '一', '二', '三', '四', '五', '六'];
+      weekday = weekdays[date.getDay()];
+    } else {
+      // 英文取前3个字母
+      weekday = weekday.substring(0, 3).toUpperCase();
+    }
+    
+    const isToday = i === 0;
+
+    let report: DailyReport | null = null;
+    if (props.reports && props.reports.length > 0) {
+
+      if (i < props.reports.length) {
+        report = props.reports[i];
+      }
+    }
+    
+    days.push({
+      date,
+      dateStr,
+      day,
+      weekday,
+      isToday,
+      report
+    });
+  }
+  
+  return days;
+});
+
+// 处理日期点击
+const handleDayClick = async (dayInfo: { date: Date; dateStr: string; report: DailyReport | null }) => {
+  // 如果面板是折叠的，先展开
+  if (props.isCollapsed) {
+    props.onToggle();
+    // 等待展开动画完成
+    await nextTick();
+    
+    await new Promise(resolve => setTimeout(resolve, 100));
+  }
+  
+  // 设置选中的日期
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
+  
+  if (isSameDay(dayInfo.date, today)) {
+    selectedDate.value = 'today';
+  } else if (isSameDay(dayInfo.date, yesterday)) {
+    selectedDate.value = 'yesterday';
+  } else {
+    selectedDate.value = dayInfo.dateStr;
+  }
+  
+  // 触发日期变化，加载对应日期的数据
+  emitDateChange();
+};
+
+// 判断是否是选中的日期
+const isSelectedDay = (dayInfo: { date: Date; dateStr: string }): boolean => {
+  const selectedDateInstance = getSelectedDateInstance(selectedDate.value);
+  return isSameDay(dayInfo.date, selectedDateInstance);
 };
 
 const getCardGradient = (index: number): string => {
@@ -253,19 +553,6 @@ const handleImageLoad = (event: Event) => {
     }
   }
 };
-
-interface Props {
-  isCollapsed: boolean;
-  onToggle: () => void;
-  reports: DailyReport[];
-  selectedReport: DailyReport | null;
-  onSelectReport: (report: DailyReport) => void;
-  isLoading?: boolean;
-  error?: string | null;
-  onRefresh?: () => void;
-}
-
-defineProps<Props>();
 </script>
 
 <style scoped>
@@ -373,7 +660,7 @@ defineProps<Props>();
 .report-overlay-panel {
   min-height: 55px;
   height: 28%;
-  max-height: 65px;
+  max-height: 78px;
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
@@ -385,12 +672,7 @@ defineProps<Props>();
 }
 
 .report-gradient-overlay {
-  height: 65%;
+  height: 31%;
   pointer-events: none;
-}
-
-.report-card.ring-2 {
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.8), 0 4px 12px rgba(59, 130, 246, 0.3);
-  border: 2px solid rgba(59, 130, 246, 0.6);
 }
 </style>
