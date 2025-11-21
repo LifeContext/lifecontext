@@ -786,7 +786,7 @@ main:hover::-webkit-scrollbar-thumb {
 .report-list-card {
   position: relative;
   width: 100%;
-  min-height: 160px;
+  min-height: 224px;
   border-radius: 1rem;
   overflow: hidden;
   transition: all 0.25s ease;
@@ -817,8 +817,8 @@ main:hover::-webkit-scrollbar-thumb {
 .report-card-content {
   position: relative;
   z-index: 1;
-  padding: 0.75rem 1.25rem;
-  gap: 0.35rem;
+  padding: 1.25rem;
+  gap: 0.5rem;
   height: 100%;
   display: flex;
   flex-direction: column;
