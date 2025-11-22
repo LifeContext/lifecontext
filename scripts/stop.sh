@@ -11,6 +11,10 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Stop service function
 stop_service() {
     local service_name=$1
@@ -46,13 +50,13 @@ stop_service() {
 }
 
 # Stop backend service
-stop_service "Backend Service" "logs/backend.pid" "python.*app.py"
+stop_service "Backend Service" "$PROJECT_ROOT/logs/backend.pid" "python.*app.py"
 
 # Stop extension service
-stop_service "Extension Service" "logs/extension.pid" "node.*server.js"
+stop_service "Extension Service" "$PROJECT_ROOT/logs/extension.pid" "node.*server.js"
 
 # Stop frontend service
-stop_service "Frontend Service" "logs/frontend.pid" "vite"
+stop_service "Frontend Service" "$PROJECT_ROOT/logs/frontend.pid" "vite"
 
 echo ""
 echo "============================================================"
