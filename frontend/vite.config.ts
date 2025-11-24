@@ -16,6 +16,15 @@ export default defineConfig(({ mode }) => {
           }
         }
       },
+      build: {
+        target: 'esnext', // 支持最新的 ES 特性，包括 top-level await
+        minify: 'esbuild',
+        rollupOptions: {
+          output: {
+            manualChunks: undefined
+          }
+        }
+      },
       plugins: [vue()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
