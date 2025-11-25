@@ -63,6 +63,9 @@ Shaped by your life. Empower yourself. Interact with the world.
 - **Privacy Protection**  
   Configure website domains you don't want recorded in the extension settings, supporting one-click add/remove. Protect your privacy without affecting other features. You can also close the extension or delete specific records at any time.
 
+- **Privacy Policy**  
+  All your data is stored locally on your device. We do not collect, transmit, or store your data on our servers. Learn more about how we handle your data in our [Privacy Policy](privacy.md).
+
 ### Coming Soon
 
 - **Web Multimodal Content Analysis**  
