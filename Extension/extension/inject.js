@@ -1005,8 +1005,124 @@
     }
   }
 
+  // 检查是否应该注入悬浮球
+  function shouldInjectFloatingChat() {
+    // 1. 检查是否在 iframe 中（不在主窗口）
+    if (window.self !== window.top) {
+      console.log('[LC] 检测到 iframe，跳过悬浮球注入');
+      return false;
+    }
+
+    // 2. 检查 URL 是否包含验证相关的关键词
+    const url = window.location.href.toLowerCase();
+    const verificationKeywords = [
+      'recaptcha',
+      'captcha',
+      'verification',
+      'verify',
+      'challenge',
+      'hcaptcha',
+      'turnstile',
+      'cloudflare',
+      'security-check',
+      'bot-detection'
+    ];
+    
+    for (const keyword of verificationKeywords) {
+      if (url.includes(keyword)) {
+        console.log('[LC] 检测到验证页面 URL，跳过悬浮球注入:', keyword);
+        return false;
+      }
+    }
+
+    // 3. 检查页面标题是否包含验证相关文本
+    const title = (document.title || '').toLowerCase();
+    const titleKeywords = ['验证', 'verification', 'captcha', 'recaptcha', '人机验证'];
+    for (const keyword of titleKeywords) {
+      if (title.includes(keyword.toLowerCase())) {
+        console.log('[LC] 检测到验证页面标题，跳过悬浮球注入:', keyword);
+        return false;
+      }
+    }
+
+    // 4. 检查页面是否包含 reCAPTCHA 相关的元素或类名
+    const recaptchaSelectors = [
+      '[id*="recaptcha"]',
+      '[class*="recaptcha"]',
+      '[id*="captcha"]',
+      '[class*="captcha"]',
+      'iframe[src*="recaptcha"]',
+      'iframe[src*="challenges.cloudflare.com"]',
+      'iframe[src*="hcaptcha"]',
+      '.g-recaptcha',
+      '#recaptcha',
+      '[data-sitekey]' // reCAPTCHA 通常有 data-sitekey 属性
+    ];
+
+    for (const selector of recaptchaSelectors) {
+      try {
+        if (document.querySelector(selector)) {
+          console.log('[LC] 检测到验证元素，跳过悬浮球注入:', selector);
+          return false;
+        }
+      } catch (e) {
+        // 忽略选择器错误
+      }
+    }
+
+    // 5. 检查页面内容是否包含验证相关的文本（中文和英文）
+    // 只在 body 存在时检查，避免性能问题
+    if (document.body) {
+      const bodyText = (document.body.innerText || document.body.textContent || '').toLowerCase();
+      const contentKeywords = [
+        '进行人机身份验证',
+        '人机验证',
+        'i\'m not a robot',
+        'verify you\'re human',
+        'select all images',
+        '选择所有包含',
+        'privacy policy - terms of use',
+        '隐私权 - 使用条款',
+        'reCAPTCHA Enterprise'
+      ];
+      
+      // 只检查前 5000 个字符，提高性能
+      const textToCheck = bodyText.substring(0, 5000);
+      for (const keyword of contentKeywords) {
+        if (textToCheck.includes(keyword.toLowerCase())) {
+          console.log('[LC] 检测到验证页面内容，跳过悬浮球注入:', keyword);
+          return false;
+        }
+      }
+    }
+
+    // 6. 检查是否在特定的验证域名下
+    const hostname = window.location.hostname.toLowerCase();
+    const verificationDomains = [
+      'recaptcha.net',
+      'google.com/recaptcha',
+      'hcaptcha.com',
+      'challenges.cloudflare.com'
+    ];
+    
+    for (const domain of verificationDomains) {
+      if (hostname.includes(domain)) {
+        console.log('[LC] 检测到验证域名，跳过悬浮球注入:', domain);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   (async function main() {
     try {
+      // 检查是否应该注入悬浮球
+      if (!shouldInjectFloatingChat()) {
+        console.log('[LC] 跳过悬浮球注入（验证页面或 iframe）');
+        return;
+      }
+
       // 先加载悬浮球状态
       await loadFloatingChatState();
       
@@ -1082,6 +1198,22 @@
     try {
       // 仅在主流 AI 网站生效
       if (!isSupportedAISite(location.hostname)) return;
+      // ==============================
+      //   新增：排除非聊天页面的路径
+      // ==============================
+      const blockedPathKeywords = [
+        '/settings', '/setting', '/account', '/accounts', '/profile', '/profiles',
+        '/index', '/introducing', '/about', '/help', '/support',
+        '/privacy', '/terms', '/billing', '/subscription', '/pricing',
+        '/login', '/signin', '/signup', '/register', '/logout'
+      ];
+      const path = location.pathname.toLowerCase();
+      for (const keyword of blockedPathKeywords) {
+        if (path.includes(keyword)) {
+          console.log('[LC] 当前路径被排除，不注入优化按钮：', path);
+          return;
+        }
+      }
       const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
         ? chrome.runtime.getURL('logo.png')
         : '';
@@ -2173,6 +2305,23 @@
           const host = (location.hostname || '').toLowerCase();
           if (!host.includes('deepseek.com')) return;
           
+          // ==============================
+          //   排除非聊天页面的路径
+          // ==============================
+          const blockedPathKeywords = [
+            '/settings', '/setting', '/account', '/accounts', '/profile', '/profiles',
+            '/index', '/introducing', '/about', '/help', '/support',
+            '/privacy', '/terms', '/billing', '/subscription', '/pricing',
+            '/login', '/signin', '/signup', '/register', '/logout'
+          ];
+          const path = location.pathname.toLowerCase();
+          for (const keyword of blockedPathKeywords) {
+            if (path.includes(keyword)) {
+              console.log('[LC] 当前路径被排除，不注入优化按钮：', path);
+              return;
+            }
+          }
+          
           // 获取 logo URL（与其他站点一致）
           const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
             ? chrome.runtime.getURL('logo.png')
@@ -2614,22 +2763,44 @@
 
       function setBtnLoading(on) {
         if (!btn) return;
+        // 确保动画已定义
+        ensureSpinAnimation();
         if (on) {
           btn.disabled = true;
-          btn.style.opacity = '.7';
+          btn.style.opacity = '1';
           btn.style.cursor = 'not-allowed';
+          // 添加淡蓝色渐变背景和边框，使加载状态更明显
+          btn.style.background = 'linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.2))';
+          btn.style.border = '1px solid rgba(14, 165, 233, 0.3)';
+          btn.style.boxShadow = '0 0 12px rgba(14, 165, 233, 0.3), 0 0 20px rgba(14, 165, 233, 0.15)';
           btn.innerHTML = `
             <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
-                         background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
+                         background: inherit;
                          position:relative;">
-              <span style="position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
-                           border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
-                           animation:lc-spin .8s linear infinite;"></span>
+              <span style="position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;
+                           border:4px solid rgba(14, 165, 233, 0.25);
+                           border-top-color:#0ea5e9;
+                           border-right-color:#3b82f6;
+                           border-radius:50%;
+                           animation:lc-spin .7s linear infinite;
+                           box-shadow: 0 0 10px rgba(14, 165, 233, 0.5), 0 0 15px rgba(14, 165, 233, 0.3);
+                           box-sizing:border-box;"></span>
             </span>`;
         } else {
           btn.disabled = false;
           btn.style.opacity = '.95';
           btn.style.cursor = 'pointer';
+          // 恢复图标背景和样式
+          const logoUrl = (typeof chrome !== 'undefined' && chrome.runtime && typeof chrome.runtime.getURL === 'function')
+            ? chrome.runtime.getURL('logo.png')
+            : '';
+          if (logoUrl) {
+            btn.style.background = `#ffffff url('${logoUrl}') center/70% no-repeat`;
+          } else {
+            btn.style.background = '#ffffff';
+          }
+          btn.style.border = '';
+          btn.style.boxShadow = '';
           btn.innerHTML = '';
         }
       }
@@ -2641,12 +2812,25 @@
         style.id = 'lc-spin-keyframes';
         style.textContent = `
           @keyframes lc-spin {
-            from { transform: rotate(0); }
+            from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
+          }
+          @keyframes lc-pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.85; transform: scale(1.05); }
+          }
+          @keyframes lc-glow {
+            0%, 100% { box-shadow: 0 0 8px rgba(14, 165, 233, 0.4), 0 0 12px rgba(14, 165, 233, 0.2); }
+            50% { box-shadow: 0 0 12px rgba(14, 165, 233, 0.6), 0 0 18px rgba(14, 165, 233, 0.3); }
           }
           .lc-btn-hidden > *:not(.lc-spinner) {
             opacity: 0 !important;
             visibility: hidden !important;
+          }
+          .lc-loading-btn {
+            background: linear-gradient(135deg, rgba(14, 165, 233, 0.1), rgba(59, 130, 246, 0.15)) !important;
+            border: 1px solid rgba(14, 165, 233, 0.3) !important;
+            animation: lc-pulse 2s ease-in-out infinite !important;
           }
         `;
         document.head.appendChild(style);
@@ -2694,8 +2878,11 @@
             
             // 设置加载状态
             el.disabled = true;
-            el.style.opacity = '0.7';
+            el.style.opacity = '1';
             el.style.cursor = 'not-allowed';
+            
+            // 添加加载状态类，用于应用统一的加载样式
+            el.classList.add('lc-loading-btn');
             
             // 检查是否为圆形按钮
             const computedStyle = window.getComputedStyle(el);
@@ -2711,22 +2898,24 @@
                 // 创建 spinner 元素
                 spinner = document.createElement('span');
                 spinner.className = 'lc-spinner';
-                // 设置 spinner 样式：绝对定位在按钮中心
+                // 设置 spinner 样式：绝对定位在按钮中心，使用蓝色主题
                 spinner.style.cssText = `
                   position: absolute;
                   left: 50%;
                   top: 50%;
-                  width: 16px;
-                  height: 16px;
-                  margin-left: -8px;
-                  margin-top: -8px;
-                  border: 2px solid rgba(0,0,0,.2);
+                  width: 24px;
+                  height: 24px;
+                  margin-left: -12px;
+                  margin-top: -12px;
+                  border: 4px solid rgba(14, 165, 233, 0.2);
                   border-top-color: #0ea5e9;
+                  border-right-color: #3b82f6;
                   border-radius: 50%;
-                  animation: lc-spin .8s linear infinite;
+                  animation: lc-spin .7s linear infinite;
                   z-index: 99999;
                   pointer-events: none;
                   box-sizing: border-box;
+                  box-shadow: 0 0 10px rgba(14, 165, 233, 0.4), 0 0 15px rgba(14, 165, 233, 0.2);
                 `;
                 // 确保按钮有相对定位
                 const currentPosition = window.getComputedStyle(el).position;
@@ -2744,24 +2933,48 @@
               // 使用 class 隐藏原内容，而不是逐个修改子元素的 style
               el.classList.add('lc-btn-hidden');
             } else if (isCircular) {
-              // 圆形按钮：显示旋转的圆圈动画
+              // 圆形按钮：隐藏图标，显示蓝色转圈动画，添加淡蓝色背景
+              // 移除背景图片，添加淡蓝色渐变背景
+              el.style.background = 'linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.2))';
+              el.style.backgroundImage = 'none';
+              el.style.border = '1px solid rgba(14, 165, 233, 0.3)';
+              el.style.boxShadow = '0 0 12px rgba(14, 165, 233, 0.3), 0 0 20px rgba(14, 165, 233, 0.15)';
               el.innerHTML = `
                 <span style="display:inline-block;width:100%;height:100%;border-radius:50%;
-                             background: radial-gradient(circle at 50% 50%, rgba(0,0,0,0.06), rgba(0,0,0,0.12));
+                             background: inherit;
                              position:relative;">
-                  <span style="position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
-                               border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
-                               animation:lc-spin .8s linear infinite;"></span>
+                  <span style="position:absolute;left:50%;top:50%;width:24px;height:24px;margin:-12px 0 0 -12px;
+                               border:4px solid rgba(14, 165, 233, 0.25);
+                               border-top-color:#0ea5e9;
+                               border-right-color:#3b82f6;
+                               border-radius:50%;
+                               animation:lc-spin .7s linear infinite;
+                               box-shadow: 0 0 10px rgba(14, 165, 233, 0.5), 0 0 15px rgba(14, 165, 233, 0.3);
+                               box-sizing:border-box;"></span>
                 </span>`;
             } else {
-              // 非圆形按钮：显示简单的旋转图标
+              // 非圆形按钮：显示明显的蓝色旋转动画，带渐变背景和发光效果
               el.innerHTML = `
-                <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;">
-                  <span style="width:16px;height:16px;border:2px solid rgba(0,0,0,.2);border-top-color:#0ea5e9;border-radius:50%;
-                               animation:lc-spin .8s linear infinite;"></span>
+                <span style="display:inline-flex;align-items:center;justify-content:center;width:100%;height:100%;
+                             background: linear-gradient(135deg, rgba(14, 165, 233, 0.15), rgba(59, 130, 246, 0.2));
+                             border-radius: 6px;
+                             position:relative;
+                             animation:lc-pulse 2s ease-in-out infinite;">
+                  <span style="width:28px;height:28px;
+                               border:4px solid rgba(14, 165, 233, 0.3);
+                               border-top-color:#0ea5e9;
+                               border-right-color:#3b82f6;
+                               border-bottom-color:#0284c7;
+                               border-radius:50%;
+                               animation:lc-spin .7s linear infinite;
+                               box-shadow: 0 0 12px rgba(14, 165, 233, 0.6), 0 0 20px rgba(14, 165, 233, 0.3);
+                               box-sizing:border-box;"></span>
                 </span>`;
             }
           } else {
+            // 移除加载状态类
+            el.classList.remove('lc-loading-btn');
+            
             // 恢复原始内容
             if (isPerplexityBtn) {
               // Perplexity 按钮：移除 spinner，移除隐藏 class，恢复原内容可见性
@@ -2782,6 +2995,9 @@
                   el.style.position = '';
                 }
               }
+              // 恢复边框和阴影
+              el.style.border = '';
+              el.style.boxShadow = '';
             } else {
               // 其他按钮：使用原有的恢复逻辑
               const original = buttonOriginalContent.get(el);
@@ -2794,7 +3010,14 @@
                   el.style.background = original.background;
                 } else if (original.backgroundImage && original.backgroundImage !== 'none') {
                   el.style.backgroundImage = original.backgroundImage;
+                } else {
+                  el.style.background = '';
+                  el.style.backgroundImage = '';
                 }
+                
+                // 恢复边框和阴影
+                el.style.border = '';
+                el.style.boxShadow = '';
                 
                 // 恢复 opacity 和 cursor
                 el.style.opacity = original.opacity || '';
@@ -3670,12 +3893,51 @@
                 type: 'OPTIMIZE_PROMPT',
                 prompt: text,
                 url: pageUrl
-              }, (r) => resolve(r));
+              }, (r) => {
+                // 检查 chrome.runtime.lastError（扩展上下文失效时会设置）
+                if (chrome.runtime.lastError) {
+                  const errorMsg = chrome.runtime.lastError.message || String(chrome.runtime.lastError);
+                  if (errorMsg.includes('Extension context invalidated') || errorMsg.includes('message port closed')) {
+                    resolve({ 
+                      ok: false, 
+                      error: 'Extension context invalidated',
+                      contextInvalidated: true 
+                    });
+                  } else {
+                    resolve({ ok: false, error: errorMsg });
+                  }
+                } else {
+                  resolve(r || { ok: false, error: 'No response' });
+                }
+              });
             } catch (err) {
-              resolve({ ok: false, error: String(err) });
+              const errorMsg = String(err);
+              if (errorMsg.includes('Extension context invalidated') || errorMsg.includes('message port closed')) {
+                resolve({ 
+                  ok: false, 
+                  error: 'Extension context invalidated',
+                  contextInvalidated: true 
+                });
+              } else {
+                resolve({ ok: false, error: errorMsg });
+              }
             }
           });
           console.log('[LC] OPTIMIZE_PROMPT resp:', resp);
+
+          // 检查扩展上下文是否失效
+          if (resp && resp.contextInvalidated) {
+            console.error('[LC] 扩展程序上下文已失效，请刷新页面后重试。');
+            // 恢复原内容
+            if (savedContent && targetEl) {
+              writeTextTo(targetEl, savedContent);
+            }
+            // 可选：显示用户提示（如果需要）
+            // alert('扩展程序已更新，请刷新页面后重试优化功能。');
+            setBtnLoadingOn(currentTriggerBtn, false);
+            optimizing = false;
+            return;
+          }
 
           // 兼容后端返回结构：
           // { ok:true, status:200, data: { code:200, data: { optimized_prompt: '...' }, message:'success' } }
@@ -3717,7 +3979,8 @@
             if (savedContent) {
               writeTextTo(targetEl, savedContent);
             }
-            console.warn('[LC] 未获得优化结果，已恢复原文。');
+            const errorMsg = resp && resp.error ? resp.error : '未知错误';
+            console.warn('[LC] 未获得优化结果，已恢复原文。错误:', errorMsg);
           }
 
           setBtnLoadingOn(currentTriggerBtn, false);

@@ -14,7 +14,7 @@
 
 ---
 
-**Navigation** | [Core Features](#-core-features) | [Scenario Introduction](#-scenario-introduction) | [Quick Start](#-quick-start) | [Development Plan](#-development-plan) | [Community](#community)
+**Navigation** | [Product Comparison](#-product-comparison) | [Core Features](#-core-features) | [Scenario Introduction](#-scenario-introduction) | [Quick Start](#-quick-start) | [Development Plan](#-development-plan) | [Community](#community)
 
 ---
 
@@ -29,17 +29,43 @@ Shaped by your life. Empower yourself. Interact with the world.
 * Delivers life-scale long-term retrieval, low-cost multimodal storage, precise context alignment, and efficient real-time compression as the core of Context Memory.
 * Reimagines how you connect, opening endless possibilities for interaction, connection, and creation with the world.
 
+## 🎬 Product Demo
+
+![Product Demo](src/gif/lifecontext.gif)
+
+## 📊 Product Comparison
+
+Core differences between LifeContext and similar products:
+
+| Feature | LifeContext | MineContext | ChatGPT Pulse | DayFlow | Description |
+|:--------|:-----------|:-----------|:-------------|:--------|:------------|
+| **Deep Browser Integration** | ✅ | ❌ | ❌ | ❌ | Native browser extension that deeply understands current page content |
+| **Smart Insights** | ✅ | ❌ | ❌ | ❌ | Proactively generates supplementary insights based on browsing activities, not just summaries, helping discover hidden information and trends |
+| **Activity Summary** | ✅ | ✅ | ✅ | ✅ | Automatically aggregates activities and generates activity summaries by time |
+| **Daily Picks** | ✅ | ❌ | ✅ | ❌ | Includes activity summaries, todo reminders, news recommendations, knowledge cards, and more |
+| **Prompt Enhancement** | ✅ | ❌ | ❌ | ❌ | Automatically optimizes prompts on AI conversation pages like ChatGPT, Claude, Gemini |
+| **Floating Ball Chat Assistant** | ✅ | ❌ | ❌ | ❌ | Quick access to AI chat functionality via floating ball on any webpage |
+| **Local Data Storage** | ✅ | ✅ | ❌ | ✅ | All data stored locally on device, not uploaded to servers |
+| **Fully Open Source** | ✅ | ✅ | ❌ | ✅ | Code fully open, freely viewable, modifiable, and extensible |
+
+**LifeContext's Core Advantages:**
+- 🎯 **Fully Open Source**: Transparent code, freely customizable and extensible
+- 🔒 **Privacy First**: All data stored locally, never uploaded to servers
+- 🌐 **Browser Native**: Deep browser integration, no additional apps needed
+- 🆓 **Completely Free**: No subscription fees, no usage limits
+- 🚀 **Continuous Iteration**: Community-driven, rapid feature updates
+
 ## 🎯 Core Features
 
 ### Proactive Push
 
-- **Smart Tips**  
-  Based on your browsing history and activity data, **proactively push** personalized smart tip cards through browser notifications or homepage display, helping you discover important information.
+- **Smart Insights**  
+  Based on your browsing history and activity data, **proactively push** personalized smart insight cards through browser notifications or homepage display, helping you discover important information.
 
 - **Todo Items**  
   Analyze your browsing content and activity patterns to **proactively push** todo suggestions. You can view, edit, complete, or delete these tasks on the homepage.
 
-- **Daily Feed**  
+- **Daily Picks**  
   **Proactively push** personalized information feed cards daily, including activity summaries, todo reminders, news recommendations, knowledge cards, and more, displayed in the left panel of the homepage to help you quickly understand important information.
 
 ### Intelligent Analysis
@@ -63,6 +89,9 @@ Shaped by your life. Empower yourself. Interact with the world.
 - **Privacy Protection**  
   Configure website domains you don't want recorded in the extension settings, supporting one-click add/remove. Protect your privacy without affecting other features. You can also close the extension or delete specific records at any time.
 
+- **Privacy Policy**  
+  All your data is stored locally on your device. We do not collect, transmit, or store your data on our servers. Learn more about how we handle your data in our [Privacy Policy](privacy.md).
+
 ### Coming Soon
 
 - **Web Multimodal Content Analysis**  
@@ -73,51 +102,35 @@ Shaped by your life. Empower yourself. Interact with the world.
 
 ## 🌄 Scenario Introduction
 
-### 1️⃣ Automatic Browsing Record
+### 1️⃣ Insight Smart Insights
 
-LifeContext automatically and seamlessly records the information you browse on web pages, including page titles, URLs, text content, etc., providing a data foundation for subsequent intelligent analysis.
+On the Insight page of the homepage, the left side displays your browsing activity timeline, while the right side generates smart insights based on these activities in real-time. The system automatically analyzes your browsing patterns, content preferences, and focus areas to provide personalized insight suggestions, helping you discover hidden information and trends.
 
-### 2️⃣ Floating Chat Assistant
+![Insight Feature Demo](src/gif/insight.gif)
 
-On any webpage, click the floating orb to open a chat window and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your browsing history.
+### 2️⃣ Daily Picks
 
-![Main Feature Demo](src/gif/main.gif)
+The system automatically generates personalized curated content daily based on your browsing history and activity patterns. Including activity summaries, important information reminders, knowledge cards, etc., helping you quickly understand the key information of the day. The default generation time is 8:30 the next day, which you can modify in the settings.
 
-### 3️⃣ Proactive Smart Content Push
+![Daily Picks Feature Demo](src/gif/daily.gif)
 
-LifeContext automatically generates smart tips, todos, and daily feeds based on your browsing experiences, and displays them through browser notifications or on the homepage, so important information finds you proactively.
+### 3️⃣ Floating Ball Assistant
 
-#### 💡 Smart Tips
+On any webpage, click the floating ball in the bottom right corner to quickly access LifeContext features. The floating ball provides a convenient entry point, allowing you to interact with the AI assistant anytime without leaving the current page.
 
-Based on your browsing records, the system proactively pushes personalized smart tip cards. Click the card to view detailed content.
+![Floating Ball Feature Demo](src/gif/FloatingBall.gif)
 
-![Tips Feature Demo](src/gif/tips.gif)
+### 4️⃣ Smart Chat
 
-#### ✅ Todo Items
+Click the floating ball to open the chat window and have natural conversations with AI. The AI can understand the content of the page you're browsing and combine your browsing history, activity records, and contextual information to provide accurate answers, summaries, or suggestions.
 
-The system automatically generates todo suggestions based on your activities. You can manually edit, complete, or delete these tasks on the homepage.
+![Chat Feature Demo](src/gif/chat.gif)
 
-![Todo Feature Demo](src/gif/todo.gif)
+### 5️⃣ Privacy Protection
 
-#### 📰 Daily Feed
+In the extension settings, you can flexibly configure privacy protection options. Support adding URL blacklists to block websites you don't want recorded with one click; you can also view, search, or delete saved browsing records at any time, giving you complete control over your data privacy.
 
-Click the date in the left sidebar of the homepage to view that day's feed information, including activity summaries, news recommendations, knowledge cards, etc. The default generation time is 8:30 the next day, which you can modify in the settings.
-
-![Daily Feature Demo](src/gif/daily.gif)
-
-### 4️⃣ Privacy Protection
-
-#### 🚫 URL Blacklist
-
-If you don't want specific websites recorded in your life context, you can block the corresponding URL in the extension settings, supporting one-click add/remove. If you don't want to record any browser activity, you can disable the extension at any time.
-
-![Blacklist Feature Demo](src/gif/blacklist.gif)
-
-#### 🗂️ Timeline Management
-
-You can select the Timeline page at the top left of the homepage to manage storage, view, search, or delete page records you don't want to keep in LifeContext.
-
-![Timeline Feature Demo](src/gif/timeline.gif)
+![Privacy Protection Feature Demo](src/gif/privacy.gif)
 
 ## 🚀 Quick Start
 
@@ -263,7 +276,7 @@ Based on the constantly enriched context, we will gradually unlock the core capa
 | Priority | Feature                                     | Progress |
 | :------- | :------------------------------------------ | :------- |
 | P0       | Proactive Daily Report Push                 |     ✅     |
-| P0       | Proactive Tips Push                         |     ✅     |
+| P0       | Proactive Insights Push                     |     ✅     |
 | P0       | Proactive To-do List Push                   |     ✅     |
 | P0       | Digital Avatar Interaction                  |          |
 | P1       | Knowledge Base                              |          |
