@@ -28,10 +28,7 @@ Shaped by your life. Empower yourself. Interact with the world.
 
 ## 🎬 产品演示
 
-<video width="100%" controls>
-  <source src="src/lifecontext.mp4" type="video/mp4">
-  您的浏览器不支持视频播放。
-</video>
+![产品演示](src/gif/lifecontext.gif)
 
 ## 📊 产品对比
 

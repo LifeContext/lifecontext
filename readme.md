@@ -31,10 +31,7 @@ Shaped by your life. Empower yourself. Interact with the world.
 
 ## 🎬 Product Demo
 
-<video width="100%" controls>
-  <source src="src/lifecontext.mp4" type="video/mp4">
-  Your browser does not support video playback.
-</video>
+![Product Demo](src/gif/lifecontext.gif)
 
 ## 📊 Product Comparison
 
@@ -45,7 +42,7 @@ Core differences between LifeContext and similar products:
 | **Deep Browser Integration** | ✅ | ❌ | ❌ | ❌ | Native browser extension that deeply understands current page content |
 | **Smart Insights** | ✅ | ❌ | ❌ | ❌ | Proactively generates supplementary insights based on browsing activities, not just summaries, helping discover hidden information and trends |
 | **Activity Summary** | ✅ | ✅ | ✅ | ✅ | Automatically aggregates activities and generates activity summaries by time |
-| **Daily Picks** | ✅ | ❌ | ❌ | ✅ | Includes activity summaries, todo reminders, news recommendations, knowledge cards, and more |
+| **Daily Picks** | ✅ | ❌ | ✅ | ❌ | Includes activity summaries, todo reminders, news recommendations, knowledge cards, and more |
 | **Prompt Enhancement** | ✅ | ❌ | ❌ | ❌ | Automatically optimizes prompts on AI conversation pages like ChatGPT, Claude, Gemini |
 | **Floating Ball Chat Assistant** | ✅ | ❌ | ❌ | ❌ | Quick access to AI chat functionality via floating ball on any webpage |
 | **Local Data Storage** | ✅ | ✅ | ❌ | ✅ | All data stored locally on device, not uploaded to servers |
