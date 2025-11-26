@@ -28,5 +28,27 @@ def get_prompt_set(language: str) -> Dict[str, Dict[str, str]]:
     return _PROMPT_SETS.get(language.lower(), PROMPTS_ZH)
 
 
-__all__ = ["get_prompt_set"]
+def get_current_prompts() -> Dict[str, Dict[str, str]]:
+    """
+    获取当前配置的提示词集合
+    优先从数据库读取 prompt_language 设置，如果没有则使用环境变量
+    """
+    try:
+        from utils.db import get_setting
+        import config
+        
+        # 优先从数据库读取
+        db_language = get_setting('prompt_language')
+        if db_language:
+            return get_prompt_set(db_language)
+        
+        # 如果数据库没有，使用环境变量配置
+        return get_prompt_set(config.PROMPT_LANGUAGE)
+    except Exception:
+        # 如果读取失败，使用环境变量配置
+        import config
+        return get_prompt_set(config.PROMPT_LANGUAGE)
+
+
+__all__ = ["get_prompt_set", "get_current_prompts"]
 

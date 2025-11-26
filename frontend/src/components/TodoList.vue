@@ -283,8 +283,7 @@ const sortedTodos = computed(() => {
     if (aPriority !== bPriority) {
       return bPriority - aPriority;
     }
-    // 兜底保持稳定
-    return a.id - b.id;
+    return b.id - a.id;
   });
 });
 

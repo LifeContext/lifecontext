@@ -536,6 +536,21 @@ async function evaluateSkipCrawlForThisPage() {
 // 尽早评估是否跳过
 (async () => { await evaluateSkipCrawlForThisPage(); })();
 
+// 监听黑名单变化，实时更新爬取策略
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  if (areaName === 'sync' && changes.blockedDomains) {
+    console.log('[LC] 黑名单已更新，重新评估爬取策略');
+    // 重新评估当前页面是否应该爬取
+    evaluateSkipCrawlForThisPage().then(() => {
+      // 如果当前页面被加入黑名单，停止观察器
+      if (window.__LC_SKIP_CRAWL__ === true && domCrawler && domCrawler.isObserving) {
+        domCrawler.stop();
+        console.log('[LC] 当前域名已加入黑名单，已停止 DOM 监听');
+      }
+    });
+  }
+});
+
 // 自动爬取网页内容（初始爬取）
 async function autoCrawlPage() {
   try {

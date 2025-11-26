@@ -17,14 +17,12 @@ from utils.helpers import (
 from utils.json_utils import parse_llm_json_response
 from utils.db import get_web_data, get_screenshots, insert_activity
 from utils.llm import get_openai_client
-from utils.prompt_config import get_prompt_set
+from utils.prompt_config import get_current_prompts
 
 logger = get_logger(__name__)
 
 # 客户端缓存
 _client = None
-
-PROMPTS = get_prompt_set(config.PROMPT_LANGUAGE)
 
 
 def _init_client():
@@ -162,9 +160,11 @@ async def _analyze_and_summarize(data_items: List[Dict], start_dt: datetime, end
         limited_data = other_items + web_items_trimmed
         data_json = json.dumps(limited_data, ensure_ascii=False, indent=2)
         
-        system_msg = PROMPTS["activity"]["system"]
+        # 动态获取当前配置的提示词
+        prompts = get_current_prompts()
+        system_msg = prompts["activity"]["system"]
 
-        user_template = Template(PROMPTS["activity"]["user_template"])
+        user_template = Template(prompts["activity"]["user_template"])
         user_msg = user_template.safe_substitute(data_json=data_json)
         
         response = client.chat.completions.create(

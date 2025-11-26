@@ -61,7 +61,7 @@
               </div>
             </div>
             <div class="pair-bubble pair-bubble-ai" v-if="pair.ai || pair.isLoading">
-              <div class="max-w-3xl px-6 py-4 rounded-lg message-bubble ai-message">
+              <div class="px-6 py-4 rounded-lg message-bubble ai-message">
                 <template v-if="pair.ai && pair.ai.content && pair.ai.content.trim().length > 0">
                   <div class="markdown-body" v-html="renderMarkdown(pair.ai.content)"></div>
                 </template>

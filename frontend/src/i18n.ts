@@ -104,7 +104,10 @@ const messages: Messages = {
     report: {
       plusMore: '+{count} more reports',
       detail: {
-        dailySummary: 'Daily Summary',
+        dailySummary: 'Daily Highlights',
+        generatedList: 'Generated Content',
+        generatedListEmpty: 'No generated content yet',
+        emptyContentTip: 'No content is available for this report yet.',
         aria: {
           prev: 'Previous report',
           next: 'Next report',
@@ -202,7 +205,7 @@ const messages: Messages = {
       },
     },
     dashboard: {
-      sectionTitle: '每日摘要',
+      sectionTitle: '每日精选',
       loading: '加载报告中...',
       moreReports: '+{count} 个更多报告',
       emptyTitle: '暂时没有日报',
@@ -279,7 +282,10 @@ const messages: Messages = {
     report: {
       plusMore: '+{count} 个更多报告',
       detail: {
-        dailySummary: '每日摘要',
+        dailySummary: '每日精选',
+        generatedList: '生成内容列表',
+        generatedListEmpty: '暂无生成内容',
+        emptyContentTip: '当前报告暂无内容，请稍后再试。',
         aria: {
           prev: '上一份报告',
           next: '下一份报告',

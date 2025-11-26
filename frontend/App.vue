@@ -18,7 +18,54 @@
                 {{ t('app.subtitle') }}
               </p>
             </div>
-            <div class="flex items-end pb-0.5">
+            <div class="flex flex-col items-end pb-0.5 gap-2 pr-4 translate-y-2">
+              <div 
+                class="relative"
+                @mouseleave="scheduleLinkPopoverHide"
+              >
+                <div 
+                  ref="linkButtonRef"
+                  class="flex items-center overflow-hidden rounded-full shadow border border-slate-200 dark:border-slate-700 h-8"
+                >
+                  <div class="px-4 h-full flex items-center bg-blue-700 text-white text-sm font-semibold tracking-wide">
+                    LifeContext.Link
+                  </div>
+                  <button
+                    class="w-8 h-8 flex items-center justify-center bg-blue-100 hover:bg-blue-200 dark:bg-blue-800 dark:hover:bg-blue-700 transition-colors"
+                    @mouseenter="showLinkPopoverPanel"
+                    @focus="showLinkPopoverPanel"
+                    @click="handleLinkButtonClick"
+                  >
+                    <img src="/link_logo.png" alt="link" class="h-4 w-4 object-contain" />
+                  </button>
+                </div>
+                <Teleport to="body">
+                  <transition name="fade">
+                    <div
+                      v-if="showLinkPopover"
+                      :style="linkPopoverStyle"
+                      class="fixed w-72 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-lg p-4 space-y-2 text-sm text-slate-600 dark:text-slate-300 z-[9999]"
+                    >
+                      <p>
+                        你的 Life 已压缩进这枚 Link，复制即可与 LLM 或朋友分享你的数字故事。
+                      </p>
+                      <div class="text-xs text-blue-600 dark:text-blue-300 break-all font-medium">
+                        {{ lifeContextLink }}
+                      </div>
+                      <button
+                        class="px-3 py-1.5 text-xs rounded-lg bg-blue-600 text-white hover:bg-blue-500 transition-colors"
+                        @click="handleLinkButtonClick"
+                      >
+                        {{ copyButtonText }}
+                      </button>
+                      <p class="text-xs text-green-600 dark:text-green-300 flex items-center gap-2 flex-nowrap whitespace-nowrap" v-if="copyState === 'copied'">
+                        <span>链接已复制，可直接粘贴使用。</span>
+                        <span class="text-slate-500 dark:text-slate-400">Coming soon！</span>
+                      </p>
+                    </div>
+                  </transition>
+                </Teleport>
+              </div>
               <span class="text-sm font-medium text-slate-500 dark:text-slate-400 whitespace-nowrap">
                 {{ today }}
               </span>
@@ -54,7 +101,8 @@
               :on-select-report="handleViewReport"
               :is-loading="isLoadingReports"
               :error="errorLoadingReports"
-              :on-refresh="loadReports"
+              :on-refresh="() => loadReports()"
+              :on-date-change="handleReportDateChange"
             />
           </div>
         </div>
@@ -94,12 +142,13 @@
             :on-close="() => handleCloseDetailView()"
           />
         </div>
-        <div v-if="viewingReport" :class="exitingView === 'reportDetail' ? 'animate-view-out' : 'animate-view-in'">
+        <div v-if="viewingReport" :class="exitingView === 'reportDetail' ? 'animate-view-out' : 'animate-view-in'" class="h-full max-h-full">
           <ReportDetailView 
             :reports="reports"
             :selected-report="viewingReport" 
             :on-close="() => handleCloseDetailView()" 
             :on-navigate="handleNavigateReport"
+            :on-select-report="handleViewReport"
           />
         </div>
       </div>
@@ -138,17 +187,6 @@ const route = useRoute();
 
 const { t, locale } = useI18n();
 
-const REPORT_DETAIL_ICONS = {
-  chevronLeft: 'M15.707 17.293a1 1 0 01-1.414 0L8.586 11.586a2 2 0 010-2.828l5.707-5.707a1 1 0 011.414 1.414L10.414 10l5.293 5.293a1 1 0 010 1.414z',
-  chevronRight: 'M8.293 17.293a1 1 0 010-1.414L13.586 10 8.293 4.707a1 1 0 011.414-1.414l5.707 5.707a2 2 0 010 2.828l-5.707 5.707a1 1 0 01-1.414 0z',
-  barChart: 'M5 9.2h3V19H5zM10.6 5h2.8v14h-2.8zm5.6 8H19v6h-2.8z',
-  fileText: 'M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z',
-  listCheck: 'M14 10H2v2h12v-2zm0-4H2v2h12V6zM2 16h8v-2H2v2zm19.5-4.5L23 13l-6.99 7-4.51-4.5L13 14l3.01 3L21.5 11.5z',
-  shieldAlert: 'M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zm-1 14h2v2h-2v-2zm0-8h2v6h-2V7z',
-  close: 'M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z',
-};
-
-
 type ActiveView = 'dashboard' | 'timeline' | 'chat' | 'tipDetail' | 'reportDetail';
 
 // Reactive state
@@ -162,6 +200,7 @@ const reports = ref<DailyReport[]>([]); // 初始化为空数组，从API加载
 const selectedDashboardReport = ref<DailyReport | null>(null);
 const isLoadingReports = ref(true); // 添加加载状态
 const errorLoadingReports = ref<string | null>(null); // 错误状态
+const selectedReportDate = ref<string>(new Date().toISOString().split('T')[0]);
 const todos = ref<TodoItem[]>([]); // 初始化为空数组，从API加载
 const isLoadingTodos = ref(true); // 添加加载状态
 const errorLoadingTodos = ref<string | null>(null); // 错误状态
@@ -178,8 +217,24 @@ const activeChatSessionId = ref<number | null>(5);
 
 const isChatWindowOpen = ref(false);
 const currentDate = ref(new Date());
+const lifeContextLink = ref('https://lifecontext.link/demo');
+const copyState = ref<'idle' | 'copied'>('idle');
+const showLinkPopover = ref(false);
+const copyButtonText = computed(() => (copyState.value === 'copied' ? '已复制' : '复制链接'));
+const linkButtonRef = ref<HTMLElement | null>(null);
 
 // Computed
+const linkPopoverStyle = computed(() => {
+  if (!linkButtonRef.value || !showLinkPopover.value) {
+    return {};
+  }
+  const rect = linkButtonRef.value.getBoundingClientRect();
+  return {
+    right: `${window.innerWidth - rect.right}px`,
+    top: `${rect.bottom + 12}px`,
+  };
+});
+
 const today = computed(() => {
   const activeLocale = locale.value === 'zh-CN' ? 'zh-CN' : 'en-US';
   return currentDate.value.toLocaleString(activeLocale, {
@@ -191,23 +246,27 @@ const today = computed(() => {
   });
 });
 
+const resolveReportDate = (dateValue?: string) => {
+  if (dateValue) return dateValue;
+  if (selectedReportDate.value) return selectedReportDate.value;
+  return new Date().toISOString().split('T')[0];
+};
+
 // 加载Reports数据的方法
-const loadReports = async () => {
+const loadReports = async (dateValue?: string) => {
   try {
     isLoadingReports.value = true;
     errorLoadingReports.value = null;
-    const reportsData = await reportService.getReports();
-    reports.value = reportsData.data.reports;
-    // 设置默认选中的报告
-    if (reportsData.length > 0 && !selectedDashboardReport.value) {
-      selectedDashboardReport.value = reportsData[0];
-    }
+    const targetDate = resolveReportDate(dateValue);
+    const reportsData = await reportService.getReports(targetDate);
+    selectedReportDate.value = targetDate;
+    const cards = reportsData?.data?.cards ?? reportsData ?? [];
+    reports.value = cards;
   } catch (error) {
     console.error('Failed to load reports:', error);
     errorLoadingReports.value = t('errors.loadReports');
     // 使用备用数据
     reports.value = dailyReports;
-    selectedDashboardReport.value = dailyReports[0];
   } finally {
     isLoadingReports.value = false;
   }
@@ -246,6 +305,49 @@ const loadTips = async () => {
 // Methods
 const handleToggleDailyPanel = () => {
   isDailyPanelCollapsed.value = !isDailyPanelCollapsed.value;
+};
+
+const handleReportDateChange = (dateValue: string) => {
+  loadReports(dateValue);
+};
+
+let copyFeedbackTimer: number | undefined;
+let linkPopoverHideTimer: number | undefined;
+
+const showLinkPopoverPanel = () => {
+  if (linkPopoverHideTimer) {
+    clearTimeout(linkPopoverHideTimer);
+  }
+  showLinkPopover.value = true;
+};
+
+const scheduleLinkPopoverHide = () => {
+  if (linkPopoverHideTimer) {
+    clearTimeout(linkPopoverHideTimer);
+  }
+  linkPopoverHideTimer = window.setTimeout(() => {
+    showLinkPopover.value = false;
+  }, 200);
+};
+
+const copyLifeContextLink = async () => {
+  try {
+    await navigator.clipboard.writeText(lifeContextLink.value);
+    copyState.value = 'copied';
+    if (copyFeedbackTimer) {
+      clearTimeout(copyFeedbackTimer);
+    }
+    copyFeedbackTimer = window.setTimeout(() => {
+      copyState.value = 'idle';
+    }, 2000);
+  } catch (error) {
+    console.error('Failed to copy LifeContext link:', error);
+  }
+};
+
+const handleLinkButtonClick = async () => {
+  await copyLifeContextLink();
+  showLinkPopover.value = true;
 };
 
 // 添加直接操作Todo的API方法
@@ -481,10 +583,14 @@ watch(() => [route.name, route.params.id], async ([routeName, tipId]) => {
         }
       }
     }
-  } else if (routeName === 'dashboard' || routeName === 'chat' || routeName === 'timeline') {
-    activeView.value = routeName as ActiveView;
+  } else {
+    // 当路由不是 reportDetail 时，清除报告相关的选中状态
+    if (routeName === 'dashboard' || routeName === 'chat' || routeName === 'timeline') {
+      activeView.value = routeName as ActiveView;
+    }
     viewingTip.value = null;
     viewingReport.value = null;
+    selectedDashboardReport.value = null;
   }
 }, { immediate: true });
 
@@ -504,6 +610,12 @@ onMounted(() => {
 onUnmounted(() => {
   if (timer) {
     clearInterval(timer);
+  }
+  if (copyFeedbackTimer) {
+    clearTimeout(copyFeedbackTimer);
+  }
+  if (linkPopoverHideTimer) {
+    clearTimeout(linkPopoverHideTimer);
   }
   
   // 停止事件轮询

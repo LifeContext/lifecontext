@@ -7,37 +7,133 @@
 [![GitHub contributors](https://img.shields.io/github/contributors/LifeContext/lifecontext?style=flat-square&color=A4DD00)](https://github.com/LifeContext/lifecontext/graphs/contributors)
 [![GitHub license](https://img.shields.io/github/license/LifeContext/lifecontext?style=flat-square&color=lightgrey)](https://github.com/LifeContext/lifecontext/blob/main/LICENSE)
 [![GitHub last commit](https://img.shields.io/github/last-commit/LifeContext/lifecontext?style=flat-square&color=BFD500)](https://github.com/LifeContext/lifecontext/commits/main)
-[![Follow on Reddit](https://img.shields.io/badge/Reddit-u%2FHungry_Refuse_8537-FF4500?logo=reddit&style=flat-square)](https://www.reddit.com/user/Hungry_Refuse_8537/)
+[![微信群](https://img.shields.io/badge/WeChat-Join_Us-brightgreen?logo=wechat&style=flat-square)](https://github.com/LifeContext/lifecontext/blob/main/src/wechat.jpg?raw=true)
+[![飞书群](https://img.shields.io/badge/Feishu-Join_Us-blue?logo=lark&style=flat-square)](https://github.com/LifeContext/lifecontext/blob/main/src/feishu.jpg?raw=true)
+[![Discord](https://img.shields.io/badge/Discord-Join_Us-7289DA?logo=discord&style=flat-square)](https://discord.gg/sb8Xg8xR)
+[![Follow on X](https://img.shields.io/badge/Follow_%40LifeContext2025-000000?logo=x&style=flat-square)](https://x.com/LifeContext2025)
+
+---
+
+**Navigation** | [Product Comparison](#-product-comparison) | [Core Features](#-core-features) | [Scenario Introduction](#-scenario-introduction) | [Quick Start](#-quick-start) | [Development Plan](#-development-plan) | [Community](#community)
+
+---
 
 [中文](readme_zh.md) / English
 
-
 ## 🌍 What is Life Context
+
+> **Open Source · Proactive · Free | Browser-based Digital Twin, the Best Alternative to ChatGPT Pulse**
 
 Shaped by your life. Empower yourself. Interact with the world.
 * Born from your unique life context, shaping a digital twin that truly understands you.
 * Delivers life-scale long-term retrieval, low-cost multimodal storage, precise context alignment, and efficient real-time compression as the core of Context Memory.
 * Reimagines how you connect, opening endless possibilities for interaction, connection, and creation with the world.
 
+## 🎬 Product Demo
+
+<video width="100%" controls>
+  <source src="src/lifecontext.mov" type="video/quicktime">
+  Your browser does not support video playback.
+</video>
+
+## 📊 Product Comparison
+
+Core differences between LifeContext and similar products:
+
+| Feature | LifeContext | MineContext | ChatGPT Pulse | DayFlow | Description |
+|:--------|:-----------|:-----------|:-------------|:--------|:------------|
+| **Deep Browser Integration** | ✅ | ❌ | ❌ | ❌ | Native browser extension that deeply understands current page content |
+| **Smart Insights** | ✅ | ❌ | ❌ | ❌ | Proactively generates supplementary insights based on browsing activities, not just summaries, helping discover hidden information and trends |
+| **Activity Summary** | ✅ | ✅ | ✅ | ✅ | Automatically aggregates activities and generates activity summaries by time |
+| **Daily Picks** | ✅ | ❌ | ❌ | ✅ | Includes activity summaries, todo reminders, news recommendations, knowledge cards, and more |
+| **Prompt Enhancement** | ✅ | ❌ | ❌ | ❌ | Automatically optimizes prompts on AI conversation pages like ChatGPT, Claude, Gemini |
+| **Floating Ball Chat Assistant** | ✅ | ❌ | ❌ | ❌ | Quick access to AI chat functionality via floating ball on any webpage |
+| **Local Data Storage** | ✅ | ✅ | ❌ | ✅ | All data stored locally on device, not uploaded to servers |
+| **Fully Open Source** | ✅ | ✅ | ❌ | ✅ | Code fully open, freely viewable, modifiable, and extensible |
+
+**LifeContext's Core Advantages:**
+- 🎯 **Fully Open Source**: Transparent code, freely customizable and extensible
+- 🔒 **Privacy First**: All data stored locally, never uploaded to servers
+- 🌐 **Browser Native**: Deep browser integration, no additional apps needed
+- 🆓 **Completely Free**: No subscription fees, no usage limits
+- 🚀 **Continuous Iteration**: Community-driven, rapid feature updates
+
 ## 🎯 Core Features
 
-- **Life Context Base:** Intelligently builds a comprehensive record of your life context across web, apps, and smart devices. Continuously evolves through interaction, preserving your knowledge and experiences.
-- **Context API**: Provides developers with a unified interface to store, retrieve, and manage contextual data, making cross-platform integration and expansion simpler and more efficient.
-- **Companion Insights**: Proactively understands your life context and surfaces the moments, ideas, and priorities that truly matter to you—so information finds you, not the other way around.
-- **Contextual Chat**: Understands your personal context to answer questions, recall memories, or reorganize inspiration—becoming an extension of your memory and mind.
-- **Adaptive Scenarios**: Delivers precise, context-aware responses within specific vertical domains based on your instructions, enabling truly context-driven intelligence.
-- **Task Automation**: Transforms AI from a thinker into a doer—proactively triggering and continuously executing conditional tasks based on your context, embedding intelligence into everyday life.
-- **Content Generation**: Creates documents, images, audio, video, and notes on demand—helping you capture, organize, and express ideas naturally and effortlessly.
-- **Digital Avatar**: As your own personal digital avatar, engage in endless interactions with the world.
+### Proactive Push
 
-![img](src/mindmap.png)
+- **Smart Insights**  
+  Based on your browsing history and activity data, **proactively push** personalized smart insight cards through browser notifications or homepage display, helping you discover important information.
 
-## 🧩 Current Version
+- **Todo Items**  
+  Analyze your browsing content and activity patterns to **proactively push** todo suggestions. You can view, edit, complete, or delete these tasks on the homepage.
 
-* Focuses on your core workspace — **web browser** — building a powerful and proactive intelligent presence.
-* Automatically analyzes the web pages you browse to generate your digital life context.
-* Stays out of your way while providing timely, actionable insights.
+- **Daily Picks**  
+  **Proactively push** personalized information feed cards daily, including activity summaries, todo reminders, news recommendations, knowledge cards, and more, displayed in the left panel of the homepage to help you quickly understand important information.
 
+### Intelligent Analysis
+
+- **Smart Content Analysis**  
+  Use large language models to automatically analyze web page content, extract key information, topic classification, summaries, and other metadata, providing the foundation for subsequent intelligent recommendations and generation.
+
+- **Timeline Management**  
+  View all browsing records on the timeline page of the homepage. The system automatically summarizes and categorizes your activities, supporting time filtering, content search, record deletion, and other operations to help you review and manage your digital footprint.
+
+### Interactive Tools
+
+- **Floating Chat Assistant**  
+  Click the floating orb on any webpage to open a chat window. The AI understands the current page content and combines your browsing history to answer questions, summarize information, or provide suggestions.
+
+- **Prompt Optimization**  
+  Automatically inject optimization buttons in mainstream AI websites like ChatGPT, Claude, Gemini, etc., optimizing your prompts based on current page content to help AI better understand your needs.
+
+### Privacy & Security
+
+- **Privacy Protection**  
+  Configure website domains you don't want recorded in the extension settings, supporting one-click add/remove. Protect your privacy without affecting other features. You can also close the extension or delete specific records at any time.
+
+- **Privacy Policy**  
+  All your data is stored locally on your device. We do not collect, transmit, or store your data on our servers. Learn more about how we handle your data in our [Privacy Policy](privacy.md).
+
+### Coming Soon
+
+- **Web Multimodal Content Analysis**  
+  Automatically identify and analyze multimedia content such as images and videos on web pages, extract key information and generate summaries to enrich your context information base.
+
+- **Office Application Integration**  
+  Support integration with common office applications (such as documents, spreadsheets, emails, etc.), automatically sync and analyze your office data to help AI better understand your work context.
+
+## 🌄 Scenario Introduction
+
+### 1️⃣ Insight Smart Insights
+
+On the Insight page of the homepage, the left side displays your browsing activity timeline, while the right side generates smart insights based on these activities in real-time. The system automatically analyzes your browsing patterns, content preferences, and focus areas to provide personalized insight suggestions, helping you discover hidden information and trends.
+
+![Insight Feature Demo](src/gif/insight.gif)
+
+### 2️⃣ Daily Picks
+
+The system automatically generates personalized curated content daily based on your browsing history and activity patterns. Including activity summaries, important information reminders, knowledge cards, etc., helping you quickly understand the key information of the day. The default generation time is 8:30 the next day, which you can modify in the settings.
+
+![Daily Picks Feature Demo](src/gif/daily.gif)
+
+### 3️⃣ Floating Ball Assistant
+
+On any webpage, click the floating ball in the bottom right corner to quickly access LifeContext features. The floating ball provides a convenient entry point, allowing you to interact with the AI assistant anytime without leaving the current page.
+
+![Floating Ball Feature Demo](src/gif/FloatingBall.gif)
+
+### 4️⃣ Smart Chat
+
+Click the floating ball to open the chat window and have natural conversations with AI. The AI can understand the content of the page you're browsing and combine your browsing history, activity records, and contextual information to provide accurate answers, summaries, or suggestions.
+
+![Chat Feature Demo](src/gif/chat.gif)
+
+### 5️⃣ Privacy Protection
+
+In the extension settings, you can flexibly configure privacy protection options. Support adding URL blacklists to block websites you don't want recorded with one click; you can also view, search, or delete saved browsing records at any time, giving you complete control over your data privacy.
+
+![Privacy Protection Feature Demo](src/gif/privacy.gif)
 
 ## 🚀 Quick Start
 
@@ -127,43 +223,6 @@ Having issues? Check out `deploy_guide.md` for a step-by-step walkthrough.
 
 If you still run into issues, refer to `deploy_guide.md`.
 
-## 🌄 Scenario Introduction
-
-1. LifeContext automatically and seamlessly records the information you browse on web pages.
-2. On any webpage, click the floating chat orb to open the Chatbox and have natural conversations with AI. It understands the content you're browsing and provides instant answers, summaries, or suggestions based on your life context.
-
-![img](src/product01.png)
-
-![img](src/product02.png)
-
-3. LifeContext seamlessly records all your browsing experiences and generates smart tips, to-dos, and daily reports based on them, appearing as instant notifications on the right side of the webpage you're browsing. You can also view all information on the homepage.
-
-![img](src/product03.png)
-
-- Tips are content recommendations based on your browsing information. Click the card to view detailed tip information.
-
-![img](src/product04.png)
-
-- The TodoList is automatically generated based on your activities. You can manually edit, delete, or add items.
-
-![img](src/product05.png)
-
-- Click the date in the left sidebar of the homepage to view that day's daily report details.
-The default generation time is 8:30 the next day, which you can modify in the settings.
-
-![img](src/product06.png)
-
-4. Privacy
-
-- If you don't want specific websites recorded in your life context, you can block the corresponding URL in the settings.
-If you don't want to record any browser activity, you can disable the extension.
-
-![img](src/product07.png)
-
-- You can also manage storage by selecting the Timeline page at the top left of the homepage and delete pages you don't want to keep in LifeContext.
-
-![img](src/product08.png)
-
 ## 🤖 Development Plan
 
 LifeContext’s evolution roadmap unfolds across three dimensions:
@@ -220,7 +279,7 @@ Based on the constantly enriched context, we will gradually unlock the core capa
 | Priority | Feature                                     | Progress |
 | :------- | :------------------------------------------ | :------- |
 | P0       | Proactive Daily Report Push                 |     ✅     |
-| P0       | Proactive Tips Push                         |     ✅     |
+| P0       | Proactive Insights Push                     |     ✅     |
 | P0       | Proactive To-do List Push                   |     ✅     |
 | P0       | Digital Avatar Interaction                  |          |
 | P1       | Knowledge Base                              |          |
