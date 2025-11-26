@@ -284,19 +284,59 @@ def get_debug_activities():
 @generation_bp.route('/tips', methods=['GET'])
 @auth_required
 def get_debug_tips():
-    """获取提示数据"""
+    """获取提示数据（按日期分类）"""
     try:
-        limit = request.args.get('limit', 10, type=int)
-        offset = request.args.get('offset', 0, type=int)
+        limit = request.args.get('limit', 100, type=int)  # 默认获取更多，以便按日期分类
         
-        tips = get_tips(limit=limit, offset=offset)
+        # 获取所有tips
+        tips = get_tips(limit=limit, offset=0)
         
-        logger.info(f"Retrieved {len(tips)} tips")
+        # 按日期分类
+        tips_by_date = {}
+        for tip in tips:
+            create_time = tip.get('create_time', '')
+            if create_time:
+                # 提取日期部分（YYYY-MM-DD）
+                try:
+                    # 处理不同格式的时间字符串
+                    if 'T' in create_time:
+                        date_str = create_time.split('T')[0]
+                    else:
+                        date_str = create_time.split(' ')[0]
+                    
+                    if date_str not in tips_by_date:
+                        tips_by_date[date_str] = []
+                    tips_by_date[date_str].append(tip)
+                except Exception as e:
+                    logger.warning(f"Failed to parse date from create_time '{create_time}': {e}")
+                    # 如果解析失败，放到"未知日期"分类
+                    if 'unknown' not in tips_by_date:
+                        tips_by_date['unknown'] = []
+                    tips_by_date['unknown'].append(tip)
+            else:
+                # 没有时间戳的放到"未知日期"
+                if 'unknown' not in tips_by_date:
+                    tips_by_date['unknown'] = []
+                tips_by_date['unknown'].append(tip)
+        
+        # 按日期倒序排序（最新的在前）
+        sorted_dates = sorted(tips_by_date.keys(), reverse=True)
+        if 'unknown' in sorted_dates:
+            sorted_dates.remove('unknown')
+            sorted_dates.append('unknown')  # 未知日期放到最后
+        
+        # 构建按日期分类的结果
+        grouped_tips = {}
+        for date_str in sorted_dates:
+            grouped_tips[date_str] = tips_by_date[date_str]
+        
+        logger.info(f"Retrieved {len(tips)} tips, grouped into {len(grouped_tips)} dates")
         
         return convert_resp(
             data={
-                "tips": tips,
-                "total": len(tips)
+                "tips_by_date": grouped_tips,
+                "total": len(tips),
+                "date_count": len(grouped_tips)
             }
         )
         

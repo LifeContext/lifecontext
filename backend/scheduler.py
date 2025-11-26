@@ -17,7 +17,7 @@ from utils.generation import (
     generate_daily_feed
 )
 from utils.event_manager import EventType, publish_event
-from utils.db import get_reports, get_setting
+from utils.db import get_reports, get_setting, set_setting
 from config import (
     ENABLE_SCHEDULER_ACTIVITY,
     ENABLE_SCHEDULER_TODO,
@@ -27,6 +27,61 @@ from config import (
 )
 
 logger = get_logger(__name__)
+
+
+def _get_next_rounded_minute(interval_minutes):
+    """
+    计算下一个整分钟时间点（基于间隔）
+    如果当前时间不是整分钟，会等到下一个整分钟时间点
+    
+    Args:
+        interval_minutes: 间隔分钟数（15、30或60）
+    
+    Returns:
+        datetime: 下一个整分钟时间点
+    """
+    now = datetime.now()
+    current_minute = now.minute
+    current_hour = now.hour
+    current_second = now.second
+    current_microsecond = now.microsecond
+    
+    # 先确保返回的时间是整分钟（秒和微秒都为0）
+    if interval_minutes == 15:
+        # 计算下一个15分钟的整点（0, 15, 30, 45）
+        next_minute = ((current_minute // 15) + 1) * 15
+        if next_minute >= 60:
+            next_minute = 0
+            next_hour = current_hour + 1
+            if next_hour >= 24:
+                # 跨天
+                return (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            else:
+                return now.replace(hour=next_hour, minute=next_minute, second=0, microsecond=0)
+        else:
+            # 如果计算出的分钟数还没到，直接返回
+            return now.replace(minute=next_minute, second=0, microsecond=0)
+    elif interval_minutes == 30:
+        # 计算下一个30分钟的整点（0, 30）
+        next_minute = ((current_minute // 30) + 1) * 30
+        if next_minute >= 60:
+            next_minute = 0
+            next_hour = current_hour + 1
+            if next_hour >= 24:
+                # 跨天
+                return (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+            else:
+                return now.replace(hour=next_hour, minute=next_minute, second=0, microsecond=0)
+        else:
+            return now.replace(minute=next_minute, second=0, microsecond=0)
+    else:  # 60分钟
+        # 下一个整点
+        next_hour = current_hour + 1
+        if next_hour >= 24:
+            # 跨天
+            return (now + timedelta(days=1)).replace(hour=0, minute=0, second=0, microsecond=0)
+        else:
+            return now.replace(hour=next_hour, minute=0, second=0, microsecond=0)
 
 # 全局调度器实例
 scheduler = None
@@ -67,17 +122,35 @@ def init_scheduler():
     else:
         logger.info("⏸️ Todo scheduler disabled")
     
-    # 3. 生成智能提示（支持任意时间间隔）
+    # 3. 生成智能提示（支持15、30、60分钟间隔，在整分钟执行）
     if ENABLE_SCHEDULER_TIP:
         tips_interval_minutes = int(get_setting('tips_interval_minutes', '60'))
+        # 限制只能是15、30或60分钟
+        if tips_interval_minutes not in [15, 30, 60]:
+            logger.warning(f"Invalid tips_interval_minutes: {tips_interval_minutes}, using default 60")
+            tips_interval_minutes = 60
+            set_setting('tips_interval_minutes', '60', 'Tips生成间隔（分钟）')
+        
+        # 计算下一个整分钟时间点
+        next_run_time = _get_next_rounded_minute(tips_interval_minutes)
+        
+        # 根据间隔设置CronTrigger
+        if tips_interval_minutes == 15:
+            trigger = CronTrigger(minute='*/15')
+        elif tips_interval_minutes == 30:
+            trigger = CronTrigger(minute='*/30')
+        else:  # 60分钟
+            trigger = CronTrigger(minute=0)
+        
         scheduler.add_job(
             func=job_generate_tips,
-            trigger=IntervalTrigger(minutes=tips_interval_minutes),
+            trigger=trigger,
             id='tips_interval',
-            name=f'每{tips_interval_minutes}分钟生成智能提示',
-            replace_existing=True
+            name=f'每{tips_interval_minutes}分钟生成智能提示（整分钟执行）',
+            replace_existing=True,
+            next_run_time=next_run_time  # 设置第一次运行时间为下一个整分钟
         )
-        logger.info(f"✅ Tip scheduler enabled (interval: {tips_interval_minutes} minutes)")
+        logger.info(f"✅ Tip scheduler enabled (interval: {tips_interval_minutes} minutes, next run: {next_run_time.strftime('%Y-%m-%d %H:%M:%S')})")
     else:
         logger.info("⏸️ Tip scheduler disabled")
     
@@ -334,18 +407,36 @@ def update_scheduler_settings():
         # 更新 tips 生成间隔
         if ENABLE_SCHEDULER_TIP:
             tips_interval_minutes = int(get_setting('tips_interval_minutes', '60'))
+            # 限制只能是15、30或60分钟
+            if tips_interval_minutes not in [15, 30, 60]:
+                logger.warning(f"Invalid tips_interval_minutes: {tips_interval_minutes}, using default 60")
+                tips_interval_minutes = 60
+                set_setting('tips_interval_minutes', '60', 'Tips生成间隔（分钟）')
+            
+            # 计算下一个整分钟时间点
+            next_run_time = _get_next_rounded_minute(tips_interval_minutes)
+            
+            # 根据间隔设置CronTrigger
+            if tips_interval_minutes == 15:
+                trigger = CronTrigger(minute='*/15')
+            elif tips_interval_minutes == 30:
+                trigger = CronTrigger(minute='*/30')
+            else:  # 60分钟
+                trigger = CronTrigger(minute=0)
+            
             try:
                 scheduler.remove_job('tips_interval')
             except:
                 pass  # 任务可能不存在，忽略错误
             scheduler.add_job(
                 func=job_generate_tips,
-                trigger=IntervalTrigger(minutes=tips_interval_minutes),
+                trigger=trigger,
                 id='tips_interval',
-                name=f'每{tips_interval_minutes}分钟生成智能提示',
-                replace_existing=True
+                name=f'每{tips_interval_minutes}分钟生成智能提示（整分钟执行）',
+                replace_existing=True,
+                next_run_time=next_run_time
             )
-            logger.info(f"✅ Updated tip scheduler interval to {tips_interval_minutes} minutes")
+            logger.info(f"✅ Updated tip scheduler interval to {tips_interval_minutes} minutes (next run: {next_run_time.strftime('%Y-%m-%d %H:%M:%S')})")
         
         # 更新 todo 生成间隔
         if ENABLE_SCHEDULER_TODO:

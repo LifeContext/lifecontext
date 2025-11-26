@@ -51,9 +51,14 @@ def update_settings():
         # 验证并更新 tips_interval_minutes
         if 'tips_interval_minutes' in data:
             tips_interval = data['tips_interval_minutes']
-            if not isinstance(tips_interval, int) or tips_interval < 1:
+            if not isinstance(tips_interval, int):
                 return jsonify({
-                    'error': 'tips_interval_minutes 必须是大于0的整数'
+                    'error': 'tips_interval_minutes 必须是整数'
+                }), 400
+            # 限制只能是15、30或60分钟
+            if tips_interval not in [15, 30, 60]:
+                return jsonify({
+                    'error': 'tips_interval_minutes 只能是15、30或60分钟'
                 }), 400
             set_setting('tips_interval_minutes', str(tips_interval), 'Tips生成间隔（分钟）')
         
