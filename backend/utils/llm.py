@@ -121,17 +121,28 @@ def analyze_web_content(
         return None
 
 
-def generate_embedding(text: str) -> Optional[List[float]]:
+# Embedding 缓存（避免重复生成相同文本的 embedding）
+_embedding_cache = {}
+
+def generate_embedding(text: str, use_cache: bool = True) -> Optional[List[float]]:
     """
-    生成文本嵌入向量
+    生成文本嵌入向量（带缓存机制）
     
     Args:
         text: 文本内容
+        use_cache: 是否使用缓存（默认 True）
     
     Returns:
         嵌入向量列表
     """
     try:
+        # 检查缓存
+        if use_cache:
+            cache_key = text[:100]  # 使用前100个字符作为缓存键
+            if cache_key in _embedding_cache:
+                logger.debug(f"Using cached embedding for query: {text[:50]}...")
+                return _embedding_cache[cache_key]
+        
         client = get_embedding_client()
         if not client:
             return None
@@ -146,7 +157,18 @@ def generate_embedding(text: str) -> Optional[List[float]]:
         )
         
         embedding = response.data[0].embedding
-        logger.info(f"Generated embedding with {len(embedding)} dimensions")
+        logger.info(f"Generated embedding with {len(embedding)} dimensions for: {text[:50]}...")
+        
+        # 存入缓存
+        if use_cache:
+            cache_key = text[:100]
+            _embedding_cache[cache_key] = embedding
+            # 限制缓存大小（最多保留100个）
+            if len(_embedding_cache) > 100:
+                # 删除最旧的缓存项（简单策略：删除第一个）
+                oldest_key = next(iter(_embedding_cache))
+                del _embedding_cache[oldest_key]
+        
         return embedding
         
     except Exception as e:

@@ -12,7 +12,7 @@ logger = get_logger(__name__)
 
 class WebSearchTool(BaseTool):
     """网络搜索工具"""
-    
+
     def __init__(self):
         super().__init__(
             name="web_search",
@@ -24,7 +24,7 @@ class WebSearchTool(BaseTool):
         self.timeout = 10  # 超时时间（秒）
         self.max_results = 5  # 默认最大结果数
         self.default_engine = "DuckDuckGo"  # 默认搜索引擎
-    
+
     def get_parameters_schema(self) -> Dict[str, Any]:
         return {
             "type": "object",
@@ -48,22 +48,22 @@ class WebSearchTool(BaseTool):
             },
             "required": ["query"]
         }
-    
+
     def execute(self, query: str, max_results: int = 5, **kwargs) -> Any:
         """
         同步执行方法（异步工具通常不需要实现）
         """
         raise NotImplementedError("This tool is async only. Use execute_async() instead.")
-    
+
     async def execute_async(self, query: str, lang: str = "zh-cn", max_results: int = None, **kwargs) -> Any:
         """
         异步执行网络搜索
-        
+
         Args:
             query: 搜索查询
             lang: 搜索语言（可选）
             max_results: 最大结果数量
-            
+
         Returns:
             搜索结果列表，每个结果包含 title, url, snippet
         """
@@ -71,7 +71,7 @@ class WebSearchTool(BaseTool):
             if max_results is None:
                 max_results = self.max_results
             max_results = min(max_results, 20)  # 限制最大结果数
-            
+
             logger.info(f"Using primary search engine: DuckDuckGo")
             results = await self._search_duckduckgo_async(query, max_results, lang)
 
@@ -95,7 +95,7 @@ class WebSearchTool(BaseTool):
         except Exception as e:
             logger.exception(f"Error in web search: {e}")
             return []
-    
+
     async def _search_duckduckgo_async(self, query: str, max_results: int, lang: str) -> List[Dict[str, Any]]:
         """使用 ddgs 库进行异步搜索"""
         try:
@@ -108,7 +108,7 @@ class WebSearchTool(BaseTool):
 
             # 在线程池中执行同步的 DDGS 调用（因为 ddgs 是同步库）
             loop = asyncio.get_event_loop()
-            
+
             def _sync_search():
                 """同步搜索函数"""
                 with DDGS(proxy=self.proxy, timeout=self.timeout, verify=True) as ddgs:
@@ -122,7 +122,7 @@ class WebSearchTool(BaseTool):
                         )
                     )
                     return search_results
-            
+
             # 在线程池中执行同步搜索
             search_results = await loop.run_in_executor(None, _sync_search)
 
@@ -137,7 +137,7 @@ class WebSearchTool(BaseTool):
                     }
                 )
             return results
-            
+
         except ImportError:
             logger.error("ddgs library not installed")
             logger.error("Please install with: pip install duckduckgo-search")
@@ -164,10 +164,3 @@ class WebSearchTool(BaseTool):
 
         return region_map.get(lang.lower(), "wt-wt")  # wt-wt 表示无特定区域
 
-
-def get_operation_tools() -> list:
-    """获取所有操作工具实例"""
-    return [
-        WebSearchTool(),
-        # 可以添加更多操作工具
-    ]

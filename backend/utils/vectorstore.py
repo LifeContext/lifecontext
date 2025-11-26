@@ -156,10 +156,14 @@ def add_web_data_to_vectorstore(
                 "tags": json.dumps(tags or [], ensure_ascii=False),
             }
             
-            # 添加 session_id（如果是 chat_context、chat_conversation 或 web_crawler 来源）
-            # 抓取的页面内容应该作为"上文"关联到当前session
-            if session_id and source in ["chat_context", "chat_conversation", "web_crawler", "web-crawler-initial", "web-crawler-incremental"]:
+            # 所有 web data 都必须带上 session_id（如果提供了）
+            # 不同 session_id 的数据完全隔离，不参与其他 session 的检索和评测
+            if session_id:
                 chunk_metadata["session_id"] = session_id
+                logger.debug(f"Adding session_id={session_id} to web_data chunk: web_data_id={web_data_id}, source={source}")
+            else:
+                # 如果没有 session_id，记录警告（但不阻止存储，兼容旧数据）
+                logger.warning(f"Web data stored without session_id: web_data_id={web_data_id}, source={source}, url={url[:50]}...")
             
             # 添加自定义元数据
             if metadata:
@@ -361,27 +365,48 @@ def search_user_context(
             else:
                 where_filters.append({"$or": [{"source": s} for s in source_filters]})
         
-        # 如果指定了当前页面URL，添加URL过滤
+        # 如果指定了当前页面URL，添加严格的URL过滤
+        # 不同页面的内容完全隔离，只检索当前页面的内容
         if current_page_url and include_page_content:
             normalized_url = current_page_url.rstrip('/')
-            url_filter = {"url": normalized_url}
+            # 提取基础URL（去除查询参数），用于更灵活的匹配
+            try:
+                from urllib.parse import urlparse, urlunparse
+                parsed = urlparse(normalized_url)
+                base_url = urlunparse((parsed.scheme, parsed.netloc, parsed.path, '', '', '')).rstrip('/')
+            except:
+                base_url = normalized_url
+            
+            # 构建URL过滤：精确匹配或基础URL匹配
+            # 优先精确匹配，如果没有结果再尝试基础URL匹配
+            url_filter = {
+                "$or": [
+                    {"url": normalized_url},  # 精确匹配
+                    {"url": base_url}  # 基础URL匹配（去除查询参数）
+                ]
+            }
+            
+            logger.info(f"Applying strict page URL filter: normalized_url={normalized_url}, base_url={base_url}")
+            
             if where_filters:
                 combined_filter = {"$and": where_filters + [url_filter]}
                 where_filters = [combined_filter]
             else:
                 where_filters = [url_filter]
         
-        # 如果提供了 session_id，添加会话过滤（只过滤对话相关的内容）
+        # 如果提供了 session_id，添加严格的会话过滤
+        # 不同 session_id 的数据完全隔离，不参与检索和评测
         if session_id and include_page_content:
             # 构建会话过滤：
             # - todo 和 tip 不受 session_id 限制（总是包含）
-            # - chat_conversation、chat_context、web_crawler 等必须匹配 session_id（抓取的页面内容也关联到当前session）
+            # - 所有 web data（chat_conversation、chat_context、web_crawler 等）必须严格匹配 session_id
+            # 注意：URL 过滤已经在前面处理了（第 368-395 行），这里只需要处理 session_id
             session_filter = {
                 "$or": [
                     # 待办事项和提示不受限制
                     {"source": "todo"},
                     {"source": "tip"},
-                    # 当前会话的对话内容和页面内容（包括抓取的页面内容）
+                    # 当前会话的对话内容和页面内容（必须严格匹配 session_id）
                     {"$and": [{"source": "chat_conversation"}, {"session_id": session_id}]},
                     {"$and": [{"source": "chat_context"}, {"session_id": session_id}]},
                     {"$and": [{"source": "web_crawler"}, {"session_id": session_id}]},
@@ -389,6 +414,8 @@ def search_user_context(
                     {"$and": [{"source": "web-crawler-incremental"}, {"session_id": session_id}]}
                 ]
             }
+            
+            logger.debug(f"Applied strict session isolation: session_id={session_id}, current_page_url={current_page_url}")
             
             if where_filters:
                 if len(where_filters) == 1 and isinstance(where_filters[0], dict) and "$and" in where_filters[0]:
@@ -479,6 +506,7 @@ def search_user_context(
         # 如果指定了当前页面URL，先尝试直接查询
         if current_page_url and include_page_content:
             normalized_url = current_page_url.rstrip('/')
+            logger.info(f"Searching page content for URL: {normalized_url}, session_id: {session_id}")
             
             # 提取基础URL（去除查询参数），用于更灵活的匹配
             try:
@@ -502,13 +530,29 @@ def search_user_context(
                         ]
                     }
                     
+                    logger.debug(f"Querying page content with filter: {current_session_query}")
                     current_session_results = collection.get(
                         where=current_session_query,
                         limit=limit
                     )
                     
+                    logger.info(f"Direct query result: found {len(current_session_results.get('ids', []))} chunks for session {session_id}")
+                    
                     if current_session_results and current_session_results.get('ids'):
-                        # 如果找到当前会话的内容，优先使用
+                        # 如果找到当前会话的内容，直接返回（不需要 embedding）
+                        logger.info(f"Found {len(current_session_results['ids'])} page content chunks for current session and URL")
+                        for i in range(len(current_session_results['ids'])):
+                            metadata = current_session_results['metadatas'][i] if current_session_results.get('metadatas') else {}
+                            results.append({
+                                "content": current_session_results['documents'][i] if current_session_results.get('documents') else "",
+                                "metadata": metadata,
+                                "distance": 0.0,  # 直接匹配，距离为0
+                                "context_type": "page"
+                            })
+                        # 如果已经有结果，可以跳过后续的语义搜索（或者继续搜索以获取更多相关内容）
+                        # 这里选择继续，以便获取更多相关内容
+                        
+                        # 如果找到当前会话的内容，也进行语义搜索以获取更相关的内容
                         from utils.llm import generate_embedding
                         query_embedding = generate_embedding(search_query) if search_query else None
                         
@@ -717,21 +761,51 @@ def search_user_context(
                 else:
                     ctx_type = "unknown"
                 
-                # 如果指定了当前页面URL，只返回匹配的页面内容
-                if current_page_url and ctx_type in ["page", "conversation"]:
+                # 如果指定了当前页面URL，严格过滤：只返回当前页面的内容
+                # 不同页面的内容完全隔离，不参与检索和评测
+                if current_page_url and ctx_type == "page":
                     url = metadata.get("url", "")
                     normalized_current = current_page_url.rstrip('/')
                     normalized_result = url.rstrip('/') if url else ""
-                    # 对话记录没有URL，所以不跳过
-                    if ctx_type == "page" and normalized_result != normalized_current:
-                        continue
+                    
+                    # 提取基础URL进行比较（去除查询参数）
+                    try:
+                        from urllib.parse import urlparse, urlunparse
+                        parsed_current = urlparse(normalized_current)
+                        base_current = urlunparse((parsed_current.scheme, parsed_current.netloc, parsed_current.path, '', '', '')).rstrip('/')
+                        
+                        parsed_result = urlparse(normalized_result) if normalized_result else None
+                        base_result = urlunparse((parsed_result.scheme, parsed_result.netloc, parsed_result.path, '', '', '')).rstrip('/') if parsed_result else ""
+                    except:
+                        base_current = normalized_current
+                        base_result = normalized_result
+                    
+                    # 必须匹配：精确匹配或基础URL匹配
+                    if normalized_result != normalized_current and base_result != base_current:
+                        # 直接淘汰，不同页面的内容不参与检索和评测
+                        logger.debug(
+                            f"Eliminated content from different page (not visible): "
+                            f"current_url={normalized_current}, result_url={normalized_result}, "
+                            f"base_current={base_current}, base_result={base_result}"
+                        )
+                        continue  # 直接跳过，不参与任何处理
                 
-                # 如果提供了 session_id，过滤对话内容（只返回该会话的内容）
+                # 对话记录（conversation）不受页面URL限制，可以跨页面
+                
+                # 如果提供了 session_id，严格过滤所有 web data（完全隔离不同 session）
+                # 不同 session_id 的数据直接淘汰，不参与评测，看不见
                 if session_id:
+                    # 对于所有 web data 来源，必须严格匹配 session_id
                     if source in ["chat_conversation", "chat_context", "web_crawler", "web-crawler-initial", "web-crawler-incremental"]:
                         result_session_id = metadata.get("session_id", "")
-                        if result_session_id != session_id:
-                            continue  # 跳过不同会话的内容
+                        if not result_session_id or result_session_id != session_id:
+                            # 直接淘汰，不参与评测，不记录到结果中
+                            logger.debug(
+                                f"Eliminated content from different session (not visible): source={source}, "
+                                f"result_session_id={result_session_id}, current_session_id={session_id}, "
+                                f"url={metadata.get('url', 'N/A')[:50]}..."
+                            )
+                            continue  # 直接跳过，不参与任何处理
                     # todo 和 tip 不受 session_id 限制，总是包含
                 
                 results.append({
@@ -831,7 +905,7 @@ def search_session_memory(
     Args:
         session_id: 会话ID
         query: 搜索查询文本（如果为空，返回最近的记录）
-        limit: 返回结果数量
+        limit: 返回结果的最大数量（限制返回的记录数，例如 limit=10 表示最多返回10条结果）
     
     Returns:
         搜索结果列表，每个结果包含 content, metadata, distance, context_type, timestamp
@@ -881,25 +955,61 @@ def search_session_memory(
             logger.error("Failed to generate query embedding for session memory search")
             return []
         
-        results = collection.query(
+        # 构建统一的搜索条件：session_memory + todo + tips 一起搜索
+        # todo/tips 不绑定 session，所有 session 都可以访问
+        unified_filter = {
+            "$or": [
+                # 当前会话的记忆
+                {"$and": [{"source": "session_memory"}, {"session_id": session_id}]},
+                # 所有 todo（不限制 session_id）
+                {"source": "todo"},
+                # 所有 tips（不限制 session_id）
+                {"source": "tip"}
+            ]
+        }
+        
+        # 统一搜索所有相关结果（session_memory + todo + tips）
+        # 搜索更多结果以便后续筛选（搜索 limit * 2 条，然后筛选最相似的）
+        all_results = collection.query(
             query_embeddings=[query_embedding],
-            n_results=limit,
-            where=filter_metadata
+            n_results=limit * 2,  # 搜索更多结果以便筛选
+            where=unified_filter
         )
         
         formatted_results = []
-        if results and results.get('documents'):
-            for i in range(len(results['documents'][0])):
-                metadata = results['metadatas'][0][i] if results.get('metadatas') else {}
-                formatted_results.append({
-                    "content": results['documents'][0][i],
+        if all_results and all_results.get('documents'):
+            # 收集所有结果，包含距离信息
+            all_items = []
+            for i in range(len(all_results['documents'][0])):
+                metadata = all_results['metadatas'][0][i] if all_results.get('metadatas') else {}
+                source = metadata.get("source", "")
+                distance = all_results['distances'][0][i] if all_results.get('distances') else 1.0
+                
+                all_items.append({
+                    "content": all_results['documents'][0][i],
                     "metadata": metadata,
-                    "distance": results['distances'][0][i] if results.get('distances') else 1.0,
-                    "context_type": metadata.get("content_type", "general"),
-                    "timestamp": metadata.get("timestamp", "")
+                    "distance": distance,
+                    "context_type": (
+                        metadata.get("content_type", "general") if source == "session_memory"
+                        else "task" if source == "todo"
+                        else "tip" if source == "tip"
+                        else "general"
+                    ),
+                    "timestamp": metadata.get("timestamp", ""),
+                    "source": source
                 })
+            
+            # 按相似度排序（距离越小越相似）
+            all_items.sort(key=lambda x: x["distance"])
+            
+            # 返回最相似的 limit 条结果
+            formatted_results = all_items[:limit]
         
-        logger.info(f"Found {len(formatted_results)} session memory results for session {session_id}")
+        # 统计结果来源
+        session_memory_count = len([r for r in formatted_results if r.get('source') == 'session_memory'])
+        todo_count = len([r for r in formatted_results if r.get('source') == 'todo'])
+        tip_count = len([r for r in formatted_results if r.get('source') == 'tip'])
+        logger.info(f"Found {len(formatted_results)} results for session {session_id} (session_memory: {session_memory_count}, todo: {todo_count}, tip: {tip_count})")
         return formatted_results
         
     except Exception as e:
@@ -982,7 +1092,8 @@ def add_todo_to_vectorstore(
     priority: int = 0,
     start_time: Optional[str] = None,
     end_time: Optional[str] = None,
-    status: int = 0
+    status: int = 0,
+    session_id: Optional[str] = None  # 新增：会话ID（可选）
 ) -> bool:
     """
     将待办事项添加到向量数据库
@@ -1034,6 +1145,10 @@ def add_todo_to_vectorstore(
             "source": "todo"
         }
         
+        # 如果提供了 session_id，添加到元数据中
+        if session_id:
+            metadata["session_id"] = session_id
+        
         if start_time:
             metadata["start_time"] = start_time
         if end_time:
@@ -1072,7 +1187,8 @@ def add_tip_to_vectorstore(
     title: str,
     content: str,
     tip_type: str = "general",
-    source_urls: Optional[List[str]] = None
+    source_urls: Optional[List[str]] = None,
+    session_id: Optional[str] = None  # 新增：会话ID（可选）
 ) -> bool:
     """
     将提示添加到向量数据库
@@ -1109,6 +1225,10 @@ def add_tip_to_vectorstore(
             "tip_type": tip_type,
             "source": "tip"
         }
+        
+        # 如果提供了 session_id，添加到元数据中
+        if session_id:
+            metadata["session_id"] = session_id
         
         if source_urls:
             import json

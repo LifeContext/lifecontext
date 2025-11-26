@@ -278,8 +278,10 @@ def upload_web_data():
                         tags=tags,
                         metadata=metadata,
                         embedding_function=embedding_function,
-                        session_id=session_id  # 新增：传递session_id
+                        session_id=session_id  # 必须传递 session_id，确保数据隔离
                     )
+                    if not session_id:
+                        logger.warning(f"[upload_web_data] Web data stored without session_id: web_data_id={web_data_id}, url={url}")
                     
                     if vector_success:
                         logger.info(f"[upload_web_data] Added to vector store successfully")

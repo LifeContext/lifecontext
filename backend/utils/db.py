@@ -272,27 +272,35 @@ def update_todo(todo_id, **kwargs):
     # 如果更新成功，同步到向量数据库（不改变原有逻辑，失败不影响返回值）
     if affected_rows > 0:
         try:
-            # 获取更新后的完整todo信息
-            todos = get_todos(limit=1000)  # 获取所有todos
-            updated_todo = None
-            for todo in todos:
-                if todo.get('id') == todo_id:
-                    updated_todo = todo
-                    break
-            
-            if updated_todo:
-                from utils.vectorstore import add_todo_to_vectorstore
-                add_todo_to_vectorstore(
-                    todo_id=todo_id,
-                    title=updated_todo.get('title', ''),
-                    description=updated_todo.get('description', ''),
-                    priority=updated_todo.get('priority', 0),
-                    start_time=updated_todo.get('start_time'),
-                    end_time=updated_todo.get('end_time'),
-                    status=updated_todo.get('status', 0)
-                )
+            # 检查是否更新了 status 字段，如果 status 变为 1（完成），则从向量数据库删除
+            if 'status' in update_fields and update_fields['status'] == 1:
+                # todo 完成，从向量数据库删除
+                from utils.vectorstore import delete_todo_from_vectorstore
+                delete_todo_from_vectorstore(todo_id)
+                logger.info(f"Deleted completed todo {todo_id} from vectorstore")
+            else:
+                # 其他更新，同步更新向量数据库
+                # 获取更新后的完整todo信息
+                todos = get_todos(limit=1000)  # 获取所有todos
+                updated_todo = None
+                for todo in todos:
+                    if todo.get('id') == todo_id:
+                        updated_todo = todo
+                        break
+                
+                if updated_todo:
+                    from utils.vectorstore import add_todo_to_vectorstore
+                    add_todo_to_vectorstore(
+                        todo_id=todo_id,
+                        title=updated_todo.get('title', ''),
+                        description=updated_todo.get('description', ''),
+                        priority=updated_todo.get('priority', 0),
+                        start_time=updated_todo.get('start_time'),
+                        end_time=updated_todo.get('end_time'),
+                        status=updated_todo.get('status', 0)
+                    )
         except Exception as e:
-            logger.warning(f"Failed to update todo in vectorstore: {e}")
+            logger.warning(f"Failed to sync todo to vectorstore: {e}")
     
     return affected_rows > 0
 
@@ -375,6 +383,7 @@ def delete_todo(todo_id):
         try:
             from utils.vectorstore import delete_todo_from_vectorstore
             delete_todo_from_vectorstore(todo_id)
+            logger.info(f"Deleted todo {todo_id} from vectorstore")
         except Exception as e:
             logger.warning(f"Failed to delete todo from vectorstore: {e}")
     
