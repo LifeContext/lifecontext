@@ -32,7 +32,7 @@ Shaped by your life. Empower yourself. Interact with the world.
 ## 🎬 Product Demo
 
 <video width="100%" controls>
-  <source src="src/lifecontext.mov" type="video/quicktime">
+  <source src="src/lifecontext.mp4" type="video/mp4">
   Your browser does not support video playback.
 </video>
 
