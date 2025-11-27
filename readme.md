@@ -109,7 +109,6 @@ Core differences between LifeContext and similar products:
 On the Insight page of the homepage, the left side displays your browsing activity timeline, while the right side generates smart insights based on these activities in real-time. The system automatically analyzes your browsing patterns, content preferences, and focus areas to provide personalized insight suggestions, helping you discover hidden information and trends.
 
 <div align="center">
-  <p><em>Loading demo animation...</em></p>
   <img src="src/gif/insight.gif" width="100%" style="max-width: 100%; height: auto;" alt="Insight Feature Demo">
 </div>
 
@@ -118,7 +117,6 @@ On the Insight page of the homepage, the left side displays your browsing activi
 The system automatically generates personalized curated content daily based on your browsing history and activity patterns. Including activity summaries, important information reminders, knowledge cards, etc., helping you quickly understand the key information of the day. The default generation time is 8:30 the next day, which you can modify in the settings.
 
 <div align="center">
-  <p><em>Loading demo animation...</em></p>
   <img src="src/gif/daily.gif" width="100%" style="max-width: 100%; height: auto;" alt="Daily Picks Feature Demo">
 </div>
 
@@ -127,7 +125,6 @@ The system automatically generates personalized curated content daily based on y
 On any webpage, click the floating ball in the bottom right corner to quickly access LifeContext features. The floating ball provides a convenient entry point, allowing you to interact with the AI assistant anytime without leaving the current page.
 
 <div align="center">
-  <p><em>Loading demo animation...</em></p>
   <img src="src/gif/FloatingBall.gif" width="100%" style="max-width: 100%; height: auto;" alt="Floating Ball Feature Demo">
 </div>
 
@@ -136,7 +133,6 @@ On any webpage, click the floating ball in the bottom right corner to quickly ac
 Click the floating ball to open the chat window and have natural conversations with AI. The AI can understand the content of the page you're browsing and combine your browsing history, activity records, and contextual information to provide accurate answers, summaries, or suggestions.
 
 <div align="center">
-  <p><em>Loading demo animation...</em></p>
   <img src="src/gif/chat.gif" width="100%" style="max-width: 100%; height: auto;" alt="Chat Feature Demo">
 </div>
 
@@ -145,7 +141,6 @@ Click the floating ball to open the chat window and have natural conversations w
 In the extension settings, you can flexibly configure privacy protection options. Support adding URL blacklists to block websites you don't want recorded with one click; you can also view, search, or delete saved browsing records at any time, giving you complete control over your data privacy.
 
 <div align="center">
-  <p><em>Loading demo animation...</em></p>
   <img src="src/gif/privacy.gif" width="100%" style="max-width: 100%; height: auto;" alt="Privacy Protection Feature Demo">
 </div>
 
