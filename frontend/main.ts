@@ -8,8 +8,7 @@ const app = createApp(App);
 installI18n(app);
 app.use(router);
 
-// 包装在异步函数中以避免 top-level await 的兼容性问题
-async function initializeApp() {
+async function bootstrap() {
   try {
     const preferredLanguage = await fetchLanguagePreference();
     if (preferredLanguage) {
@@ -18,11 +17,11 @@ async function initializeApp() {
       initializeLocaleFromBrowser();
     }
   } catch (error) {
-    console.warn('Failed to fetch language preference, using browser default:', error);
+    console.error('语言偏好获取失败，使用浏览器默认语言', error);
     initializeLocaleFromBrowser();
   }
-  
+
   app.mount('#app');
 }
 
-initializeApp();
+void bootstrap();
