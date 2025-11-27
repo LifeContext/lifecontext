@@ -28,7 +28,9 @@ Shaped by your life. Empower yourself. Interact with the world.
 
 ## 🎬 产品演示
 
-![产品演示](src/gif/lifecontext.gif)
+<div align="center">
+  <video src="https://github.com/user-attachments/assets/c3a36ac8-be01-4e71-a3fc-4ade2266d271" controls width="100%" style="max-width: 100%; height: auto;"></video>
+</div>
 
 ## 📊 产品对比
 
@@ -103,31 +105,41 @@ LifeContext 与同类产品的核心差异对比：
 
 在主页的 Insight 页面中，左侧展示您的浏览网页活动时间线，右侧实时生成基于这些活动的智能洞察。系统会自动分析您的浏览模式、内容偏好和关注点，为您提供个性化的洞察建议，帮助您发现隐藏的信息和趋势。
 
-![Insight功能演示](src/gif/insight.gif)
+<div align="center">
+  <img src="src/gif/insight.gif" width="100%" style="max-width: 100%; height: auto;">
+</div>
 
 ### 2️⃣ Daily Picks 每日精选
 
 系统会根据您的浏览历史和活动模式，每天自动生成个性化的精选内容。包括活动总结、重要信息提醒、知识卡片等，让您快速了解当天的关键信息。默认生成时间为次日 8:30，您可通过设置进行修改。
 
-![Daily Picks功能演示](src/gif/daily.gif)
+<div align="center">
+  <img src="src/gif/daily.gif" width="100%" style="max-width: 100%; height: auto;">
+</div>
 
 ### 3️⃣ 悬浮球助手
 
 在任意网页上，点击右下角的悬浮球即可快速访问 LifeContext 功能。悬浮球提供便捷的入口，让您随时与 AI 助手交互，无需离开当前页面。
 
-![悬浮球功能演示](src/gif/FloatingBall.gif)
+<div align="center">
+  <img src="src/gif/FloatingBall.gif" width="100%" style="max-width: 100%; height: auto;">
+</div>
 
 ### 4️⃣ 智能聊天
 
 点击悬浮球打开聊天窗口，与 AI 进行自然对话。AI 能够理解您正在浏览的页面内容，并结合您的浏览历史、活动记录和上下文信息，为您提供精准的回答、总结或建议。
 
-![聊天功能演示](src/gif/chat.gif)
+<div align="center">
+  <img src="src/gif/chat.gif" width="100%" style="max-width: 100%; height: auto;">
+</div>
 
 ### 5️⃣ 隐私保护
 
 在插件设置中，您可以灵活配置隐私保护选项。支持添加 URL 黑名单，一键屏蔽不想被记录的网站；也可以随时查看、搜索或删除已保存的浏览记录，完全掌控您的数据隐私。
 
-![隐私保护功能演示](src/gif/privacy.gif)
+<div align="center">
+  <img src="src/gif/privacy.gif" width="100%" style="max-width: 100%; height: auto;">
+</div>
 
 ## 🚀 快速开始
 ### 📋 前置准备
