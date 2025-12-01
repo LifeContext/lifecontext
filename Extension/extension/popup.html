@@ -321,6 +321,18 @@
       #domain-hint {
         color: #64748b !important;
       }
+      #privacy-notice {
+        background: rgba(59, 130, 246, 0.05) !important;
+        border-color: rgba(59, 130, 246, 0.15) !important;
+      }
+      #privacy-notice-text {
+        color: #475569 !important;
+      }
+    }
+
+    #privacy-notice:hover {
+      opacity: 0.8;
+      background: rgba(59, 130, 246, 0.15);
     }
     
   </style>
@@ -380,6 +392,17 @@
         <span id="domain-chip-icon" style="font-size:14px; font-weight:600;">✔</span>
         <span id="domain-chip-text" style="font-size:14px; opacity:0.9;">current-domain</span>
       </button>
+    </div>
+
+    <!-- Privacy notice -->
+    <div id="privacy-notice" style="padding:8px 12px; margin-top:8px; background:rgba(59,130,246,0.1); border-radius:8px; border:1px solid rgba(59,130,246,0.2); transition:opacity 0.2s;">
+      <div style="display:flex; align-items:center; gap:6px; font-size:11px; color:#94a3b8;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z" stroke="currentColor" stroke-width="2" fill="none"/>
+          <path d="M12 16v-4M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+        <span id="privacy-notice-text" style="flex:1;">数据仅存储在本地服务器</span>
+      </div>
     </div>
   </div>
 

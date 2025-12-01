@@ -399,7 +399,8 @@ const TEXT = {
     domainAllowed: '✔',
     domainBlocked: '✖',
     toggleRecordingTitle: '记录开关',
-    toggleNotificationsTitle: '通知开关'
+    toggleNotificationsTitle: '通知开关',
+    privacyNotice: '数据仅存储在本地服务器'
   },
   en: {
     recording: 'Record',
@@ -407,7 +408,8 @@ const TEXT = {
     domainAllowed: '✔',
     domainBlocked: '✖',
     toggleRecordingTitle: 'Toggle Recording',
-    toggleNotificationsTitle: 'Toggle Notifications'
+    toggleNotificationsTitle: 'Toggle Notifications',
+    privacyNotice: 'Data stored locally only'
   }
 };
 function localizeUI() {
