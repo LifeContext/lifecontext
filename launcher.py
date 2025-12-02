@@ -178,7 +178,7 @@ class LifeContextLauncher:
         self.open_browser_button = tk.Button(
             button_frame,
             text="🌐 打开主页",
-            command=lambda: webbrowser.open("http://localhost:3000"),
+            command=lambda: webbrowser.open("http://localhost:8000"),
             bg="#2196F3",
             fg="white",
             font=("Arial", 12, "bold"),
@@ -316,9 +316,18 @@ class LifeContextLauncher:
         
         return frame
     
-    def log(self, message):
+    def log(self, message, level="INFO"):
         """添加日志"""
-        self.log_text.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] {message}\n")
+        if level == "ERROR":
+            prefix = "❌"
+        elif level == "WARNING":
+            prefix = "⚠️"
+        elif level == "SUCCESS":
+            prefix = "✅"
+        else:
+            prefix = "ℹ️"
+        
+        self.log_text.insert(tk.END, f"[{time.strftime('%H:%M:%S')}] {prefix} {message}\n")
         self.log_text.see(tk.END)
         self.root.update()
     
@@ -430,26 +439,8 @@ class LifeContextLauncher:
             # 2. Extension 插件依赖浏览器直连，跳过独立服务
             self.log("ℹ️ 插件采用直连模式，无需单独的 Extension Server")
             
-            # 3. 启动 Frontend（仅开发模式）
-            self.log("📦 启动 Frontend 服务（开发模式）...")
-            try:
-                creationflags = 0
-                preexec_fn = None
-                if sys.platform == 'win32':
-                    creationflags = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
-                else:
-                    preexec_fn = os.setsid
-                self.frontend_process = subprocess.Popen(
-                    ["npm", "run", "dev"],
-                    cwd=str(self.frontend_dir),
-                    creationflags=creationflags,
-                    preexec_fn=preexec_fn
-                )
-                self.processes.append(self.frontend_process)
-                self.log("✅ Frontend 服务已启动（开发模式）")
-            except Exception as e:
-                self.log("ℹ️ 未自动启动 Frontend，需自行提供静态文件服务", "WARNING")
-                self.log(f"❌ Frontend 启动失败: {e}")
+            # 3. Frontend 静态文件由 Backend 代理提供，无需单独启动
+            self.log("ℹ️ Frontend 静态文件由 Backend 代理提供（端口 8000）")
             
             time.sleep(2)
             
@@ -461,7 +452,7 @@ class LifeContextLauncher:
             self.log("")
             self.log("📝 服务地址:")
             self.log("   • Backend:   http://localhost:8000")
-            self.log("   • Frontend:  http://localhost:3000")
+            self.log("   • Frontend:  http://localhost:8000 (代理)")
             self.log("")
             self.log("💡 提示:")
             self.log("   1. 点击「打开主页」访问 LifeContext")
@@ -470,7 +461,7 @@ class LifeContextLauncher:
             
             # 自动打开浏览器
             time.sleep(2)
-            webbrowser.open("http://localhost:3000")
+            webbrowser.open("http://localhost:8000")
             
         except Exception as e:
             self.log(f"❌ 启动服务时出错: {e}")
