@@ -40,12 +40,11 @@ python build_portable.py
 该脚本会自动完成以下步骤：
 1. 清理旧的构建文件
 2. 构建前端静态文件
-3. 构建前端服务器可执行文件
-4. 准备浏览器插件文件
-5. 构建后端可执行文件
-6. 构建启动器可执行文件
-7. 复制必要的配置文件
-8. 打包成 ZIP 文件
+3. 准备浏览器插件文件
+4. 构建后端可执行文件
+5. 构建启动器可执行文件
+6. 复制必要的配置文件
+7. 打包成 ZIP 文件
 
 构建完成后，会在项目根目录生成：
 - `LifeContext-Portable/` - 便携包文件夹
@@ -69,27 +68,19 @@ cd backend
 python -m PyInstaller build.spec
 ```
 
-#### 3. 构建前端服务器
-
-```bash
-cd ..
-python -m PyInstaller frontend_server.spec
-```
-
-#### 4. 构建启动器
+#### 3. 构建启动器
 
 ```bash
 python -m PyInstaller launcher.spec
 ```
 
-#### 5. 组织文件结构
+#### 4. 组织文件结构
 
 创建以下目录结构：
 
 ```
 LifeContext-Portable/
 ├── LifeContext.exe              # 启动器
-├── frontend_server.exe          # 前端服务器
 ├── README.txt                   # 使用说明
 ├── backend/
 │   ├── LifeContextBackend.exe   # 后端服务
@@ -99,12 +90,11 @@ LifeContext-Portable/
 │   └── dist/                    # 前端静态文件
 └── Extension/
     ├── extension/               # 浏览器插件
-    ├── server.js                # Extension 服务器
     ├── package.json
     └── node_modules/            # Node.js 依赖
 ```
 
-#### 6. 创建 ZIP 包
+#### 5. 创建 ZIP 包
 
 将 `LifeContext-Portable/` 文件夹压缩成 ZIP 文件。
 
@@ -135,15 +125,6 @@ LifeContext-Portable/
 1. 在 `build.spec` 中添加更多排除项到 `excludes` 列表
 2. 使用 UPX 压缩（已在 spec 中启用）
 3. 考虑不打包某些大型依赖，改为运行时安装
-
-### Extension Server 无法启动
-
-**问题**: Extension 服务启动失败
-
-**解决方案**:
-1. 确保 `Extension/node_modules` 存在
-2. 检查 `server.js` 中的依赖是否正确
-3. 可以选择不打包 Extension Server，保持使用 `node server.js` 运行
 
 ## 📦 减小打包体积的技巧
 

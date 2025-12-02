@@ -48,9 +48,6 @@ stop_service() {
 # Stop backend service
 stop_service "Backend Service" "logs/backend.pid" "python.*app.py"
 
-# Stop extension service
-stop_service "Extension Service" "logs/extension.pid" "node.*server.js"
-
 # Stop frontend service
 stop_service "Frontend Service" "logs/frontend.pid" "vite"
 

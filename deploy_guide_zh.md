@@ -70,13 +70,12 @@ chmod +x deploy.sh stop.sh
 
 ## 📊 服务说明
 
-脚本会自动启动以下三个服务：
+脚本会自动启动以下服务：
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
 | 后端服务 | 8000 | Flask API 服务 |
 | 前端界面 | 3000 | Vue.js 前端界面 |
-| 插件服务 | - | 浏览器插件后端支持 |
 
 ## 🔍 服务验证
 
@@ -92,9 +91,6 @@ chmod +x deploy.sh stop.sh
 ```bash
 # 查看后端日志
 tail -f logs/backend.log
-
-# 查看插件日志
-tail -f logs/extension.log
 
 # 查看前端日志
 tail -f logs/frontend.log
@@ -222,14 +218,6 @@ chmod +x node_modules/.bin/vite
 cd backend
 conda activate lifecontext
 python app.py
-```
-
-### 启动插件服务
-
-```bash
-cd Extension
-npm install  # 首次运行
-node server.js
 ```
 
 ### 启动前端

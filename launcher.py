@@ -28,7 +28,6 @@ class LifeContextLauncher:
         self.processes = []
         self.backend_process = None
         self.frontend_process = None
-        self.extension_process = None
         
         # 路径配置
         # 处理 PyInstaller 打包后的路径问题
@@ -43,7 +42,6 @@ class LifeContextLauncher:
         self.frontend_dir = self.base_dir / "frontend"
         self.extension_dir = self.base_dir / "Extension"
         self.env_file = self.backend_dir / ".env"
-        self.enable_extension_server = os.getenv("ENABLE_EXTENSION_SERVER", "0").lower() in ("1", "true", "yes")
         
         # 确保必要的目录存在
         self.backend_dir.mkdir(parents=True, exist_ok=True)
@@ -361,7 +359,6 @@ class LifeContextLauncher:
         self.log(f"Extension 目录: {self.extension_dir}")
         self.log(f"配置文件: {self.env_file}")
         self.log(f"配置文件存在: {self.env_file.exists()}")
-        self.log(f"Extension Server 启用: {self.enable_extension_server}")
         self.log("=" * 60)
         
         # 检查配置
@@ -430,54 +427,12 @@ class LifeContextLauncher:
                 self.log("✅ Backend 服务已启动（开发模式）")
                 time.sleep(3)
             
-            # 2. 启动 Extension Server
-            if self.enable_extension_server:
-                self.log("📦 启动 Extension 服务 (端口 3001)...")
-                extension_exe = self.extension_dir / "ExtensionServer.exe"
-                if extension_exe.exists():
-                    creationflags = 0
-                    preexec_fn = None
-                    if sys.platform == 'win32':
-                        creationflags = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
-                    else:
-                        preexec_fn = os.setsid
-                    self.extension_process = subprocess.Popen(
-                        [str(extension_exe)],
-                        cwd=str(self.extension_dir),
-                        creationflags=creationflags,
-                        preexec_fn=preexec_fn
-                    )
-                    self.processes.append(self.extension_process)
-                    self.log("✅ Extension 服务已启动 (端口 3001)")
-                    time.sleep(2)
-                else:
-                    self.log(f"⚠️ 找不到 Extension Server: {extension_exe}")
-                    self.log("   使用 Node.js 启动...")
-                    try:
-                        creationflags = 0
-                        preexec_fn = None
-                        if sys.platform == 'win32':
-                            creationflags = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
-                        else:
-                            preexec_fn = os.setsid
-                        self.extension_process = subprocess.Popen(
-                            ["node", "server.js"],
-                            cwd=str(self.extension_dir),
-                            creationflags=creationflags,
-                            preexec_fn=preexec_fn
-                        )
-                        self.processes.append(self.extension_process)
-                        self.log("✅ Extension 服务已启动（Node.js模式）")
-                        time.sleep(2)
-                    except Exception as e:
-                        self.log(f"⚠️ Extension 服务启动失败: {e}")
-            else:
-                self.log("ℹ️ 插件已启用直连模式，跳过 Extension Server (3001)")
+            # 2. Extension 插件依赖浏览器直连，跳过独立服务
+            self.log("ℹ️ 插件采用直连模式，无需单独的 Extension Server")
             
-            # 3. 启动 Frontend
-            self.log("📦 启动 Frontend 服务...")
-            frontend_server = self.base_dir / "frontend_server.exe"
-            if frontend_server.exists():
+            # 3. 启动 Frontend（仅开发模式）
+            self.log("📦 启动 Frontend 服务（开发模式）...")
+            try:
                 creationflags = 0
                 preexec_fn = None
                 if sys.platform == 'win32':
@@ -485,33 +440,16 @@ class LifeContextLauncher:
                 else:
                     preexec_fn = os.setsid
                 self.frontend_process = subprocess.Popen(
-                    [str(frontend_server)],
-                    cwd=str(self.base_dir),
+                    ["npm", "run", "dev"],
+                    cwd=str(self.frontend_dir),
                     creationflags=creationflags,
                     preexec_fn=preexec_fn
                 )
                 self.processes.append(self.frontend_process)
-                self.log("✅ Frontend 服务已启动 (端口 3000)")
-            else:
-                self.log("⚠️ 找不到 Frontend Server")
-                # 尝试使用 npm 启动（开发模式）
-                try:
-                    creationflags = 0
-                    preexec_fn = None
-                    if sys.platform == 'win32':
-                        creationflags = subprocess.CREATE_NEW_CONSOLE | subprocess.CREATE_NEW_PROCESS_GROUP
-                    else:
-                        preexec_fn = os.setsid
-                    self.frontend_process = subprocess.Popen(
-                        ["npm", "run", "dev"],
-                        cwd=str(self.frontend_dir),
-                        creationflags=creationflags,
-                        preexec_fn=preexec_fn
-                    )
-                    self.processes.append(self.frontend_process)
-                    self.log("✅ Frontend 服务已启动（开发模式）")
-                except Exception as e:
-                    self.log(f"❌ Frontend 启动失败: {e}")
+                self.log("✅ Frontend 服务已启动（开发模式）")
+            except Exception as e:
+                self.log("ℹ️ 未自动启动 Frontend，需自行提供静态文件服务", "WARNING")
+                self.log(f"❌ Frontend 启动失败: {e}")
             
             time.sleep(2)
             
@@ -524,7 +462,6 @@ class LifeContextLauncher:
             self.log("📝 服务地址:")
             self.log("   • Backend:   http://localhost:8000")
             self.log("   • Frontend:  http://localhost:3000")
-            self.log("   • Extension: http://localhost:3001")
             self.log("")
             self.log("💡 提示:")
             self.log("   1. 点击「打开主页」访问 LifeContext")
@@ -560,7 +497,6 @@ class LifeContextLauncher:
         self.processes.clear()
         self.backend_process = None
         self.frontend_process = None
-        self.extension_process = None
         
         self.start_button.config(state=tk.NORMAL)
         self.stop_button.config(state=tk.DISABLED)

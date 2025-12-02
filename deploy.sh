@@ -66,12 +66,11 @@ check_conda_env
 # Terminate previous processes
 echo "🧹 Cleaning up old processes..."
 pkill -f "python.*app.py" 2>/dev/null
-pkill -f "node.*server.js" 2>/dev/null
 pkill -f "vite" 2>/dev/null
 sleep 2
 
 # 1. Start backend service
-echo "[1/3] Starting backend service..."
+echo "[1/2] Starting backend service..."
 echo "============================================================"
 cd backend
 source "$(conda info --base)/etc/profile.d/conda.sh"
@@ -82,22 +81,8 @@ echo -e "${GREEN}✅ Backend service started (PID: $BACKEND_PID)${NC}"
 cd ..
 sleep 3
 
-# 2. Start browser extension service
-echo "[2/3] Starting browser extension service..."
-echo "============================================================"
-cd Extension
-if [ ! -d "node_modules" ]; then
-    echo "📦 First run, installing dependencies..."
-    npm install
-fi
-nohup node server.js > ../logs/extension.log 2>&1 &
-EXTENSION_PID=$!
-echo -e "${GREEN}✅ Extension service started (PID: $EXTENSION_PID)${NC}"
-cd ..
-sleep 3
-
-# 3. Start frontend service
-echo "[3/3] Starting frontend service..."
+# 2. Start frontend service
+echo "[2/2] Starting frontend service..."
 echo "============================================================"
 cd frontend
 if [ ! -d "node_modules" ]; then
@@ -121,12 +106,10 @@ echo "============================================================"
 echo ""
 echo "📝 Service List:"
 echo "   • Backend Service:   http://localhost:8000  (PID: $BACKEND_PID)"
-echo "   • Frontend UI:        http://localhost:3000  (PID: $FRONTEND_PID)"
-echo "   • Extension Service: Running              (PID: $EXTENSION_PID)"
+echo "   • Frontend UI:       http://localhost:3000  (PID: $FRONTEND_PID)"
 echo ""
 echo "📊 Log Files:"
 echo "   • Backend Log:   logs/backend.log"
-echo "   • Extension Log: logs/extension.log"
 echo "   • Frontend Log:  logs/frontend.log"
 echo ""
 echo "💡 Tips:"
@@ -139,18 +122,16 @@ echo "      - Load Extension/extension folder"
 echo ""
 echo "   3. View real-time logs:"
 echo "      tail -f logs/backend.log"
-echo "      tail -f logs/extension.log"
 echo "      tail -f logs/frontend.log"
 echo ""
 echo "   4. Stop all services:"
 echo "      ./stop.sh"
-echo "      Or manually: kill $BACKEND_PID $EXTENSION_PID $FRONTEND_PID"
+echo "      Or manually: kill $BACKEND_PID $FRONTEND_PID"
 echo ""
 echo "============================================================"
 
 # Save PID to file for easy stop
 echo "$BACKEND_PID" > logs/backend.pid
-echo "$EXTENSION_PID" > logs/extension.pid
 echo "$FRONTEND_PID" > logs/frontend.pid
 
 # Wait for user input

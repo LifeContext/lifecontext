@@ -70,13 +70,12 @@ chmod +x deploy.sh stop.sh
 
 ## 📊 Service Overview
 
-The script automatically starts the following three services:
+The script automatically starts the following services:
 
 | Service | Port | Description |
 |---------|------|-------------|
 | Backend Service | 8000 | Flask API service |
 | Frontend Interface | 3000 | Vue.js frontend interface |
-| Extension Service | - | Browser extension backend support |
 
 ## 🔍 Service Verification
 
@@ -92,9 +91,6 @@ Visit the following addresses to verify:
 ```bash
 # View backend logs
 tail -f logs/backend.log
-
-# View extension logs
-tail -f logs/extension.log
 
 # View frontend logs
 tail -f logs/frontend.log
@@ -222,14 +218,6 @@ If the one-click deployment script encounters issues, you can manually start eac
 cd backend
 conda activate lifecontext
 python app.py
-```
-
-### Start Extension Service
-
-```bash
-cd Extension
-npm install  # First time only
-node server.js
 ```
 
 ### Start Frontend

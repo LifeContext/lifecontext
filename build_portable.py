@@ -141,8 +141,8 @@ class PortableBuilder:
             return False
     
     def build_extension_server(self):
-        """构建 Extension Server"""
-        self.log("准备 Extension Server...")
+        """准备 Extension 插件"""
+        self.log("复制 Extension 插件文件...")
         
         extension_dir = self.base_dir / "Extension"
         
@@ -158,8 +158,8 @@ class PortableBuilder:
                 )
                 self.log("已复制 Extension 插件文件")
             
-            # 复制 server.js 和相关文件
-            files_to_copy = ["server.js", "package.json"]
+            # 复制 package.json 等配置文件
+            files_to_copy = ["package.json"]
             for file_name in files_to_copy:
                 src_file = extension_dir / file_name
                 if src_file.exists():
@@ -175,10 +175,10 @@ class PortableBuilder:
             else:
                 self.log("Extension node_modules 不存在，需要手动安装", "WARNING")
             
-            self.log("Extension Server 准备完成", "SUCCESS")
+            self.log("Extension 插件准备完成", "SUCCESS")
             return True
         except Exception as e:
-            self.log(f"Extension Server 准备出错: {e}", "ERROR")
+            self.log(f"Extension 插件准备出错: {e}", "ERROR")
             return False
     
     def build_launcher(self):
@@ -258,79 +258,6 @@ exe = EXE(
             self.log(f"启动器构建出错: {e}", "ERROR")
             return False
     
-    def build_frontend_server(self):
-        """构建前端服务器"""
-        self.log("构建前端服务器...")
-        
-        try:
-            spec_content = """
-# -*- mode: python ; coding: utf-8 -*-
-
-block_cipher = None
-
-a = Analysis(
-    ['frontend_server.py'],
-    pathex=[],
-    binaries=[],
-    datas=[],
-    hiddenimports=[],
-    hookspath=[],
-    hooksconfig={},
-    runtime_hooks=[],
-    excludes=[],
-    win_no_prefer_redirects=False,
-    win_private_assemblies=False,
-    cipher=block_cipher,
-    noarchive=False,
-)
-
-pyz = PYZ(a.pure, a.zipped_data, cipher=block_cipher)
-
-exe = EXE(
-    pyz,
-    a.scripts,
-    a.binaries,
-    a.zipfiles,
-    a.datas,
-    [],
-    name='frontend_server',
-    debug=False,
-    bootloader_ignore_signals=False,
-    strip=False,
-    upx=True,
-    upx_exclude=[],
-    runtime_tmpdir=None,
-    console=True,
-    disable_windowed_traceback=False,
-    argv_emulation=False,
-    target_arch=None,
-    codesign_identity=None,
-    entitlements_file=None,
-)
-"""
-            
-            spec_file = self.base_dir / "frontend_server.spec"
-            with open(spec_file, 'w', encoding='utf-8') as f:
-                f.write(spec_content)
-            
-            subprocess.run(
-                [sys.executable, "-m", "PyInstaller", "frontend_server.spec", "--clean"],
-                cwd=str(self.base_dir),
-                check=True
-            )
-            
-            frontend_server_exe = self.base_dir / "dist" / "frontend_server.exe"
-            if frontend_server_exe.exists():
-                shutil.copy2(frontend_server_exe, self.output_dir / "frontend_server.exe")
-                self.log("前端服务器构建完成", "SUCCESS")
-                return True
-            else:
-                self.log("找不到生成的前端服务器", "ERROR")
-                return False
-        except Exception as e:
-            self.log(f"前端服务器构建出错: {e}", "ERROR")
-            return False
-    
     def copy_additional_files(self):
         """复制额外文件"""
         self.log("复制额外文件...")
@@ -380,7 +307,6 @@ exe = EXE(
 
 - Backend: http://localhost:8000
 - Frontend: http://localhost:3000
-- Extension Server: http://localhost:3001
 
 ## ❓ 常见问题
 
@@ -447,7 +373,6 @@ exe = EXE(
         steps = [
             ("清理旧文件", self.clean),
             ("构建前端", self.build_frontend),
-            ("构建前端服务器", self.build_frontend_server),
             ("准备Extension", self.build_extension_server),
             ("构建Backend", self.build_backend),
             ("构建启动器", self.build_launcher),
@@ -487,7 +412,6 @@ exe = EXE(
         self.log("验证构建结果...")
         checks = [
             ("启动器", self.output_dir / "LifeContext.exe"),
-            ("前端服务器", self.output_dir / "frontend_server.exe"),
             ("前端静态文件", self.output_dir / "frontend" / "dist" / "index.html"),
             ("Backend 服务", self.output_dir / "backend" / "LifeContextBackend.exe"),
             ("Extension 插件", self.output_dir / "Extension" / "extension" / "manifest.json"),
