@@ -12,6 +12,10 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Get script directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
+
 # Check dependencies
 check_dependencies() {
     echo "🔍 Checking dependencies..."
@@ -46,16 +50,16 @@ check_conda_env() {
         echo -e "${GREEN}✅ Found lifecontext environment${NC}"
     else
         echo -e "${YELLOW}⚠️  lifecontext environment not found, creating...${NC}"
-        cd backend
+        cd "$PROJECT_ROOT/backend"
         conda env create -f environment.yml
-        cd ..
+        cd "$PROJECT_ROOT"
         echo -e "${GREEN}✅ Environment created${NC}"
     fi
     echo ""
 }
 
 # Create logs directory
-mkdir -p logs
+mkdir -p "$PROJECT_ROOT/logs"
 
 # Check dependencies
 check_dependencies
@@ -73,33 +77,33 @@ sleep 2
 # 1. Start backend service
 echo "[1/3] Starting backend service..."
 echo "============================================================"
-cd backend
+cd "$PROJECT_ROOT/backend"
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate lifecontext
-nohup python app.py > ../logs/backend.log 2>&1 &
+nohup python app.py > "$PROJECT_ROOT/logs/backend.log" 2>&1 &
 BACKEND_PID=$!
 echo -e "${GREEN}✅ Backend service started (PID: $BACKEND_PID)${NC}"
-cd ..
+cd "$PROJECT_ROOT"
 sleep 3
 
 # 2. Start browser extension service
 echo "[2/3] Starting browser extension service..."
 echo "============================================================"
-cd Extension
+cd "$PROJECT_ROOT/Extension"
 if [ ! -d "node_modules" ]; then
     echo "📦 First run, installing dependencies..."
     npm install
 fi
-nohup node server.js > ../logs/extension.log 2>&1 &
+nohup node server.js > "$PROJECT_ROOT/logs/extension.log" 2>&1 &
 EXTENSION_PID=$!
 echo -e "${GREEN}✅ Extension service started (PID: $EXTENSION_PID)${NC}"
-cd ..
+cd "$PROJECT_ROOT"
 sleep 3
 
 # 3. Start frontend service
 echo "[3/3] Starting frontend service..."
 echo "============================================================"
-cd frontend
+cd "$PROJECT_ROOT/frontend"
 if [ ! -d "node_modules" ]; then
     echo "📦 First run, installing dependencies..."
     npm install
@@ -108,10 +112,10 @@ if [ ! -d "node_modules" ]; then
         chmod +x node_modules/.bin/vite
     fi
 fi
-nohup npm run dev > ../logs/frontend.log 2>&1 &
+nohup npm run dev > "$PROJECT_ROOT/logs/frontend.log" 2>&1 &
 FRONTEND_PID=$!
 echo -e "${GREEN}✅ Frontend service started (PID: $FRONTEND_PID)${NC}"
-cd ..
+cd "$PROJECT_ROOT"
 sleep 5
 
 echo ""
@@ -143,15 +147,15 @@ echo "      tail -f logs/extension.log"
 echo "      tail -f logs/frontend.log"
 echo ""
 echo "   4. Stop all services:"
-echo "      ./stop.sh"
+echo "      ./scripts/stop.sh"
 echo "      Or manually: kill $BACKEND_PID $EXTENSION_PID $FRONTEND_PID"
 echo ""
 echo "============================================================"
 
 # Save PID to file for easy stop
-echo "$BACKEND_PID" > logs/backend.pid
-echo "$EXTENSION_PID" > logs/extension.pid
-echo "$FRONTEND_PID" > logs/frontend.pid
+echo "$BACKEND_PID" > "$PROJECT_ROOT/logs/backend.pid"
+echo "$EXTENSION_PID" > "$PROJECT_ROOT/logs/extension.pid"
+echo "$FRONTEND_PID" > "$PROJECT_ROOT/logs/frontend.pid"
 
 # Wait for user input
 echo ""

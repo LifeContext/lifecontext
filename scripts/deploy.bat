@@ -1,33 +1,37 @@
 @echo off
 chcp 65001 >nul
+
+REM Get the script directory
+for /f "tokens=*" %%A in ('cd') do set "PROJECT_ROOT=%%A"
+
 echo ============================================================
 echo  🚀 LifeContext One-Click Deployment Script (Windows)
 echo ============================================================
 echo.
 
-:: Check if services are already running
+REM Check if services are already running
 tasklist /FI "IMAGENAME eq python.exe" 2>NUL | find /I /N "python.exe">NUL
 if "%ERRORLEVEL%"=="0" (
     echo [Warning] Python processes detected, services may already be running
     echo.
 )
 
-:: 1. Start backend service
+REM 1. Start backend service
 echo [1/3] Starting backend service...
 echo ============================================================
-start "LifeContext Backend" cmd /k "cd backend && echo Activating conda environment... && conda activate lifecontext && echo Starting backend service... && python app.py"
+start "LifeContext Backend" cmd /k "cd /d "%PROJECT_ROOT%\backend" && echo Activating conda environment... && conda activate lifecontext && echo Starting backend service... && python app.py"
 timeout /t 3 >nul
 
-:: 2. Start extension service
+REM 2. Start extension service
 echo [2/3] Starting extension service...
 echo ============================================================
-start "LifeContext Extension" cmd /k "cd Extension && echo Installing dependencies... && if not exist node_modules (npm install && echo Dependencies installed successfully) else (echo Dependencies already installed) && echo Extension service ready"
+start "LifeContext Extension" cmd /k "cd /d "%PROJECT_ROOT%\Extension" && echo Installing dependencies... && if not exist node_modules (npm install && echo Dependencies installed successfully) else (echo Dependencies already installed) && echo Extension service ready"
 timeout /t 3 >nul
 
-:: 3. Start frontend service
+REM 3. Start frontend service
 echo [3/3] Starting frontend service...
 echo ============================================================
-start "LifeContext Frontend" cmd /k "cd frontend && echo Installing dependencies... && if not exist node_modules (npm install && echo Dependencies installed successfully && echo Starting frontend service... && npm run dev) else (echo Dependencies already installed && echo Starting frontend service... && npm run dev)"
+start "LifeContext Frontend" cmd /k "cd /d "%PROJECT_ROOT%\frontend" && echo Installing dependencies... && if not exist node_modules (npm install && echo Dependencies installed successfully && echo Starting frontend service... && npm run dev) else (echo Dependencies already installed && echo Starting frontend service... && npm run dev)"
 timeout /t 3 >nul
 
 echo.
