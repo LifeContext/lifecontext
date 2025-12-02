@@ -1005,8 +1005,124 @@
     }
   }
 
+  // 检查是否应该注入悬浮球
+  function shouldInjectFloatingChat() {
+    // 1. 检查是否在 iframe 中（不在主窗口）
+    if (window.self !== window.top) {
+      console.log('[LC] 检测到 iframe，跳过悬浮球注入');
+      return false;
+    }
+
+    // 2. 检查 URL 是否包含验证相关的关键词
+    const url = window.location.href.toLowerCase();
+    const verificationKeywords = [
+      'recaptcha',
+      'captcha',
+      'verification',
+      'verify',
+      'challenge',
+      'hcaptcha',
+      'turnstile',
+      'cloudflare',
+      'security-check',
+      'bot-detection'
+    ];
+    
+    for (const keyword of verificationKeywords) {
+      if (url.includes(keyword)) {
+        console.log('[LC] 检测到验证页面 URL，跳过悬浮球注入:', keyword);
+        return false;
+      }
+    }
+
+    // 3. 检查页面标题是否包含验证相关文本
+    const title = (document.title || '').toLowerCase();
+    const titleKeywords = ['验证', 'verification', 'captcha', 'recaptcha', '人机验证'];
+    for (const keyword of titleKeywords) {
+      if (title.includes(keyword.toLowerCase())) {
+        console.log('[LC] 检测到验证页面标题，跳过悬浮球注入:', keyword);
+        return false;
+      }
+    }
+
+    // 4. 检查页面是否包含 reCAPTCHA 相关的元素或类名
+    const recaptchaSelectors = [
+      '[id*="recaptcha"]',
+      '[class*="recaptcha"]',
+      '[id*="captcha"]',
+      '[class*="captcha"]',
+      'iframe[src*="recaptcha"]',
+      'iframe[src*="challenges.cloudflare.com"]',
+      'iframe[src*="hcaptcha"]',
+      '.g-recaptcha',
+      '#recaptcha',
+      '[data-sitekey]' // reCAPTCHA 通常有 data-sitekey 属性
+    ];
+
+    for (const selector of recaptchaSelectors) {
+      try {
+        if (document.querySelector(selector)) {
+          console.log('[LC] 检测到验证元素，跳过悬浮球注入:', selector);
+          return false;
+        }
+      } catch (e) {
+        // 忽略选择器错误
+      }
+    }
+
+    // 5. 检查页面内容是否包含验证相关的文本（中文和英文）
+    // 只在 body 存在时检查，避免性能问题
+    if (document.body) {
+      const bodyText = (document.body.innerText || document.body.textContent || '').toLowerCase();
+      const contentKeywords = [
+        '进行人机身份验证',
+        '人机验证',
+        'i\'m not a robot',
+        'verify you\'re human',
+        'select all images',
+        '选择所有包含',
+        'privacy policy - terms of use',
+        '隐私权 - 使用条款',
+        'reCAPTCHA Enterprise'
+      ];
+      
+      // 只检查前 5000 个字符，提高性能
+      const textToCheck = bodyText.substring(0, 5000);
+      for (const keyword of contentKeywords) {
+        if (textToCheck.includes(keyword.toLowerCase())) {
+          console.log('[LC] 检测到验证页面内容，跳过悬浮球注入:', keyword);
+          return false;
+        }
+      }
+    }
+
+    // 6. 检查是否在特定的验证域名下
+    const hostname = window.location.hostname.toLowerCase();
+    const verificationDomains = [
+      'recaptcha.net',
+      'google.com/recaptcha',
+      'hcaptcha.com',
+      'challenges.cloudflare.com'
+    ];
+    
+    for (const domain of verificationDomains) {
+      if (hostname.includes(domain)) {
+        console.log('[LC] 检测到验证域名，跳过悬浮球注入:', domain);
+        return false;
+      }
+    }
+
+    return true;
+  }
+
   (async function main() {
     try {
+      // 检查是否应该注入悬浮球
+      if (!shouldInjectFloatingChat()) {
+        console.log('[LC] 跳过悬浮球注入（验证页面或 iframe）');
+        return;
+      }
+
       // 先加载悬浮球状态
       await loadFloatingChatState();
       
