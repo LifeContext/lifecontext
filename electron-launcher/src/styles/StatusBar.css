@@ -1,0 +1,76 @@
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: #f8f9fa;
+  border-top: 1px solid #dee2e6;
+}
+
+.buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.start-button,
+.stop-button,
+.browser-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.start-button {
+  background-color: #28a745;
+  color: white;
+}
+
+.start-button:hover:not(:disabled) {
+  background-color: #218838;
+}
+
+.stop-button {
+  background-color: #dc3545;
+  color: white;
+}
+
+.stop-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.browser-button {
+  background-color: #17a2b8;
+  color: white;
+}
+
+.browser-button:hover:not(:disabled) {
+  background-color: #138496;
+}
+
+.start-button:disabled,
+.stop-button:disabled,
+.browser-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+}
+
+.status-indicator {
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.status-indicator.running {
+  color: #28a745;
+}
+
+.status-indicator.stopped {
+  color: #dc3545;
+}

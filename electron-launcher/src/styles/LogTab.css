@@ -1,0 +1,31 @@
+.log-tab {
+  height: 100%;
+}
+
+.log-container {
+  height: 100%;
+  background-color: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 1rem;
+  overflow-y: auto;
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.log-entry {
+  padding: 0.25rem 0;
+  border-bottom: 1px solid #e9ecef;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.log-entry:last-child {
+  border-bottom: none;
+}
+
+.log-entry.empty {
+  color: #6c757d;
+  font-style: italic;
+  text-align: center;
+  padding: 2rem 0;
+}
