@@ -1,7 +1,5 @@
 import type { ChatMessage } from '../../types';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 // 聊天API服务类
 export class ChatService {
   async sendMessageStream(
@@ -236,10 +234,10 @@ export class ChatService {
     }
   }
 
-  // 获取聊天历史（如果需要的话）
+  // 获取聊天历史
   async getChatHistory(): Promise<ChatMessage[]> {
     try {
-      const response = await fetch(`${API_BASE_URL}/chat/history`);
+      const response = await fetch(`/api/agent/chat/history`);
       if (!response.ok) {
         throw new Error(`Failed to fetch chat history: ${response.statusText}`);
       }

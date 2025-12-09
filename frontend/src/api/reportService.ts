@@ -1,7 +1,5 @@
 import type { DailyReport } from '../../types';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 // Daily Report API服务类
 export class ReportService {
   // 获取所有Daily Reports

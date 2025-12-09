@@ -85,9 +85,9 @@ async function openFrontendPage() {
       });
     });
   } catch (e) {
-    // 兜底：使用默认地址
+    // 兜底：使用默认地址（构建后前端由 Backend 代理，端口 8000）
     try {
-      chrome.windows.create({ url: 'http://localhost:3000/', focused: true, state: 'normal' });
+      chrome.windows.create({ url: 'http://localhost:8000/', focused: true, state: 'normal' });
     } catch (_) {}
   }
 }

@@ -6,7 +6,7 @@ var DEFAULT_CONFIG = {
     API_HOST: "localhost",
     API_PORT: "8000",
     FRONTEND_HOST: "localhost", 
-    FRONTEND_PORT: "3000"
+    FRONTEND_PORT: "8000"
 };
 
 // 从存储中获取配置，如果没有则使用默认配置

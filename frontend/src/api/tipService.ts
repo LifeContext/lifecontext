@@ -1,7 +1,5 @@
 import type { Tip } from '../../types';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 // Tip API服务类
 export class TipService {
   // 获取所有Tips
@@ -21,7 +19,7 @@ export class TipService {
   // 根据ID获取单个Tip
   async getTipById(id: number): Promise<Tip> {
     try {
-      const response = await fetch(`${API_BASE_URL}/tips/${id}`);
+      const response = await fetch(`/api/generation/tips/${id}`);
       if (!response.ok) {
         throw new Error(`Failed to fetch tip: ${response.statusText}`);
       }
@@ -35,7 +33,7 @@ export class TipService {
   // 创建新的Tip
   async createTip(tip: Omit<Tip, 'id' | 'created_at'>): Promise<Tip> {
     try {
-      const response = await fetch(`${API_BASE_URL}/tips`, {
+      const response = await fetch(`/api/generation/tips`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -57,7 +55,7 @@ export class TipService {
   // 更新Tip
   async updateTip(id: number, tip: Partial<Tip>): Promise<Tip> {
     try {
-      const response = await fetch(`${API_BASE_URL}/tips/${id}`, {
+      const response = await fetch(`/api/generation/tips/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -79,7 +77,7 @@ export class TipService {
   // 删除Tip
   async deleteTip(id: number): Promise<void> {
     try {
-      const response = await fetch(`${API_BASE_URL}/tips/${id}`, {
+      const response = await fetch(`/api/generation/tips/${id}`, {
         method: 'DELETE'
       });
       

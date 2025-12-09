@@ -279,7 +279,7 @@ exe = EXE(
 1. 双击运行 `LifeContext.exe`
 2. 首次运行会提示配置 API Key，请按照提示填写
 3. 点击「启动服务」按钮
-4. 浏览器会自动打开 http://localhost:3000
+4. 浏览器会自动打开 http://localhost:8000
 
 ## 📝 浏览器插件安装
 
@@ -305,8 +305,8 @@ exe = EXE(
 
 ## 📊 服务端口
 
-- Backend: http://localhost:8000
-- Frontend: http://localhost:3000
+- Backend + Frontend: http://localhost:8000
+  （构建后前端由 Backend 代理提供）
 
 ## ❓ 常见问题
 
