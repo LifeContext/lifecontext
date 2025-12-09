@@ -2,11 +2,12 @@
 // 注意：不要写 export，这里用 var 定义方便 background.js 用 importScripts 引入
 
 // 默认配置
+// 构建后前端由 Backend 代理提供，所以 FRONTEND_PORT 与 API_PORT 一致
 var DEFAULT_CONFIG = {
     API_HOST: "localhost",
     API_PORT: "8000",
     FRONTEND_HOST: "localhost", 
-    FRONTEND_PORT: "3000"
+    FRONTEND_PORT: "8000"
 };
 
 // 从存储中获取配置，如果没有则使用默认配置

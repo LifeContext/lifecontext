@@ -1,7 +1,5 @@
 import type { TodoItem } from '../../types';
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-
 // Todo API服务类
 export class TodoService {
   // 获取所有Todo项

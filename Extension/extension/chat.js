@@ -24,7 +24,8 @@ const app = createApp({
   `,
   data() {
     return {
-      apiUrl: 'http://localhost:3000/chat',
+      // 构建后前端由 Backend 代理提供，端口 8000
+      apiUrl: 'http://localhost:8000/api/agent/chat',
       appName: 'my-crawler',
       domainName: 'user123',
       callbacks: {

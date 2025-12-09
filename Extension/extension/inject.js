@@ -758,7 +758,8 @@
         const url = `http://${cfg.FRONTEND_HOST}:${cfg.FRONTEND_PORT}/`;
         window.open(url, '_blank');
       } catch (_) {
-        window.open('http://localhost:3000/', '_blank');
+        // 兜底：构建后前端由 Backend 代理，端口 8000
+        window.open('http://localhost:8000/', '_blank');
       }
     }
     chatHeader.querySelector('#home-btn').addEventListener('click', openHome);
